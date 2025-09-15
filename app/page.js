@@ -1,103 +1,330 @@
-import Image from "next/image";
+'use client';
+
+import React, { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import axios from 'axios';
+import styles from './styles/Home.module.css';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const canvasRef = useRef(null);
+  const [markets, setMarkets] = useState([]);
+  const [evaluationType, setEvaluationType] = useState('one-phase');
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // Fetch active markets from Polymarket and Kalshi
+  useEffect(() => {
+    const fetchMarkets = async () => {
+      try {
+        // Polymarket API
+        const polymarketResponse = await axios.get('/api/polymarket');
+        const polymarketMarkets = Array.isArray(polymarketResponse.data)
+          ? polymarketResponse.data.slice(0, 5).map(market => ({
+              title: market.question || market.name || 'Untitled Market',
+              yesPrice: market.outcomes?.[0]?.price || 0,
+              noPrice: market.outcomes?.[1]?.price || 0,
+              source: 'Polymarket'
+            }))
+          : [];
+
+        // Kalshi API
+        const kalshiResponse = await axios.get('/api/kalshi');
+        const kalshiMarkets = Array.isArray(kalshiResponse.data.markets)
+          ? kalshiResponse.data.markets.map(market => ({
+              title: market.title || 'Untitled Market',
+              yesPrice: (market.yes_ask || 0) / 100,
+              noPrice: (market.no_ask || 0) / 100,
+              source: 'Kalshi'
+            }))
+          : [];
+
+        const combinedMarkets = [...polymarketMarkets, ...kalshiMarkets];
+
+        setMarkets(combinedMarkets.length > 0 ? combinedMarkets : [
+          { title: 'Sample Market', yesPrice: 0.55, noPrice: 0.45, source: 'Demo' },
+          { title: 'Another Sample', yesPrice: 0.70, noPrice: 0.30, source: 'Demo' }
+        ]);
+      } catch (error) {
+        console.error('Error fetching markets:', error);
+        setMarkets([
+          { title: 'Sample Market', yesPrice: 0.55, noPrice: 0.45, source: 'Demo' },
+          { title: 'Another Sample', yesPrice: 0.70, noPrice: 0.30, source: 'Demo' }
+        ]);
+      }
+    };
+
+    fetchMarkets();
+  }, []);
+
+  // Particle animation
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+    const particleCount = 200;
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 4 + 1;
+        this.speedX = Math.random() * 1.5 - 0.75;
+        this.speedY = Math.random() * 1.5 - 0.75;
+        this.opacity = Math.random() * 0.3 + 0.3;
+      }
+
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        if (this.size > 0.2) this.size -= 0.03;
+        if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+        if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+      }
+
+      draw() {
+        ctx.fillStyle = `rgba(45, 212, 191, ${this.opacity})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function initParticles() {
+      for (let i = 0; i < particleCount; i++) {
+        particles.push(new Particle());
+      }
+    }
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let particle of particles) {
+        particle.update();
+        particle.draw();
+      }
+      requestAnimationFrame(animateParticles);
+    }
+
+    initParticles();
+    animateParticles();
+
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Challenge plan data
+  const challengePlans = {
+    'one-phase': [
+      { size: '$10,000', profitTarget: '10% ($1,000)', dailyLoss: '5% ($500)', drawdown: '8% ($800)', fee: '$100' },
+      { size: '$25,000', profitTarget: '10% ($2,500)', dailyLoss: '5% ($1,250)', drawdown: '8% ($2,000)', fee: '$250' },
+      { size: '$50,000', profitTarget: '10% ($5,000)', dailyLoss: '5% ($2,500)', drawdown: '8% ($4,000)', fee: '$400' },
+      { size: '$100,000', profitTarget: '10% ($10,000)', dailyLoss: '5% ($5,000)', drawdown: '8% ($8,000)', fee: '$500' },
+    ],
+    'two-phase': [
+      { size: '$10,000', profitTarget: '10% ($1,000)', dailyLoss: '5% ($500)', drawdown: '10% ($1,000)', fee: '$120' },
+      { size: '$25,000', profitTarget: '10% ($2,500)', dailyLoss: '5% ($1,250)', drawdown: '10% ($2,500)', fee: '$275' },
+      { size: '$50,000', profitTarget: '10% ($5,000)', dailyLoss: '5% ($2,500)', drawdown: '10% ($5,000)', fee: '$450' },
+      { size: '$100,000', profitTarget: '10% ($10,000)', dailyLoss: '5% ($5,000)', drawdown: '10% ($10,000)', fee: '$650' },
+    ]
+  };
+
+  return (
+    <>
+      <section className={styles.hero} id="home">
+        <canvas ref={canvasRef} className={styles.particles}></canvas>
+        <div className={`${styles.heroContent} ${styles.container}`}>
+          <h1>Trade Prediction Markets with Funded Capital</h1>
+          <p>Trade politics, sports, economics & more — get funded up to $200,000.</p>
+          <div className={styles.cta}>
+            <Link href="/traders">
+              <button className={`${styles.ctaButton} ${styles.primary}`}>Start Challenge</button>
+            </Link>
+            <Link href="#how-it-works">
+              <button className={`${styles.ctaButton} ${styles.secondary}`}>Learn How It Works</button>
+            </Link>
+            <Link href="/lps">
+              <button className={`${styles.ctaButton} ${styles.tertiary}`}>Stake USDC</button>
+            </Link>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </section>
+      <section className={styles.marketTicker}>
+        <div className={styles.container}>
+          <h2>Live Prediction Markets</h2>
+          <div className={styles.marqueeContainer}>
+            <div className={styles.marqueeContent}>
+              {markets.map((market, index) => (
+                <div key={index} className={styles.tickerItem}>
+                  <span>{market.source}: {market.title}</span>
+                  <span>Yes: ${(market.yesPrice || 0).toFixed(2)}</span>
+                  <span>No: ${(market.noPrice || 0).toFixed(2)}</span>
+                </div>
+              ))}
+              {markets.map((market, index) => (
+                <div key={`duplicate-${index}`} className={styles.tickerItem}>
+                  <span>{market.source}: {market.title}</span>
+                  <span>Yes: ${(market.yesPrice || 0).toFixed(2)}</span>
+                  <span>No: ${(market.noPrice || 0).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className={styles.howItWorks} id="how-it-works">
+        <div className={styles.container}>
+          <h2>How It Works (3 Steps)</h2>
+          <div className={styles.howSteps}>
+            <div className={styles.step}>
+              <svg viewBox="0 0 24 24" fill="#2DD4BF">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+              </svg>
+              <h3>Take the Challenge</h3>
+              <p>Prove your edge in a demo account with live market data.</p>
+            </div>
+            <div className={styles.step}>
+              <svg viewBox="0 0 24 24" fill="#1E3A8A">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+              </svg>
+              <h3>Get Funded</h3>
+              <p>Pass the rules, trade with PredictProp’s capital.</p>
+            </div>
+            <div className={styles.step}>
+              <svg viewBox="0 0 24 24" fill="#2DD4BF">
+                <path d="M11 4v2H8v14h8v-6h2v8H6V4h5zm7 2.3l-8-8L9.4.9l8 8 .6-.6zm-2-2l-1.4-1.4 4.3-4.3 1.4 1.4L16 4.3z"/>
+              </svg>
+              <h3>Earn Payouts</h3>
+              <p>Keep up to 90% of profits, paid within 24 hours.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className={styles.features} id="features">
+        <div className={styles.container}>
+          <h2>Why PredictProp?</h2>
+          <div className={styles.featureGrid}>
+            <div className={styles.featureCard}>
+              <svg viewBox="0 0 24 24" fill="#2DD4BF">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+              </svg>
+              <h3>Funded Trading</h3>
+              <p>Trade Polymarket and Kalshi with up to $200k, keeping 80% of profits.</p>
+            </div>
+            <div className={styles.featureCard}>
+              <svg viewBox="0 0 24 24" fill="#1E3A8A">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+              </svg>
+              <h3>High-Yield Staking</h3>
+              <p>Stake USDC for 10-20% APY, withdraw anytime with zk-proofs.</p>
+            </div>
+            <div className={styles.featureCard}>
+              <svg viewBox="0 0 24 24" fill="#2DD4BF">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+              </svg>
+              <h3>Real-Time Integrations</h3>
+              <p>Growing Fast: Billions traded across Polymarket, Kalshi with advanced tools.</p>
+            </div>
+            <div className={styles.featureCard}>
+              <svg viewBox="0 0 24 24" fill="#1E3A8A">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+              </svg>
+              <h3>Referral Rewards</h3>
+              <p>Earn 10% of trader fees or 5% of LP yields in USDC.</p>
+            </div>
+            <div className={styles.featureCard}>
+              <svg viewBox="0 0 24 24" fill="#2DD4BF">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+              </svg>
+              <h3>New Asset Class</h3>
+              <p>Trade politics, sports, macro events.</p>
+            </div>
+            <div className={styles.featureCard}>
+              <svg viewBox="0 0 24 24" fill="#1E3A8A">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+              </svg>
+              <h3>Non-Correlated</h3>
+              <p>Unaffected by stocks or crypto cycles.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className={styles.challengePlans} id="challenge-plans">
+        <div className={styles.container}>
+          <div className={styles.sectionHeader}>
+            <h2>Choose Your Challenge Plan</h2>
+            <p>Clear, fair rules designed for trader success and risk management.</p>
+          </div>
+          <div className={styles.evaluationToggle}>
+            <button
+              className={`${styles.toggleButton} ${evaluationType === 'one-phase' ? styles.active : ''}`}
+              onClick={() => setEvaluationType('one-phase')}
+            >
+              One-Phase Evaluation
+            </button>
+            <button
+              className={`${styles.toggleButton} ${evaluationType === 'two-phase' ? styles.active : ''}`}
+              onClick={() => setEvaluationType('two-phase')}
+            >
+              Two-Phase Evaluation
+            </button>
+          </div>
+          <div className={styles.plansGrid}>
+            {challengePlans[evaluationType].map((plan, index) => (
+              <div key={index} className={`${styles.planCard} ${index === 1 ? styles.featured : ''}`}>
+                <div className={styles.planHeader}>
+                  <h3>{plan.size}</h3>
+                  <div className={styles.planPrice}>{plan.fee}</div>
+                  {index === 1 && <span className={styles.featuredBadge}>Most Popular</span>}
+                </div>
+                <div className={styles.planFeatures}>
+                  <div className={styles.featureItem}>
+                    <span className={styles.featureLabel}>Profit Target</span>
+                    <span className={styles.featureValue}>{plan.profitTarget}</span>
+                  </div>
+                  <div className={styles.featureItem}>
+                    <span className={styles.featureLabel}>Max Daily Loss</span>
+                    <span className={styles.featureValue}>{plan.dailyLoss}</span>
+                  </div>
+                  <div className={styles.featureItem}>
+                    <span className={styles.featureLabel}>Max Drawdown</span>
+                    <span className={styles.featureValue}>{plan.drawdown}</span>
+                  </div>
+                </div>
+                <div className={styles.planFooter}>
+                  <Link href="/traders">
+                    <button className={styles.planButton}>{index === 1 ? 'Most Popular' : 'Select Plan'}</button>
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className={styles.sectionFooter}>
+            <Link href="/docs">
+              <button className={`${styles.ctaButton} ${styles.secondary}`}>Explore Rules & FAQ</button>
+            </Link>
+          </div>
+        </div>
+      </section>
+      <section className={styles.trust} id="trust">
+        <div className={styles.container}>
+          <h2>Built on Trusted Platforms</h2>
+          <p>Secure, transparent, and powered by leading blockchain and prediction market tech.</p>
+          <div className={styles.trustLogos}>
+            <img src="https://polygon.technology/images/polygon-logo.svg" alt="Polygon" />
+            <img src="https://polymarket.com/images/logo.svg" alt="Polymarket" />
+            <img src="https://kalshi.com/images/logo.svg" alt="Kalshi" />
+            <img src="https://privy.io/images/logo.svg" alt="Privy" />
+          </div>
+          <Link href="#waitlist">
+            <button className={`${styles.ctaButton} ${styles.secondary}`}>Join the 2025 Waitlist</button>
+          </Link>
+        </div>
+      </section>
+    </>
   );
 }
