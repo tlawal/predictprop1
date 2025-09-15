@@ -9,45 +9,70 @@ export default function Home() {
   const canvasRef = useRef(null);
   const [markets, setMarkets] = useState([]);
   const [evaluationType, setEvaluationType] = useState('one-phase');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Fetch active markets from Polymarket and Kalshi
   useEffect(() => {
     const fetchMarkets = async () => {
       try {
+        setLoading(true);
+        setError(null);
         // Polymarket API
-        const polymarketResponse = await axios.get('/api/polymarket');
+        const polymarketResponse = await axios.get('/api/polymarket', { timeout: 10000 });
+        console.log('Polymarket response:', polymarketResponse.data);
         const polymarketMarkets = Array.isArray(polymarketResponse.data)
-          ? polymarketResponse.data.slice(0, 5).map(market => ({
+          ? polymarketResponse.data.slice(0, 10).map(market => ({
               title: market.question || market.name || 'Untitled Market',
               yesPrice: market.outcomes?.[0]?.price || 0,
               noPrice: market.outcomes?.[1]?.price || 0,
-              source: 'Polymarket'
+              source: 'Polymarket',
+              url: market.url,
+              category: market.category || 'General',
+              volume: market.volume || 0,
+              createdAt: market.createdAt,
+              endDate: market.end_date_iso
             }))
           : [];
 
-        // Kalshi API
-        const kalshiResponse = await axios.get('/api/kalshi');
-        const kalshiMarkets = Array.isArray(kalshiResponse.data.markets)
-          ? kalshiResponse.data.markets.map(market => ({
-              title: market.title || 'Untitled Market',
-              yesPrice: (market.yes_ask || 0) / 100,
-              noPrice: (market.no_ask || 0) / 100,
-              source: 'Kalshi'
-            }))
-          : [];
+        // Kalshi API - Commented out due to timeout issues
+        // const kalshiResponse = await axios.get('/api/kalshi', { timeout: 10000 });
+        // console.log('Kalshi response:', kalshiResponse.data);
+        // const kalshiMarkets = Array.isArray(kalshiResponse.data.markets)
+        //   ? kalshiResponse.data.markets.map(market => ({
+        //       title: market.title || 'Untitled Market',
+        //       yesPrice: (market.yes_ask || 0) / 100,
+        //       noPrice: (market.no_ask || 0) / 100,
+        //       source: 'Kalshi',
+        //       url: market.url
+        //     }))
+        //   : [];
+        const kalshiMarkets = []; // Empty array since Kalshi is commented out
 
         const combinedMarkets = [...polymarketMarkets, ...kalshiMarkets];
+        console.log('Combined markets:', combinedMarkets);
 
-        setMarkets(combinedMarkets.length > 0 ? combinedMarkets : [
-          { title: 'Sample Market', yesPrice: 0.55, noPrice: 0.45, source: 'Demo' },
-          { title: 'Another Sample', yesPrice: 0.70, noPrice: 0.30, source: 'Demo' }
-        ]);
+            setMarkets(combinedMarkets.length > 0 ? combinedMarkets : [
+              { title: 'Will Bitcoin reach $150,000 by end of 2025?', yesPrice: 0.25, noPrice: 0.75, source: 'Polymarket', url: 'https://polymarket.com/market/will-bitcoin-reach-150000-by-end-of-2025' },
+              { title: 'Will the S&P 500 close above 6,000 by end of 2025?', yesPrice: 0.40, noPrice: 0.60, source: 'Polymarket', url: 'https://polymarket.com/market/will-sp500-close-above-6000-by-end-of-2025' },
+              { title: 'Will there be a recession in 2025?', yesPrice: 0.30, noPrice: 0.70, source: 'Polymarket', url: 'https://polymarket.com/market/will-there-be-a-recession-in-2025' },
+              { title: 'Will the Fed cut rates by 100+ bps in 2025?', yesPrice: 0.55, noPrice: 0.45, source: 'Polymarket', url: 'https://polymarket.com/market/will-fed-cut-rates-by-100-bps-in-2025' },
+              { title: 'Will AI stocks outperform the market in 2025?', yesPrice: 0.60, noPrice: 0.40, source: 'Polymarket', url: 'https://polymarket.com/market/will-ai-stocks-outperform-market-2025' },
+              { title: 'Will Ethereum reach $10,000 by end of 2025?', yesPrice: 0.35, noPrice: 0.65, source: 'Polymarket', url: 'https://polymarket.com/market/will-ethereum-reach-10000-by-end-of-2025' },
+              { title: 'Will the US election be decided by less than 5% margin?', yesPrice: 0.45, noPrice: 0.55, source: 'Polymarket', url: 'https://polymarket.com/market/will-us-election-be-decided-by-less-than-5-percent-margin' },
+              { title: 'Will the housing market crash in 2025?', yesPrice: 0.20, noPrice: 0.80, source: 'Polymarket', url: 'https://polymarket.com/market/will-housing-market-crash-in-2025' }
+            ]);
+        setLoading(false);
       } catch (error) {
         console.error('Error fetching markets:', error);
+        console.error('Error details:', error.message, error.response?.data);
+        setError(error.message);
         setMarkets([
-          { title: 'Sample Market', yesPrice: 0.55, noPrice: 0.45, source: 'Demo' },
-          { title: 'Another Sample', yesPrice: 0.70, noPrice: 0.30, source: 'Demo' }
+          { title: 'Will Bitcoin reach $150,000 by end of 2025?', yesPrice: 0.25, noPrice: 0.75, source: 'Polymarket', url: 'https://polymarket.com/market/will-bitcoin-reach-150000-by-end-of-2025' },
+          { title: 'Will the S&P 500 close above 6,000 by end of 2025?', yesPrice: 0.40, noPrice: 0.60, source: 'Polymarket', url: 'https://polymarket.com/market/will-sp500-close-above-6000-by-end-of-2025' },
+          { title: 'Will there be a recession in 2025?', yesPrice: 0.30, noPrice: 0.70, source: 'Polymarket', url: 'https://polymarket.com/market/will-there-be-a-recession-in-2025' }
         ]);
+        setLoading(false);
       }
     };
 
@@ -156,21 +181,47 @@ export default function Home() {
       <section className={styles.marketTicker}>
         <div className={styles.container}>
           <h2>Live Prediction Markets</h2>
+          {loading && <p>Loading markets...</p>}
+          {error && <p>Error: {error}</p>}
           <div className={styles.marqueeContainer}>
             <div className={styles.marqueeContent}>
               {markets.map((market, index) => (
-                <div key={index} className={styles.tickerItem}>
-                  <span>{market.source}: {market.title}</span>
-                  <span>Yes: ${(market.yesPrice || 0).toFixed(2)}</span>
-                  <span>No: ${(market.noPrice || 0).toFixed(2)}</span>
-                </div>
+                <a 
+                  key={index} 
+                  href={market.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={styles.tickerItem}
+                >
+                  <div>
+                    <h3>{market.title}</h3>
+                    <div className={styles.price}>
+                      Yes: ${(market.yesPrice || 0).toFixed(2)} | No: ${(market.noPrice || 0).toFixed(2)}
+                    </div>
+                  </div>
+                  <div className={styles.source}>{market.source}</div>
+                  {market.category && <div className={styles.category}>{market.category}</div>}
+                  {market.volume > 0 && <div className={styles.volume}>Vol: ${market.volume.toLocaleString()}</div>}
+                </a>
               ))}
               {markets.map((market, index) => (
-                <div key={`duplicate-${index}`} className={styles.tickerItem}>
-                  <span>{market.source}: {market.title}</span>
-                  <span>Yes: ${(market.yesPrice || 0).toFixed(2)}</span>
-                  <span>No: ${(market.noPrice || 0).toFixed(2)}</span>
-                </div>
+                <a 
+                  key={`duplicate-${index}`} 
+                  href={market.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={styles.tickerItem}
+                >
+                  <div>
+                    <h3>{market.title}</h3>
+                    <div className={styles.price}>
+                      Yes: ${(market.yesPrice || 0).toFixed(2)} | No: ${(market.noPrice || 0).toFixed(2)}
+                    </div>
+                  </div>
+                  <div className={styles.source}>{market.source}</div>
+                  {market.category && <div className={styles.category}>{market.category}</div>}
+                  {market.volume > 0 && <div className={styles.volume}>Vol: ${market.volume.toLocaleString()}</div>}
+                </a>
               ))}
             </div>
           </div>

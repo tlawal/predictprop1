@@ -14,19 +14,26 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <PrivyProvider
-          appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'clpispdty00ycl80fpueukbhl'}
-          config={{
-            loginMethods: ['email', 'social', 'wallet'],
-            appearance: { theme: 'dark', accentColor: '#2DD4BF' }
-          }}
-        >
-          <ThemeProvider>
+        <ThemeProvider>
+          <PrivyProvider
+            appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'clpispdty00ycl80fpueukbhl'}
+            config={{
+              loginMethods: ['email', 'google', 'twitter', 'wallet'],
+              appearance: { 
+                theme: 'dark', 
+                accentColor: '#2DD4BF',
+                logo: 'https://polymarket.com/images/logo.svg'
+              },
+              embeddedWallets: {
+                createOnLogin: 'users-without-wallets'
+              }
+            }}
+          >
             <Header />
             {children}
             <Footer />
-          </ThemeProvider>
-        </PrivyProvider>
+          </PrivyProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

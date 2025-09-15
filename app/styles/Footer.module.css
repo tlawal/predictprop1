@@ -1,0 +1,32 @@
+.footer {
+    background: var(--background);
+    color: var(--text-color);
+    padding: 60px 0;
+    text-align: center;
+    border-top: 1px solid var(--accent-color);
+  }
+  
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  
+  .container a {
+    color: var(--secondary-accent);
+    text-decoration: none;
+    margin: 0 20px;
+    font-size: 16px;
+    font-weight: 600;
+    transition: color 0.3s;
+  }
+  
+  .container a:hover {
+    color: var(--accent-color);
+  }
+  
+  .security {
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--foreground);
+  }

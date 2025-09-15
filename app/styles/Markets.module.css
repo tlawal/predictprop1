@@ -1,0 +1,48 @@
+.markets {
+    padding: 100px 0;
+    background: #1A1A1A;
+    text-align: center;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+  }
+  
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  
+  .markets h1 {
+    font-size: 36px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #1E3A8A, #2DD4BF);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 20px;
+  }
+  
+  .markets p {
+    font-size: 20px;
+    color: #D1D5DB;
+    max-width: 800px;
+    margin: 0 auto 40px;
+  }
+  
+  .ctaButton.primary {
+    background: #2DD4BF;
+    color: #1A1A1A;
+    font-size: 18px;
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+  }
+  
+  .ctaButton.primary:hover {
+    background: #26A69A;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }

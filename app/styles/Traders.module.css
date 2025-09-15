@@ -1,0 +1,98 @@
+.traders {
+  padding: 100px 0;
+  background: var(--background);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.traders h1 {
+  font-family: 'Inter', sans-serif;
+  font-size: 48px;
+  font-weight: 800;
+  color: var(--text-color);
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.traders p {
+  font-size: 20px;
+  color: var(--foreground);
+  max-width: 600px;
+  margin: 0 auto 40px;
+  line-height: 1.6;
+}
+
+.cta {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.ctaButton {
+  font-family: 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  padding: 16px 32px;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+  display: inline-block;
+}
+
+.ctaButton.primary {
+  background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
+  color: var(--background);
+  box-shadow: 0 4px 20px rgba(30, 58, 138, 0.3);
+}
+
+.ctaButton.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(30, 58, 138, 0.4);
+}
+
+.ctaButton.secondary {
+  background: transparent;
+  border: 2px solid var(--accent-color);
+  color: var(--text-color);
+}
+
+.ctaButton.secondary:hover {
+  background: var(--accent-color);
+  color: var(--background);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .traders h1 {
+    font-size: 36px;
+  }
+  
+  .traders p {
+    font-size: 18px;
+  }
+  
+  .cta {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .ctaButton {
+    width: 100%;
+    max-width: 300px;
+  }
+}
