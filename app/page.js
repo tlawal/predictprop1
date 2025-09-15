@@ -218,7 +218,6 @@ export default function Home() {
           <div className={styles.heroScroll}>
             <div className={styles.scrollIndicator}>
               <div className={styles.scrollLine}></div>
-              <span>Scroll to explore</span>
             </div>
           </div>
         </div>
@@ -362,15 +361,8 @@ export default function Home() {
               <svg viewBox="0 0 24 24" fill="#1E3A8A">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
               </svg>
-              <h3>New Asset Class</h3>
-              <p>Trade politics, sports, macro events.</p>
-            </div>
-            <div className={styles.featureCard}>
-              <svg viewBox="0 0 24 24" fill="#2DD4BF">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
-              </svg>
-              <h3>Non-Correlated</h3>
-              <p>Unaffected by stocks or crypto cycles.</p>
+              <h3>Non-correlated Asset</h3>
+              <p>trade politics, sports, macro events & more unaffected by stocks or crypto</p>
             </div>
           </div>
         </div>
@@ -441,7 +433,7 @@ export default function Home() {
             <Image src="https://privy.io/images/logo.svg" alt="Privy" width={120} height={40} />
           </div>
           <Link href="#waitlist">
-            <button className={`${styles.ctaButton} ${styles.secondary}`}>Join the 2025 Waitlist</button>
+            <button className={`${styles.ctaButton} ${styles.secondary}`}>Join the Waitlist</button>
           </Link>
         </div>
       </section>
