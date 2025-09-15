@@ -40,13 +40,15 @@ export async function GET() {
       .filter(market => {
         const isNotArchived = !market.question.toLowerCase().includes('arch');
         const isActive = market.active === true;
+        const isNotClosed = !market.closed;
+        const isAcceptingOrders = market.accepting_orders === true;
         
-        // Check if market was created within the last 2 years
-        const marketDate = new Date(market.createdAt || market.end_date_iso);
+        // Check if market has a future end date or is currently active
+        const marketDate = new Date(market.end_date_iso);
         const isRecent = marketDate >= twoYearsAgo;
         
-        // Look for markets that are active, not archived, and created recently
-        return isActive && isNotArchived && isRecent;
+        // Look for markets that are active, not archived, not closed, and accepting orders
+        return isActive && isNotArchived && isNotClosed && isAcceptingOrders;
       })
       .sort((a, b) => {
         // Sort by creation date, most recent first
@@ -55,21 +57,34 @@ export async function GET() {
         return bDate - aDate;
       })
       .slice(0, 8) // Limit to 8 markets
-      .map(market => ({
-        id: market.id,
-        question: market.question,
-        name: market.question,
-        outcomes: market.outcomes ? JSON.parse(market.outcomes).map(outcome => ({
-          name: outcome,
-          price: market.outcomePrices ? JSON.parse(market.outcomePrices)[JSON.parse(market.outcomes).indexOf(outcome)] || 0 : 0,
-        })) : [],
-        active: market.active,
-        end_date_iso: market.endDate,
-        createdAt: market.createdAt,
-        category: market.category,
-        volume: market.volumeNum || 0,
-        url: `https://polymarket.com/market/${market.slug}`,
-      }));
+      .map(market => {
+        // Parse outcomes from tokens array
+        let outcomes = [];
+        try {
+          if (market.tokens && Array.isArray(market.tokens)) {
+            outcomes = market.tokens.map(token => ({
+              name: token.outcome,
+              price: token.price || 0,
+            }));
+          }
+        } catch (e) {
+          console.log('Error parsing outcomes:', e);
+          outcomes = [];
+        }
+
+        return {
+          id: market.condition_id || market.id,
+          question: market.question,
+          name: market.question,
+          outcomes: outcomes,
+          active: market.active,
+          end_date_iso: market.end_date_iso,
+          createdAt: market.createdAt,
+          category: market.category,
+          volume: market.volumeNum || 0,
+          url: market.market_slug ? `https://polymarket.com/market/${market.market_slug}` : `https://polymarket.com/market/${market.condition_id || market.id}`,
+        };
+      });
 
     console.log('Active markets found:', activeMarkets.length);
     if (activeMarkets.length === 0) {

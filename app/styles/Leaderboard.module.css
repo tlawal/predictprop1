@@ -1,0 +1,426 @@
+/* Main Page Layout */
+.leaderboardPage {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--text-color);
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Hero Section */
+.hero {
+  background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
+  padding: 120px 0 80px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+  opacity: 0.3;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+}
+
+.hero h1 {
+  font-size: 48px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.hero p {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 600px;
+  margin: 0 auto 40px;
+}
+
+.timeframeSelector {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 40px;
+}
+
+.timeframeButton {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+
+.timeframeButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.timeframeButton.active {
+  background: white;
+  color: var(--accent-color);
+  border-color: white;
+}
+
+/* Leaderboard Section */
+.leaderboardSection {
+  padding: 80px 0;
+  background: var(--background);
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 0;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--accent-color);
+  border-top: 4px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error {
+  text-align: center;
+  padding: 60px 0;
+  color: #ef4444;
+  font-size: 18px;
+}
+
+/* Leaderboard Table */
+.leaderboardTable {
+  background: var(--background);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--accent-color);
+}
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: 80px 1fr 140px 100px 100px 120px 140px 140px;
+  gap: 20px;
+  padding: 24px 32px;
+  background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.headerCell {
+  display: flex;
+  align-items: center;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 80px 1fr 140px 100px 100px 120px 140px 140px;
+  gap: 20px;
+  padding: 20px 32px;
+  border-bottom: 1px solid rgba(30, 58, 138, 0.1);
+  transition: all 0.3s ease;
+  align-items: center;
+}
+
+.tableRow:hover {
+  background: rgba(30, 58, 138, 0.05);
+  transform: translateY(-1px);
+}
+
+.tableRow:last-child {
+  border-bottom: none;
+}
+
+/* Cell Styles */
+.rankCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rankIcon {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent-color);
+}
+
+.traderCell {
+  display: flex;
+  align-items: center;
+}
+
+.traderInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.traderName {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.verifiedBadge {
+  background: var(--secondary-accent);
+  color: var(--background);
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.traderAddress {
+  font-size: 12px;
+  color: var(--foreground);
+  font-family: 'Courier New', monospace;
+}
+
+.pnlCell,
+.winRateCell,
+.tradesCell,
+.avgReturnCell,
+.bestTradeCell,
+.worstTradeCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pnlValue {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.winRateValue,
+.avgReturnValue {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tradesValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.bestTradeValue,
+.worstTradeValue {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* CTA Section */
+.ctaSection {
+  text-align: center;
+  padding: 80px 0;
+  background: var(--background);
+}
+
+.ctaSection h2 {
+  font-size: 36px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  color: var(--text-color);
+}
+
+.ctaSection p {
+  font-size: 18px;
+  color: var(--foreground);
+  max-width: 600px;
+  margin: 0 auto 40px;
+}
+
+.ctaButtons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.ctaButton {
+  background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
+  color: white;
+  padding: 16px 32px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.ctaButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(30, 58, 138, 0.3);
+}
+
+.ctaButton.secondary {
+  background: transparent;
+  border: 2px solid var(--accent-color);
+  color: var(--accent-color);
+}
+
+.ctaButton.secondary:hover {
+  background: var(--accent-color);
+  color: white;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .tableHeader,
+  .tableRow {
+    grid-template-columns: 60px 1fr 120px 80px 80px 100px 120px 120px;
+    gap: 15px;
+    padding: 20px 24px;
+  }
+  
+  .headerCell,
+  .rankCell,
+  .pnlCell,
+  .winRateCell,
+  .tradesCell,
+  .avgReturnCell,
+  .bestTradeCell,
+  .worstTradeCell {
+    font-size: 12px;
+  }
+  
+  .traderName {
+    font-size: 14px;
+  }
+  
+  .traderAddress {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero h1 {
+    font-size: 36px;
+  }
+  
+  .hero p {
+    font-size: 18px;
+  }
+  
+  .timeframeSelector {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .timeframeButton {
+    width: 200px;
+  }
+  
+  .leaderboardTable {
+    overflow-x: auto;
+  }
+  
+  .tableHeader,
+  .tableRow {
+    grid-template-columns: 50px 150px 100px 80px 80px 90px 100px 100px;
+    gap: 10px;
+    padding: 16px 20px;
+    min-width: 800px;
+  }
+  
+  .headerCell,
+  .rankCell,
+  .pnlCell,
+  .winRateCell,
+  .tradesCell,
+  .avgReturnCell,
+  .bestTradeCell,
+  .worstTradeCell {
+    font-size: 11px;
+  }
+  
+  .traderName {
+    font-size: 13px;
+  }
+  
+  .traderAddress {
+    font-size: 10px;
+  }
+  
+  .ctaButtons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .ctaButton {
+    width: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 16px;
+  }
+  
+  .hero {
+    padding: 80px 0 60px;
+  }
+  
+  .hero h1 {
+    font-size: 28px;
+  }
+  
+  .hero p {
+    font-size: 16px;
+  }
+  
+  .leaderboardSection {
+    padding: 40px 0;
+  }
+  
+  .ctaSection {
+    padding: 40px 0;
+  }
+  
+  .ctaSection h2 {
+    font-size: 28px;
+  }
+  
+  .ctaSection p {
+    font-size: 16px;
+  }
+}

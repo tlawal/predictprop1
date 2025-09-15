@@ -1,0 +1,834 @@
+/* Main Page Layout */
+.lpPage {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--text-color);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Hero Section */
+.hero {
+  background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
+  padding: 120px 0 80px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+  opacity: 0.3;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+}
+
+.hero h1 {
+  font-size: 48px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.hero p {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 600px;
+  margin: 0 auto 40px;
+}
+
+.heroStats {
+  display: flex;
+  justify-content: center;
+  gap: 60px;
+  margin-top: 40px;
+}
+
+.stat {
+  text-align: center;
+}
+
+.statValue {
+  display: block;
+  font-size: 32px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.statLabel {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Tabs Section */
+.tabsSection {
+  background: var(--background);
+  border-bottom: 1px solid var(--accent-color);
+  padding: 0;
+}
+
+.tabs {
+  display: flex;
+  gap: 0;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  padding: 20px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--foreground);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.tab:hover {
+  background: rgba(30, 58, 138, 0.05);
+  color: var(--accent-color);
+}
+
+.tab.active {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+  background: rgba(30, 58, 138, 0.05);
+}
+
+/* Section Headers */
+.sectionHeader {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.sectionHeader h2 {
+  font-size: 36px;
+  font-weight: 800;
+  margin-bottom: 16px;
+  color: var(--text-color);
+}
+
+.sectionHeader p {
+  font-size: 18px;
+  color: var(--foreground);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Vaults Section */
+.vaultsSection {
+  padding: 80px 0;
+  background: var(--background);
+}
+
+.vaultsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 30px;
+}
+
+.vaultCard {
+  background: var(--background);
+  border: 2px solid var(--accent-color);
+  border-radius: 20px;
+  padding: 32px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.vaultCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent-color), var(--secondary-accent));
+}
+
+.vaultCard:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 60px rgba(30, 58, 138, 0.2);
+  border-color: var(--secondary-accent);
+}
+
+.vaultCard.green::before {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.vaultCard.blue::before {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.vaultCard.purple::before {
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+}
+
+.vaultHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.vaultInfo h3 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-color);
+}
+
+.manager {
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.vaultApy {
+  text-align: right;
+}
+
+.apyValue {
+  display: block;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--secondary-accent);
+  line-height: 1;
+}
+
+.apyLabel {
+  font-size: 12px;
+  color: var(--foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vaultStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.vaultStats .stat {
+  text-align: center;
+  padding: 16px;
+  background: rgba(30, 58, 138, 0.05);
+  border-radius: 12px;
+}
+
+.vaultStats .statLabel {
+  display: block;
+  font-size: 12px;
+  color: var(--foreground);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vaultStats .statValue {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.riskBadge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.riskBadge.low {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.riskBadge.medium {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.riskBadge.high {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+}
+
+.performance {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.vaultDetails {
+  margin-bottom: 24px;
+}
+
+.strategy {
+  font-size: 14px;
+  color: var(--foreground);
+  margin-bottom: 8px;
+}
+
+.depositRange {
+  font-size: 12px;
+  color: var(--foreground);
+  opacity: 0.8;
+}
+
+.stakeButton {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
+  color: white;
+  border: none;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.stakeButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(30, 58, 138, 0.3);
+}
+
+/* Market Makers Section */
+.marketMakersSection {
+  padding: 80px 0;
+  background: var(--background);
+}
+
+.mmGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 30px;
+}
+
+.mmCard {
+  background: var(--background);
+  border: 2px solid var(--accent-color);
+  border-radius: 20px;
+  padding: 32px;
+  transition: all 0.3s ease;
+}
+
+.mmCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 40px rgba(30, 58, 138, 0.15);
+}
+
+.mmHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.mmInfo h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-color);
+}
+
+.verifiedBadge {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rating {
+  text-align: right;
+}
+
+.ratingValue {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.stars {
+  color: #fbbf24;
+  font-size: 14px;
+}
+
+.mmStats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.mmStats .stat {
+  padding: 12px;
+  background: rgba(30, 58, 138, 0.05);
+  border-radius: 8px;
+}
+
+.mmStats .statLabel {
+  display: block;
+  font-size: 12px;
+  color: var(--foreground);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mmStats .statValue {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.strategies h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-color);
+}
+
+.strategyTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.strategyTag {
+  background: rgba(30, 58, 138, 0.1);
+  color: var(--accent-color);
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.viewVaultsButton {
+  width: 100%;
+  background: transparent;
+  border: 2px solid var(--accent-color);
+  color: var(--accent-color);
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.viewVaultsButton:hover {
+  background: var(--accent-color);
+  color: white;
+}
+
+/* Create Vault Section */
+.createVaultSection {
+  padding: 80px 0;
+  background: var(--background);
+}
+
+.createVaultForm {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.formSection {
+  background: var(--background);
+  border: 2px solid var(--accent-color);
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 24px;
+}
+
+.formSection h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: var(--text-color);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.formGroup label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-color);
+}
+
+.formGroup input,
+.formGroup select {
+  padding: 12px 16px;
+  border: 2px solid var(--accent-color);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--text-color);
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.formGroup input:focus,
+.formGroup select:focus {
+  outline: none;
+  border-color: var(--secondary-accent);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.1);
+}
+
+.capitalInput {
+  text-align: center;
+}
+
+.capitalInput label {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text-color);
+}
+
+.inputGroup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.inputGroup input {
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  padding: 16px 24px;
+  border: 2px solid var(--accent-color);
+  border-radius: 12px;
+  background: var(--background);
+  color: var(--text-color);
+  max-width: 200px;
+}
+
+.currency {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent-color);
+}
+
+.helpText {
+  font-size: 14px;
+  color: var(--foreground);
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.terms {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-color);
+}
+
+.checkboxLabel input[type="checkbox"] {
+  margin: 0;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-color);
+}
+
+.createVaultButton {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
+  color: white;
+  border: none;
+  padding: 20px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 32px;
+}
+
+.createVaultButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(30, 58, 138, 0.3);
+}
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--background);
+  border-radius: 20px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--accent-color);
+}
+
+.modalHeader h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--foreground);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.closeButton:hover {
+  background: rgba(30, 58, 138, 0.1);
+  color: var(--accent-color);
+}
+
+.modalContent {
+  padding: 32px;
+}
+
+.vaultSummary {
+  background: rgba(30, 58, 138, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.summaryItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.summaryItem:last-child {
+  margin-bottom: 0;
+}
+
+.summaryItem span:first-child {
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.summaryItem span:last-child {
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.stakeForm {
+  margin-bottom: 24px;
+}
+
+.stakeForm label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-color);
+}
+
+.stakeForm .inputGroup {
+  margin-bottom: 16px;
+}
+
+.stakeForm .inputGroup input {
+  flex: 1;
+  padding: 16px;
+  border: 2px solid var(--accent-color);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--text-color);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.amountButtons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.amountButtons button {
+  background: transparent;
+  border: 1px solid var(--accent-color);
+  color: var(--accent-color);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.amountButtons button:hover {
+  background: var(--accent-color);
+  color: white;
+}
+
+.stakeSummary {
+  background: rgba(30, 58, 138, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.stakeSummary h4 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-color);
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.summaryRow:last-child {
+  margin-bottom: 0;
+}
+
+.summaryRow span:first-child {
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.summaryRow span:last-child {
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.confirmStakeButton {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
+  color: white;
+  border: none;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.confirmStakeButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(30, 58, 138, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hero h1 {
+    font-size: 36px;
+  }
+  
+  .hero p {
+    font-size: 18px;
+  }
+  
+  .heroStats {
+    flex-direction: column;
+    gap: 30px;
+  }
+  
+  .tabs {
+    flex-direction: column;
+  }
+  
+  .tab {
+    border-bottom: 1px solid var(--accent-color);
+    border-right: none;
+  }
+  
+  .vaultsGrid,
+  .mmGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .vaultStats,
+  .mmStats {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal {
+    margin: 20px;
+  }
+  
+  .modalContent {
+    padding: 20px;
+  }
+}

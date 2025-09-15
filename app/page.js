@@ -8,9 +8,18 @@ import styles from './styles/Home.module.css';
 
 export default function Home() {
   const canvasRef = useRef(null);
-  const [markets, setMarkets] = useState([]);
+  const [markets, setMarkets] = useState([
+    { title: 'Will Bitcoin reach $150,000 by end of 2025?', yesPrice: 0.25, noPrice: 0.75, source: 'Polymarket', url: 'https://polymarket.com/market/will-bitcoin-reach-150000-by-end-of-2025' },
+    { title: 'Will the S&P 500 close above 6,000 by end of 2025?', yesPrice: 0.40, noPrice: 0.60, source: 'Polymarket', url: 'https://polymarket.com/market/will-sp500-close-above-6000-by-end-of-2025' },
+    { title: 'Will there be a recession in 2025?', yesPrice: 0.30, noPrice: 0.70, source: 'Polymarket', url: 'https://polymarket.com/market/will-there-be-a-recession-in-2025' },
+    { title: 'Will the Fed cut rates by 100+ bps in 2025?', yesPrice: 0.55, noPrice: 0.45, source: 'Polymarket', url: 'https://polymarket.com/market/will-fed-cut-rates-by-100-bps-in-2025' },
+    { title: 'Will AI stocks outperform the market in 2025?', yesPrice: 0.60, noPrice: 0.40, source: 'Polymarket', url: 'https://polymarket.com/market/will-ai-stocks-outperform-market-2025' },
+    { title: 'Will Ethereum reach $10,000 by end of 2025?', yesPrice: 0.35, noPrice: 0.65, source: 'Polymarket', url: 'https://polymarket.com/market/will-ethereum-reach-10000-by-end-of-2025' },
+    { title: 'Will the US election be decided by less than 5% margin?', yesPrice: 0.45, noPrice: 0.55, source: 'Polymarket', url: 'https://polymarket.com/market/will-us-election-be-decided-by-less-than-5-percent-margin' },
+    { title: 'Will the housing market crash in 2025?', yesPrice: 0.20, noPrice: 0.80, source: 'Polymarket', url: 'https://polymarket.com/market/will-housing-market-crash-in-2025' }
+  ]);
   const [evaluationType, setEvaluationType] = useState('one-phase');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Fetch active markets from Polymarket and Kalshi
@@ -51,7 +60,6 @@ export default function Home() {
         const kalshiMarkets = []; // Empty array since Kalshi is commented out
 
         const combinedMarkets = [...polymarketMarkets, ...kalshiMarkets];
-        console.log('Combined markets:', combinedMarkets);
 
             setMarkets(combinedMarkets.length > 0 ? combinedMarkets : [
               { title: 'Will Bitcoin reach $150,000 by end of 2025?', yesPrice: 0.25, noPrice: 0.75, source: 'Polymarket', url: 'https://polymarket.com/market/will-bitcoin-reach-150000-by-end-of-2025' },
@@ -182,32 +190,13 @@ export default function Home() {
       <section className={styles.marketTicker}>
         <div className={styles.container}>
           <h2>Live Prediction Markets</h2>
-          {loading && <p>Loading markets...</p>}
+          {markets.length === 0 && <p>Loading markets...</p>}
           {error && <p>Error: {error}</p>}
           <div className={styles.marqueeContainer}>
             <div className={styles.marqueeContent}>
               {markets.map((market, index) => (
                 <a 
                   key={index} 
-                  href={market.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className={styles.tickerItem}
-                >
-                  <div>
-                    <h3>{market.title}</h3>
-                    <div className={styles.price}>
-                      Yes: ${(market.yesPrice || 0).toFixed(2)} | No: ${(market.noPrice || 0).toFixed(2)}
-                    </div>
-                  </div>
-                  <div className={styles.source}>{market.source}</div>
-                  {market.category && <div className={styles.category}>{market.category}</div>}
-                  {market.volume > 0 && <div className={styles.volume}>Vol: ${market.volume.toLocaleString()}</div>}
-                </a>
-              ))}
-              {markets.map((market, index) => (
-                <a 
-                  key={`duplicate-${index}`} 
                   href={market.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
@@ -265,7 +254,7 @@ export default function Home() {
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
               </svg>
               <h3>Funded Trading</h3>
-              <p>Trade Polymarket and Kalshi with up to $200k, keeping 80% of profits.</p>
+              <p>Trade Polymarket with up to $200k, keeping 80% of profits.</p>
             </div>
             <div className={styles.featureCard}>
               <svg viewBox="0 0 24 24" fill="#1E3A8A">
@@ -279,7 +268,7 @@ export default function Home() {
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
               </svg>
               <h3>Real-Time Integrations</h3>
-              <p>Growing Fast: Billions traded across Polymarket, Kalshi with advanced tools.</p>
+              <p>Growing Fast: Billions traded across Polymarket with advanced tools.</p>
             </div>
             <div className={styles.featureCard}>
               <svg viewBox="0 0 24 24" fill="#1E3A8A">
@@ -331,7 +320,6 @@ export default function Home() {
                 <div className={styles.planHeader}>
                   <h3>{plan.size}</h3>
                   <div className={styles.planPrice}>{plan.fee}</div>
-                  {index === 1 && <span className={styles.featuredBadge}>Most Popular</span>}
                 </div>
                 <div className={styles.planFeatures}>
                   <div className={styles.featureItem}>
@@ -369,7 +357,6 @@ export default function Home() {
           <div className={styles.trustLogos}>
             <Image src="https://polygon.technology/images/polygon-logo.svg" alt="Polygon" width={120} height={40} />
             <Image src="https://polymarket.com/images/logo.svg" alt="Polymarket" width={120} height={40} />
-            <Image src="https://kalshi.com/images/logo.svg" alt="Kalshi" width={120} height={40} />
             <Image src="https://privy.io/images/logo.svg" alt="Privy" width={120} height={40} />
           </div>
           <Link href="#waitlist">

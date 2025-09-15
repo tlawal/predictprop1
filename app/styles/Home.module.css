@@ -489,14 +489,14 @@
   .planHeader h3 {
     font-size: 28px;
     font-weight: 600;
-    color: #1A1A1A;
+    color: var(--text-color);
     margin-bottom: 16px;
   }
   
   .planPrice {
     font-size: 24px;
     font-weight: 800;
-    color: #2DD4BF;
+    color: var(--secondary-accent);
   }
   
   .featuredBadge {
@@ -523,16 +523,16 @@
     display: flex;
     justify-content: space-between;
     font-size: 18px;
-    color: #4B5563;
+    color: var(--foreground);
   }
   
   .featureLabel {
     font-weight: 600;
-    color: #1A1A1A;
+    color: var(--text-color);
   }
   
   .featureValue {
-    color: #2DD4BF;
+    color: var(--secondary-accent);
   }
   
   .planFooter {

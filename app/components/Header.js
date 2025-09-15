@@ -37,6 +37,7 @@ export default function Header() {
             <li><Link href="/">Home</Link></li>
             <li><Link href="/traders">Traders</Link></li>
             <li><Link href="/lps">LPs</Link></li>
+            <li><Link href="/leaderboard">Leaderboard</Link></li>
             <li><Link href="/refer">Refer & Earn</Link></li>
             <li><Link href="/markets">Markets</Link></li>
             <li>
