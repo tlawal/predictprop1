@@ -10,12 +10,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #475569 75%, #64748b 100%);
     text-align: center;
     padding: 80px 0;
+    overflow: hidden;
   }
   
-  .particles {
+  .heroBackground {
     position: absolute;
     top: 0;
     left: 0;
@@ -24,124 +25,378 @@
     z-index: 1;
   }
   
-  .heroContent {
-    position: relative;
+  .heroGradient {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at center, rgba(30, 58, 138, 0.3) 0%, rgba(45, 212, 191, 0.1) 50%, transparent 70%);
+    animation: gradientShift 8s ease-in-out infinite;
+  }
+  
+  .heroPattern {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+      radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+      radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 50px 50px, 80px 80px;
+    animation: patternFloat 20s linear infinite;
+  }
+  
+  .heroGlow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(45, 212, 191, 0.2) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    animation: glowPulse 4s ease-in-out infinite;
+    filter: blur(40px);
+  }
+  
+  .particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     z-index: 2;
   }
   
-  .heroContent h1 {
-    font-family: 'Inter', sans-serif;
-    font-size: 36px;
-    font-weight: 800;
-    color: var(--text-color);
-    margin-bottom: 20px;
+  .heroContent {
+    position: relative;
+    z-index: 3;
+    max-width: 1000px;
+    margin: 0 auto;
   }
   
-  .heroContent p {
+  .heroBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50px;
+    padding: 8px 20px;
+    margin-bottom: 32px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    animation: badgeFloat 3s ease-in-out infinite;
+  }
+  
+  .badgeIcon {
+    font-size: 16px;
+    animation: rocketBounce 2s ease-in-out infinite;
+  }
+  
+  .heroTitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 48px;
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .titleGradient {
+    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 50%, #e2e8f0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: titleGlow 3s ease-in-out infinite;
+  }
+  
+  .titleAccent {
+    background: linear-gradient(135deg, #2dd4bf 0%, #14b8a6 50%, #0d9488 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 0.9em;
+  }
+  
+  .heroSubtitle {
     font-size: 20px;
-    color: var(--foreground);
+    color: rgba(255, 255, 255, 0.8);
     max-width: 600px;
     margin: 0 auto 40px;
+    line-height: 1.6;
+  }
+  
+  .amountHighlight {
+    background: linear-gradient(135deg, #2dd4bf, #14b8a6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+    font-size: 1.1em;
+  }
+  
+  .heroStats {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 32px;
+    margin: 48px 0;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    animation: statsSlide 1s ease-out 0.5s both;
+  }
+  
+  .statItem {
+    text-align: center;
+  }
+  
+  .statNumber {
+    font-size: 24px;
+    font-weight: 800;
+    color: #2dd4bf;
+    margin-bottom: 4px;
+  }
+  
+  .statLabel {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .statDivider {
+    width: 1px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  .heroScroll {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+  }
+  
+  .scrollIndicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .scrollLine {
+    width: 2px;
+    height: 30px;
+    background: linear-gradient(to bottom, #2dd4bf, transparent);
+    animation: scrollLine 2s ease-in-out infinite;
   }
   
   .cta {
     display: flex;
     gap: 20px;
     justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 40px;
   }
   
   .ctaButton {
     font-family: 'Inter', sans-serif;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
-    padding: 12px 24px;
-    border-radius: 8px;
+    padding: 16px 32px;
+    border-radius: 12px;
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     border: none;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 180px;
+    justify-content: center;
+  }
+  
+  .ctaButton::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+  }
+  
+  .ctaButton:hover::before {
+    left: 100%;
+  }
+  
+  .buttonIcon {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s ease;
+  }
+  
+  .ctaButton:hover .buttonIcon {
+    transform: translateX(4px);
   }
   
   .ctaButton.primary {
-    background: var(--secondary-accent);
-    color: var(--background);
+    background: linear-gradient(135deg, #2dd4bf 0%, #14b8a6 50%, #0d9488 100%);
+    color: white;
+    box-shadow: 0 8px 32px rgba(45, 212, 191, 0.3);
   }
   
   .ctaButton.primary:hover {
-    background: var(--accent-color);
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(45, 212, 191, 0.4);
   }
   
   .ctaButton.secondary {
-    background: transparent;
-    border: 2px solid var(--secondary-accent);
-    color: var(--text-color);
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    backdrop-filter: blur(10px);
   }
   
   .ctaButton.secondary:hover {
-    background: var(--secondary-accent);
-    color: var(--background);
-    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(255, 255, 255, 0.1);
   }
   
   .ctaButton.tertiary {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--text-color);
-    backdrop-filter: blur(8px);
+    background: rgba(30, 58, 138, 0.2);
+    border: 2px solid rgba(30, 58, 138, 0.4);
+    color: white;
+    backdrop-filter: blur(10px);
   }
   
   .ctaButton.tertiary:hover {
-    background: var(--secondary-accent);
+    background: rgba(30, 58, 138, 0.3);
+    border-color: rgba(30, 58, 138, 0.6);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(30, 58, 138, 0.2);
     color: var(--background);
     transform: scale(1.05);
   }
   
   .marketTicker {
-    padding: 100px 0;
-    background: var(--background);
+    padding: 80px 0;
+    background: linear-gradient(135deg, var(--background) 0%, rgba(30, 58, 138, 0.02) 100%);
     position: relative;
-    border-top: 1px solid var(--accent-color);
-    border-bottom: 1px solid var(--accent-color);
+    overflow: hidden;
   }
   
-  .marketTicker::before {
-    content: '';
+  .tickerBackground {
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+    width: 100%;
+    height: 100%;
+    z-index: 1;
   }
   
-  .marketTicker::after {
-    content: '';
+  .tickerPattern {
     position: absolute;
-    bottom: 0;
+    top: 0;
     left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+    width: 100%;
+    height: 100%;
+    background-image: 
+      linear-gradient(45deg, rgba(45, 212, 191, 0.03) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(30, 58, 138, 0.03) 25%, transparent 25%);
+    background-size: 40px 40px;
+    animation: tickerPatternMove 30s linear infinite;
   }
   
-  .marketTicker h2 {
+  .tickerHeader {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  
+  .tickerTitle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .titleIcon {
+    font-size: 32px;
+    animation: iconPulse 2s ease-in-out infinite;
+  }
+  
+  .tickerTitle h2 {
     font-family: 'Inter', sans-serif;
     font-size: 42px;
     font-weight: 800;
     color: var(--text-color);
-    text-align: center;
-    margin-bottom: 20px;
     letter-spacing: -0.025em;
+    margin: 0;
   }
   
-  .marketTicker p {
-    text-align: center;
+  .liveIndicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #ef4444;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .liveDot {
+    width: 8px;
+    height: 8px;
+    background: #ef4444;
+    border-radius: 50%;
+    animation: livePulse 1.5s ease-in-out infinite;
+  }
+  
+  .tickerSubtitle {
     color: var(--foreground);
     font-size: 18px;
-    margin-bottom: 50px;
     font-weight: 400;
+    margin: 0;
+    opacity: 0.8;
+  }
+  
+  .loadingMessage,
+  .errorMessage {
+    text-align: center;
+    color: var(--foreground);
+    font-size: 16px;
+    margin: 40px 0;
+  }
+  
+  .errorMessage {
+    color: #ef4444;
   }
   
   .marqueeContainer {
@@ -192,11 +447,11 @@
   }
   
   .tickerItem {
-    background: var(--background);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--accent-color);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
-    padding: 20px 28px;
+    padding: 16px 24px;
     display: inline-flex;
     align-items: center;
     gap: 20px;
@@ -208,43 +463,179 @@
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     text-decoration: none;
     position: relative;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
   }
   
   .tickerItem::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
-    border-radius: 16px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(45, 212, 191, 0.1), transparent);
+    transition: left 0.6s ease;
   }
   
   .tickerItem:hover::before {
-    opacity: 1;
+    left: 100%;
   }
   
   .tickerItem:hover {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.85) 100%);
-    transform: translateY(-6px) scale(1.03);
-    box-shadow: 0 20px 60px rgba(59, 130, 246, 0.4);
-    border-color: rgba(59, 130, 246, 0.6);
-    color: #f1f5f9;
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 60px rgba(45, 212, 191, 0.3);
+    border-color: rgba(45, 212, 191, 0.4);
+    color: var(--text-color);
     text-decoration: none;
   }
   
-  .tickerItem h3 {
+  .marketContent {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    position: relative;
+    z-index: 2;
+  }
+  
+  .marketHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .marketTitle {
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 700;
     margin: 0;
     line-height: 1.4;
     color: var(--text-color);
+    flex: 1;
+  }
+  
+  .marketSource {
+    display: flex;
+    align-items: center;
+  }
+  
+  .sourceBadge {
+    background: linear-gradient(135deg, #2dd4bf, #14b8a6);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .marketData {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .priceContainer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .priceItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  
+  .priceLabel {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .priceValue {
+    font-size: 16px;
+    font-weight: 800;
+    font-family: 'Courier New', monospace;
+  }
+  
+  .priceValue.yes {
+    color: #10b981;
+  }
+  
+  .priceValue.no {
+    color: #ef4444;
+  }
+  
+  .priceDivider {
+    width: 1px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  .marketMeta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  
+  .categoryTag,
+  .volumeTag {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .categoryTag {
+    background: rgba(30, 58, 138, 0.2);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+  
+  .volumeTag {
+    background: rgba(45, 212, 191, 0.2);
+    color: #2dd4bf;
+    border: 1px solid rgba(45, 212, 191, 0.3);
+  }
+  
+  .tickerArrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transition: all 0.3s ease;
     position: relative;
-    z-index: 1;
+    z-index: 2;
+  }
+  
+  .tickerArrow svg {
+    width: 16px;
+    height: 16px;
+    fill: var(--foreground);
+    transition: all 0.3s ease;
+  }
+  
+  .tickerItem:hover .tickerArrow {
+    background: rgba(45, 212, 191, 0.2);
+    transform: translateX(4px);
+  }
+  
+  .tickerItem:hover .tickerArrow svg {
+    fill: #2dd4bf;
+    transform: translateX(2px);
   }
   
   .tickerItem .price {
@@ -655,5 +1046,180 @@
   
     .marqueeContent {
       animation-duration: 40s;
+    }
+  }
+
+  /* Award-Winning Animations */
+  @keyframes gradientShift {
+    0%, 100% {
+      background: radial-gradient(ellipse at center, rgba(30, 58, 138, 0.3) 0%, rgba(45, 212, 191, 0.1) 50%, transparent 70%);
+    }
+    50% {
+      background: radial-gradient(ellipse at center, rgba(45, 212, 191, 0.2) 0%, rgba(30, 58, 138, 0.2) 50%, transparent 70%);
+    }
+  }
+
+  @keyframes patternFloat {
+    0% {
+      transform: translate(0, 0);
+    }
+    25% {
+      transform: translate(-10px, -10px);
+    }
+    50% {
+      transform: translate(10px, -5px);
+    }
+    75% {
+      transform: translate(-5px, 10px);
+    }
+    100% {
+      transform: translate(0, 0);
+    }
+  }
+
+  @keyframes glowPulse {
+    0%, 100% {
+      opacity: 0.3;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: translate(-50%, -50%) scale(1.1);
+    }
+  }
+
+  @keyframes badgeFloat {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+
+  @keyframes rocketBounce {
+    0%, 100% {
+      transform: translateY(0) rotate(0deg);
+    }
+    25% {
+      transform: translateY(-3px) rotate(-5deg);
+    }
+    75% {
+      transform: translateY(3px) rotate(5deg);
+    }
+  }
+
+  @keyframes titleGlow {
+    0%, 100% {
+      filter: brightness(1);
+    }
+    50% {
+      filter: brightness(1.1);
+    }
+  }
+
+  @keyframes statsSlide {
+    0% {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scrollLine {
+    0% {
+      height: 0;
+      opacity: 0;
+    }
+    50% {
+      height: 30px;
+      opacity: 1;
+    }
+    100% {
+      height: 0;
+      opacity: 0;
+    }
+  }
+
+  @keyframes tickerPatternMove {
+    0% {
+      transform: translate(0, 0);
+    }
+    100% {
+      transform: translate(40px, 40px);
+    }
+  }
+
+  @keyframes iconPulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+
+  @keyframes livePulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.2);
+    }
+  }
+
+  /* Enhanced Responsive Design */
+  @media (max-width: 768px) {
+    .heroTitle {
+      font-size: 36px;
+    }
+    
+    .heroStats {
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .statDivider {
+      width: 40px;
+      height: 1px;
+    }
+    
+    .cta {
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .ctaButton {
+      width: 100%;
+      max-width: 280px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .heroTitle {
+      font-size: 28px;
+    }
+    
+    .heroSubtitle {
+      font-size: 18px;
+    }
+    
+    .heroStats {
+      padding: 16px;
+      gap: 12px;
+    }
+    
+    .statNumber {
+      font-size: 20px;
+    }
+    
+    .heroBadge {
+      font-size: 12px;
+      padding: 6px 16px;
     }
   }

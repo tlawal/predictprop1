@@ -171,27 +171,76 @@ export default function Home() {
     <>
       <section className={styles.hero} id="home">
         <canvas ref={canvasRef} className={styles.particles}></canvas>
+        <div className={styles.heroBackground}>
+          <div className={styles.heroGradient}></div>
+          <div className={styles.heroPattern}></div>
+          <div className={styles.heroGlow}></div>
+        </div>
         <div className={`${styles.heroContent} ${styles.container}`}>
-          <h1>Trade Prediction Markets with Funded Capital</h1>
-          <p>Trade politics, sports, economics & more — get funded up to $200,000.</p>
+          <div className={styles.heroBadge}>
+            <span className={styles.badgeIcon}>🚀</span>
+            <span>Live Beta launch</span>
+          </div>
+          <h1 className={styles.heroTitle}>
+            <span className={styles.titleGradient}>Trade Prediction Markets</span>
+            <span className={styles.titleAccent}>with Funded Capital</span>
+          </h1>
+          <p className={styles.heroSubtitle}>
+            Trade politics, sports, economics & more — get funded up to 
+            <span className={styles.amountHighlight}> $100,000</span>.
+          </p>
           <div className={styles.cta}>
             <Link href="/traders">
-              <button className={`${styles.ctaButton} ${styles.primary}`}>Start Challenge</button>
+              <button className={`${styles.ctaButton} ${styles.primary}`}>
+                <span>Start Challenge</span>
+                <svg className={styles.buttonIcon} viewBox="0 0 24 24">
+                  <path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/>
+                </svg>
+              </button>
             </Link>
             <Link href="#how-it-works">
-              <button className={`${styles.ctaButton} ${styles.secondary}`}>Learn How It Works</button>
+              <button className={`${styles.ctaButton} ${styles.secondary}`}>
+                <span>Learn How It Works</span>
+                <svg className={styles.buttonIcon} viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                </svg>
+              </button>
             </Link>
             <Link href="/lps">
-              <button className={`${styles.ctaButton} ${styles.tertiary}`}>Stake USDC</button>
+              <button className={`${styles.ctaButton} ${styles.tertiary}`}>
+                <span>Stake USDC</span>
+                <svg className={styles.buttonIcon} viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </button>
             </Link>
+          </div>
+          <div className={styles.heroScroll}>
+            <div className={styles.scrollIndicator}>
+              <div className={styles.scrollLine}></div>
+              <span>Scroll to explore</span>
+            </div>
           </div>
         </div>
       </section>
       <section className={styles.marketTicker}>
+        <div className={styles.tickerBackground}>
+          <div className={styles.tickerPattern}></div>
+        </div>
         <div className={styles.container}>
-          <h2>Live Prediction Markets</h2>
-          {markets.length === 0 && <p>Loading markets...</p>}
-          {error && <p>Error: {error}</p>}
+          <div className={styles.tickerHeader}>
+            <div className={styles.tickerTitle}>
+              <div className={styles.titleIcon}>📊</div>
+              <h2>Live Prediction Markets</h2>
+              <div className={styles.liveIndicator}>
+                <div className={styles.liveDot}></div>
+                <span>LIVE</span>
+              </div>
+            </div>
+            <p className={styles.tickerSubtitle}>Real-time market data from leading prediction platforms</p>
+          </div>
+          {markets.length === 0 && <p className={styles.loadingMessage}>Loading markets...</p>}
+          {error && <p className={styles.errorMessage}>Error: {error}</p>}
           <div className={styles.marqueeContainer}>
             <div className={styles.marqueeContent}>
               {markets.map((market, index) => (
@@ -202,15 +251,40 @@ export default function Home() {
                   rel="noopener noreferrer"
                   className={styles.tickerItem}
                 >
-                  <div>
-                    <h3>{market.title}</h3>
-                    <div className={styles.price}>
-                      Yes: ${(market.yesPrice || 0).toFixed(2)} | No: ${(market.noPrice || 0).toFixed(2)}
+                  <div className={styles.marketContent}>
+                    <div className={styles.marketHeader}>
+                      <h3 className={styles.marketTitle}>{market.title}</h3>
+                      <div className={styles.marketSource}>
+                        <span className={styles.sourceBadge}>{market.source}</span>
+                      </div>
+                    </div>
+                    <div className={styles.marketData}>
+                      <div className={styles.priceContainer}>
+                        <div className={styles.priceItem}>
+                          <span className={styles.priceLabel}>Yes</span>
+                          <span className={`${styles.priceValue} ${styles.yes}`}>${(market.yesPrice || 0).toFixed(2)}</span>
+                        </div>
+                        <div className={styles.priceDivider}></div>
+                        <div className={styles.priceItem}>
+                          <span className={styles.priceLabel}>No</span>
+                          <span className={`${styles.priceValue} ${styles.no}`}>${(market.noPrice || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+                      <div className={styles.marketMeta}>
+                        {market.category && (
+                          <div className={styles.categoryTag}>{market.category}</div>
+                        )}
+                        {market.volume > 0 && (
+                          <div className={styles.volumeTag}>Vol: ${market.volume.toLocaleString()}</div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className={styles.source}>{market.source}</div>
-                  {market.category && <div className={styles.category}>{market.category}</div>}
-                  {market.volume > 0 && <div className={styles.volume}>Vol: ${market.volume.toLocaleString()}</div>}
+                  <div className={styles.tickerArrow}>
+                    <svg viewBox="0 0 24 24">
+                      <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+                    </svg>
+                  </div>
                 </a>
               ))}
             </div>
@@ -254,7 +328,7 @@ export default function Home() {
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
               </svg>
               <h3>Funded Trading</h3>
-              <p>Trade Polymarket with up to $200k, keeping 80% of profits.</p>
+              <p>Trade Polymarket with up to $100k, keeping 80% of profits.</p>
             </div>
             <div className={styles.featureCard}>
               <svg viewBox="0 0 24 24" fill="#1E3A8A">
@@ -281,11 +355,18 @@ export default function Home() {
               <svg viewBox="0 0 24 24" fill="#2DD4BF">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
               </svg>
+              <h3>Instant Payouts</h3>
+              <p>Get paid immediately when you win trades.</p>
+            </div>
+            <div className={styles.featureCard}>
+              <svg viewBox="0 0 24 24" fill="#1E3A8A">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+              </svg>
               <h3>New Asset Class</h3>
               <p>Trade politics, sports, macro events.</p>
             </div>
             <div className={styles.featureCard}>
-              <svg viewBox="0 0 24 24" fill="#1E3A8A">
+              <svg viewBox="0 0 24 24" fill="#2DD4BF">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
               </svg>
               <h3>Non-Correlated</h3>
