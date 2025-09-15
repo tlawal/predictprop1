@@ -10,7 +10,7 @@ export default function Footer() {
           <Link href="/docs">Docs</Link>
           <Link href="/blog">Blog</Link>
           <Link href="/discord">Discord</Link>
-          <Link href="/twitter">Twitter</Link>
+          <Link href="https://x.com/PredictProp" target="_blank" rel="noopener noreferrer">Twitter</Link>
         </div>
         <div className={styles.security}>
           Join our community for 2025 launch updates
