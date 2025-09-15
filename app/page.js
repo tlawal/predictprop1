@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import axios from 'axios';
 import styles from './styles/Home.module.css';
 
@@ -366,10 +367,10 @@ export default function Home() {
           <h2>Built on Trusted Platforms</h2>
           <p>Secure, transparent, and powered by leading blockchain and prediction market tech.</p>
           <div className={styles.trustLogos}>
-            <img src="https://polygon.technology/images/polygon-logo.svg" alt="Polygon" />
-            <img src="https://polymarket.com/images/logo.svg" alt="Polymarket" />
-            <img src="https://kalshi.com/images/logo.svg" alt="Kalshi" />
-            <img src="https://privy.io/images/logo.svg" alt="Privy" />
+            <Image src="https://polygon.technology/images/polygon-logo.svg" alt="Polygon" width={120} height={40} />
+            <Image src="https://polymarket.com/images/logo.svg" alt="Polymarket" width={120} height={40} />
+            <Image src="https://kalshi.com/images/logo.svg" alt="Kalshi" width={120} height={40} />
+            <Image src="https://privy.io/images/logo.svg" alt="Privy" width={120} height={40} />
           </div>
           <Link href="#waitlist">
             <button className={`${styles.ctaButton} ${styles.secondary}`}>Join the 2025 Waitlist</button>

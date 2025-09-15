@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import styles from '../styles/Traders.module.css';
 
 export default function Traders() {
@@ -7,7 +8,7 @@ export default function Traders() {
         <h1>Traders</h1>
         <p>Prove your trading skills and get funded up to $200,000. Choose a challenge plan and start trading on Polymarket and Kalshi.</p>
         <div className={styles.cta}>
-          <a href="/#challenge-plans" className={`${styles.ctaButton} ${styles.primary}`}>Choose a Plan</a>
+          <Link href="/#challenge-plans" className={`${styles.ctaButton} ${styles.primary}`}>Choose a Plan</Link>
         </div>
       </div>
     </section>
