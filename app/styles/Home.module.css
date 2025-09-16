@@ -419,7 +419,7 @@
     width: 80px;
     height: 100%;
     background: linear-gradient(90deg, rgba(15, 23, 42, 0.95), transparent);
-    z-index: 2;
+    z-index: 1;
     pointer-events: none;
   }
   
@@ -431,7 +431,7 @@
     width: 80px;
     height: 100%;
     background: linear-gradient(270deg, rgba(15, 23, 42, 0.95), transparent);
-    z-index: 2;
+    z-index: 1;
     pointer-events: none;
   }
   
@@ -442,8 +442,12 @@
     align-items: center;
   }
   
-  .marqueeContent:hover {
-    animation-play-state: paused;
+  .marqueeContent.paused {
+    animation-play-state: paused !important;
+  }
+  
+  .marqueeContainer:hover .marqueeContent {
+    animation-play-state: paused !important;
   }
   
   .tickerItem {
@@ -465,6 +469,8 @@
     position: relative;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     overflow: hidden;
+    z-index: 10;
+    pointer-events: auto;
   }
   
   .tickerItem::before {

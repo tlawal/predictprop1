@@ -8,84 +8,118 @@ import styles from './styles/Home.module.css';
 
 export default function Home() {
   const canvasRef = useRef(null);
+  const marqueeRef = useRef(null);
   const [markets, setMarkets] = useState([
-    { title: 'Will Bitcoin reach $150,000 by end of 2025?', yesPrice: 0.25, noPrice: 0.75, source: 'Polymarket', url: 'https://polymarket.com/market/will-bitcoin-reach-150000-by-end-of-2025' },
-    { title: 'Will the S&P 500 close above 6,000 by end of 2025?', yesPrice: 0.40, noPrice: 0.60, source: 'Polymarket', url: 'https://polymarket.com/market/will-sp500-close-above-6000-by-end-of-2025' },
-    { title: 'Will there be a recession in 2025?', yesPrice: 0.30, noPrice: 0.70, source: 'Polymarket', url: 'https://polymarket.com/market/will-there-be-a-recession-in-2025' },
-    { title: 'Will the Fed cut rates by 100+ bps in 2025?', yesPrice: 0.55, noPrice: 0.45, source: 'Polymarket', url: 'https://polymarket.com/market/will-fed-cut-rates-by-100-bps-in-2025' },
-    { title: 'Will AI stocks outperform the market in 2025?', yesPrice: 0.60, noPrice: 0.40, source: 'Polymarket', url: 'https://polymarket.com/market/will-ai-stocks-outperform-market-2025' },
-    { title: 'Will Ethereum reach $10,000 by end of 2025?', yesPrice: 0.35, noPrice: 0.65, source: 'Polymarket', url: 'https://polymarket.com/market/will-ethereum-reach-10000-by-end-of-2025' },
-    { title: 'Will the US election be decided by less than 5% margin?', yesPrice: 0.45, noPrice: 0.55, source: 'Polymarket', url: 'https://polymarket.com/market/will-us-election-be-decided-by-less-than-5-percent-margin' },
-    { title: 'Will the housing market crash in 2025?', yesPrice: 0.20, noPrice: 0.80, source: 'Polymarket', url: 'https://polymarket.com/market/will-housing-market-crash-in-2025' }
+    { title: 'Will Bitcoin reach $150,000 by end of 2025?', yesPrice: 0.25, noPrice: 0.75, source: 'Polymarket', url: 'https://polymarket.com' },
+    { title: 'Will the S&P 500 close above 6,000 by end of 2025?', yesPrice: 0.40, noPrice: 0.60, source: 'Polymarket', url: 'https://polymarket.com' },
+    { title: 'Will there be a recession in 2025?', yesPrice: 0.30, noPrice: 0.70, source: 'Polymarket', url: 'https://polymarket.com' },
+    { title: 'Will the Fed cut rates by 100+ bps in 2025?', yesPrice: 0.55, noPrice: 0.45, source: 'Polymarket', url: 'https://polymarket.com' },
+    { title: 'Will AI stocks outperform the market in 2025?', yesPrice: 0.60, noPrice: 0.40, source: 'Polymarket', url: 'https://polymarket.com' },
+    { title: 'Will Ethereum reach $10,000 by end of 2025?', yesPrice: 0.35, noPrice: 0.65, source: 'Polymarket', url: 'https://polymarket.com' },
+    { title: 'Will the US election be decided by less than 5% margin?', yesPrice: 0.45, noPrice: 0.55, source: 'Polymarket', url: 'https://polymarket.com' },
+    { title: 'Will the housing market crash in 2025?', yesPrice: 0.20, noPrice: 0.80, source: 'Polymarket', url: 'https://polymarket.com' }
   ]);
   const [evaluationType, setEvaluationType] = useState('one-phase');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch active markets from Polymarket and Kalshi
+  // Fetch active markets from Polymarket API
   useEffect(() => {
     const fetchMarkets = async () => {
       try {
         setLoading(true);
         setError(null);
-        // Polymarket API
-        const polymarketResponse = await axios.get('/api/polymarket', { timeout: 10000 });
-        console.log('Polymarket response:', polymarketResponse.data);
+        
+        // Fetch from our internal API route (which proxies to Polymarket)
+        const polymarketResponse = await axios.get('/api/polymarket', {
+          timeout: 5000 // Reduced timeout to match API route
+        });
+        
+        console.log('Polymarket API response:', polymarketResponse.data);
+        
         const polymarketMarkets = Array.isArray(polymarketResponse.data)
-          ? polymarketResponse.data.slice(0, 10).map(market => ({
-              title: market.question || market.name || 'Untitled Market',
-              yesPrice: market.outcomes?.[0]?.price || 0,
-              noPrice: market.outcomes?.[1]?.price || 0,
-              source: 'Polymarket',
-              url: market.url,
-              category: market.category || 'General',
-              volume: market.volume || 0,
-              createdAt: market.createdAt,
-              endDate: market.end_date_iso
-            }))
+          ? polymarketResponse.data.slice(0, 10).map(market => {
+              // Extract prices from outcomes array
+              let yesPrice = 0.5;
+              let noPrice = 0.5;
+              
+              if (market.outcomes && Array.isArray(market.outcomes) && market.outcomes.length >= 2) {
+                yesPrice = market.outcomes[0].price || 0.5;
+                noPrice = market.outcomes[1].price || 0.5;
+              }
+              
+              return {
+                title: market.question || market.name || 'Untitled Market',
+                yesPrice: yesPrice,
+                noPrice: noPrice,
+                source: 'Polymarket',
+                url: market.url,
+                category: market.category || 'General',
+                volume: market.volume || 0,
+                liquidity: market.liquidity || 0,
+                endDate: market.end_date_iso,
+                active: market.active
+              };
+            })
           : [];
 
-        // Kalshi API - Commented out due to timeout issues
-        // const kalshiResponse = await axios.get('/api/kalshi', { timeout: 10000 });
-        // console.log('Kalshi response:', kalshiResponse.data);
-        // const kalshiMarkets = Array.isArray(kalshiResponse.data.markets)
-        //   ? kalshiResponse.data.markets.map(market => ({
-        //       title: market.title || 'Untitled Market',
-        //       yesPrice: (market.yes_ask || 0) / 100,
-        //       noPrice: (market.no_ask || 0) / 100,
-        //       source: 'Kalshi',
-        //       url: market.url
-        //     }))
-        //   : [];
-        const kalshiMarkets = []; // Empty array since Kalshi is commented out
-
-        const combinedMarkets = [...polymarketMarkets, ...kalshiMarkets];
-
-            setMarkets(combinedMarkets.length > 0 ? combinedMarkets : [
-              { title: 'Will Bitcoin reach $150,000 by end of 2025?', yesPrice: 0.25, noPrice: 0.75, source: 'Polymarket', url: 'https://polymarket.com/market/will-bitcoin-reach-150000-by-end-of-2025' },
-              { title: 'Will the S&P 500 close above 6,000 by end of 2025?', yesPrice: 0.40, noPrice: 0.60, source: 'Polymarket', url: 'https://polymarket.com/market/will-sp500-close-above-6000-by-end-of-2025' },
-              { title: 'Will there be a recession in 2025?', yesPrice: 0.30, noPrice: 0.70, source: 'Polymarket', url: 'https://polymarket.com/market/will-there-be-a-recession-in-2025' },
-              { title: 'Will the Fed cut rates by 100+ bps in 2025?', yesPrice: 0.55, noPrice: 0.45, source: 'Polymarket', url: 'https://polymarket.com/market/will-fed-cut-rates-by-100-bps-in-2025' },
-              { title: 'Will AI stocks outperform the market in 2025?', yesPrice: 0.60, noPrice: 0.40, source: 'Polymarket', url: 'https://polymarket.com/market/will-ai-stocks-outperform-market-2025' },
-              { title: 'Will Ethereum reach $10,000 by end of 2025?', yesPrice: 0.35, noPrice: 0.65, source: 'Polymarket', url: 'https://polymarket.com/market/will-ethereum-reach-10000-by-end-of-2025' },
-              { title: 'Will the US election be decided by less than 5% margin?', yesPrice: 0.45, noPrice: 0.55, source: 'Polymarket', url: 'https://polymarket.com/market/will-us-election-be-decided-by-less-than-5-percent-margin' },
-              { title: 'Will the housing market crash in 2025?', yesPrice: 0.20, noPrice: 0.80, source: 'Polymarket', url: 'https://polymarket.com/market/will-housing-market-crash-in-2025' }
-            ]);
+        setMarkets(polymarketMarkets.length > 0 ? polymarketMarkets : [
+          { title: 'Will Bitcoin reach $150,000 by end of 2025?', yesPrice: 0.25, noPrice: 0.75, source: 'Polymarket', url: 'https://polymarket.com' },
+          { title: 'Will the S&P 500 close above 6,000 by end of 2025?', yesPrice: 0.40, noPrice: 0.60, source: 'Polymarket', url: 'https://polymarket.com' },
+          { title: 'Will there be a recession in 2025?', yesPrice: 0.30, noPrice: 0.70, source: 'Polymarket', url: 'https://polymarket.com' },
+          { title: 'Will the Fed cut rates by 100+ bps in 2025?', yesPrice: 0.55, noPrice: 0.45, source: 'Polymarket', url: 'https://polymarket.com' },
+          { title: 'Will AI stocks outperform the market in 2025?', yesPrice: 0.60, noPrice: 0.40, source: 'Polymarket', url: 'https://polymarket.com' },
+          { title: 'Will Ethereum reach $10,000 by end of 2025?', yesPrice: 0.35, noPrice: 0.65, source: 'Polymarket', url: 'https://polymarket.com' },
+          { title: 'Will the US election be decided by less than 5% margin?', yesPrice: 0.45, noPrice: 0.55, source: 'Polymarket', url: 'https://polymarket.com' },
+          { title: 'Will the housing market crash in 2025?', yesPrice: 0.20, noPrice: 0.80, source: 'Polymarket', url: 'https://polymarket.com' }
+        ]);
+        
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching markets:', error);
+        console.error('Error fetching markets from Polymarket API:', error);
         console.error('Error details:', error.message, error.response?.data);
         setError(error.message);
         setMarkets([
-          { title: 'Will Bitcoin reach $150,000 by end of 2025?', yesPrice: 0.25, noPrice: 0.75, source: 'Polymarket', url: 'https://polymarket.com/market/will-bitcoin-reach-150000-by-end-of-2025' },
-          { title: 'Will the S&P 500 close above 6,000 by end of 2025?', yesPrice: 0.40, noPrice: 0.60, source: 'Polymarket', url: 'https://polymarket.com/market/will-sp500-close-above-6000-by-end-of-2025' },
-          { title: 'Will there be a recession in 2025?', yesPrice: 0.30, noPrice: 0.70, source: 'Polymarket', url: 'https://polymarket.com/market/will-there-be-a-recession-in-2025' }
+          { title: 'Will Bitcoin reach $150,000 by end of 2025?', yesPrice: 0.25, noPrice: 0.75, source: 'Polymarket', url: 'https://polymarket.com' },
+          { title: 'Will the S&P 500 close above 6,000 by end of 2025?', yesPrice: 0.40, noPrice: 0.60, source: 'Polymarket', url: 'https://polymarket.com' },
+          { title: 'Will there be a recession in 2025?', yesPrice: 0.30, noPrice: 0.70, source: 'Polymarket', url: 'https://polymarket.com' }
         ]);
         setLoading(false);
       }
     };
 
     fetchMarkets();
+  }, []);
+
+  // Add hover pause functionality for marquee
+  useEffect(() => {
+    const marqueeElement = marqueeRef.current;
+    const containerElement = marqueeElement?.parentElement;
+    
+    if (!marqueeElement || !containerElement) return;
+
+    const handleMouseEnter = () => {
+      console.log('Mouse entered ticker - pausing animation');
+      marqueeElement.style.animationPlayState = 'paused';
+    };
+
+    const handleMouseLeave = () => {
+      console.log('Mouse left ticker - resuming animation');
+      marqueeElement.style.animationPlayState = 'running';
+    };
+
+    // Add listeners to both the container and the marquee content
+    containerElement.addEventListener('mouseenter', handleMouseEnter);
+    containerElement.addEventListener('mouseleave', handleMouseLeave);
+    marqueeElement.addEventListener('mouseenter', handleMouseEnter);
+    marqueeElement.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      containerElement.removeEventListener('mouseenter', handleMouseEnter);
+      containerElement.removeEventListener('mouseleave', handleMouseLeave);
+      marqueeElement.removeEventListener('mouseenter', handleMouseEnter);
+      marqueeElement.removeEventListener('mouseleave', handleMouseLeave);
+    };
   }, []);
 
   // Particle animation
@@ -240,8 +274,15 @@ export default function Home() {
           </div>
           {markets.length === 0 && <p className={styles.loadingMessage}>Loading markets...</p>}
           {error && <p className={styles.errorMessage}>Error: {error}</p>}
-          <div className={styles.marqueeContainer}>
-            <div className={styles.marqueeContent}>
+          
+          <div className={styles.marqueeContainer} 
+               onMouseEnter={() => console.log('Container mouse enter')}
+               onMouseLeave={() => console.log('Container mouse leave')}
+               style={{ position: 'relative', zIndex: 100 }}>
+            <div ref={marqueeRef} className={styles.marqueeContent}
+                 onMouseEnter={() => console.log('Marquee mouse enter')}
+                 onMouseLeave={() => console.log('Marquee mouse leave')}
+                 style={{ position: 'relative', zIndex: 101 }}>
               {markets.map((market, index) => (
                 <a 
                   key={index} 
@@ -249,6 +290,12 @@ export default function Home() {
                   target="_blank" 
                   rel="noopener noreferrer"
                   className={styles.tickerItem}
+                  style={{ position: 'relative', zIndex: 102 }}
+                  onClick={(e) => {
+                    console.log('Market clicked:', market.title, market.url);
+                    e.preventDefault();
+                    window.open(market.url, '_blank');
+                  }}
                 >
                   <div className={styles.marketContent}>
                     <div className={styles.marketHeader}>
