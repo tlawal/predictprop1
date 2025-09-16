@@ -387,7 +387,7 @@ export default function Home() {
                     <div className={styles.stepGlow}></div>
                   </div>
                   <h3>Get Funded</h3>
-                  <p>Pass the rules and start trading with PredictProp's capital up to $100,000.</p>
+                  <p>Pass the rules and start trading with PredictProp&apos;s capital up to $100,000.</p>
                   <div className={styles.stepMeta}>
                     <span className={styles.stepDuration}>Instant</span>
                     <span className={styles.stepDifficulty}>Automatic</span>
