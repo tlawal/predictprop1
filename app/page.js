@@ -338,78 +338,216 @@ export default function Home() {
         </div>
       </section>
       <section className={styles.howItWorks} id="how-it-works">
+        <div className={styles.howItWorksBackground}>
+          <div className={styles.howItWorksGradient}></div>
+          <div className={styles.howItWorksPattern}></div>
+          <div className={styles.howItWorksGlow}></div>
+        </div>
         <div className={styles.container}>
-          <h2>How It Works (3 Steps)</h2>
-          <div className={styles.howSteps}>
-            <div className={styles.step}>
-              <svg viewBox="0 0 24 24" fill="#2DD4BF">
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-              </svg>
-              <h3>Take the Challenge</h3>
-              <p>Prove your edge in a demo account with live market data.</p>
-            </div>
-            <div className={styles.step}>
-              <svg viewBox="0 0 24 24" fill="#1E3A8A">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-              </svg>
-              <h3>Get Funded</h3>
-              <p>Pass the rules, trade with PredictProp’s capital.</p>
-            </div>
-            <div className={styles.step}>
-              <svg viewBox="0 0 24 24" fill="#2DD4BF">
-                <path d="M11 4v2H8v14h8v-6h2v8H6V4h5zm7 2.3l-8-8L9.4.9l8 8 .6-.6zm-2-2l-1.4-1.4 4.3-4.3 1.4 1.4L16 4.3z"/>
-              </svg>
-              <h3>Earn Payouts</h3>
-              <p>Keep up to 90% of profits, paid within 24 hours.</p>
+          <div className={styles.howItWorksHeader}>
+            <h2 className={styles.howItWorksTitle}>
+              <span className={styles.titleGradient}>How It Works</span>
+            </h2>
+          </div>
+          
+          <div className={styles.timelineContainer}>
+            <div className={styles.timelineLine}></div>
+            <div className={styles.timelineSteps}>
+              <div className={`${styles.timelineStep} ${styles.stepActive}`}>
+                <div className={styles.stepNumber}>
+                  <span>01</span>
+                  <div className={styles.stepProgress}></div>
+                </div>
+                <div className={styles.stepContent}>
+                  <div className={styles.stepIcon}>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                    <div className={styles.stepGlow}></div>
+                  </div>
+                  <h3>Take the Challenge</h3>
+                  <p>Prove your edge in a demo account with live market data from Polymarket and Kalshi.</p>
+                  <div className={styles.stepMeta}>
+                    <span className={styles.stepDuration}>2-30 days</span>
+                    <span className={styles.stepDifficulty}>Easy</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className={`${styles.timelineStep} ${styles.stepActive}`}>
+                <div className={styles.stepNumber}>
+                  <span>02</span>
+                  <div className={styles.stepProgress}></div>
+                </div>
+                <div className={styles.stepContent}>
+                  <div className={styles.stepIcon}>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                    </svg>
+                    <div className={styles.stepGlow}></div>
+                  </div>
+                  <h3>Get Funded</h3>
+                  <p>Pass the rules and start trading with PredictProp's capital up to $100,000.</p>
+                  <div className={styles.stepMeta}>
+                    <span className={styles.stepDuration}>Instant</span>
+                    <span className={styles.stepDifficulty}>Automatic</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className={`${styles.timelineStep} ${styles.stepActive}`}>
+                <div className={styles.stepNumber}>
+                  <span>03</span>
+                  <div className={styles.stepProgress}></div>
+                </div>
+                <div className={styles.stepContent}>
+                  <div className={styles.stepIcon}>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M11 4v2H8v14h8v-6h2v8H6V4h5zm7 2.3l-8-8L9.4.9l8 8 .6-.6zm-2-2l-1.4-1.4 4.3-4.3 1.4 1.4L16 4.3z"/>
+                    </svg>
+                    <div className={styles.stepGlow}></div>
+                  </div>
+                  <h3>Earn Payouts</h3>
+                  <p>Keep up to 90% of profits, paid within 24 hours via USDC.</p>
+                  <div className={styles.stepMeta}>
+                    <span className={styles.stepDuration}>24 hours</span>
+                    <span className={styles.stepDifficulty}>Guaranteed</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
       <section className={styles.features} id="features">
+        <div className={styles.featuresBackground}>
+          <div className={styles.featuresGradient}></div>
+          <div className={styles.featuresPattern}></div>
+          <div className={styles.featuresParticles}></div>
+          <div className={styles.featuresGlow}></div>
+        </div>
         <div className={styles.container}>
-          <h2>Why PredictProp?</h2>
-          <div className={styles.featureGrid}>
-            <div className={styles.featureCard}>
-              <svg viewBox="0 0 24 24" fill="#2DD4BF">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
-              </svg>
-              <h3>Funded Trading</h3>
-              <p>Trade Polymarket with up to $100k, keeping 80% of profits.</p>
+          <div className={styles.featuresHeader}>
+            <div className={styles.sectionBadge}>
+              <span className={styles.badgeIcon}>✨</span>
+              <span>Why PredictProp</span>
             </div>
-            <div className={styles.featureCard}>
-              <svg viewBox="0 0 24 24" fill="#1E3A8A">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
-              </svg>
-              <h3>High-Yield Staking</h3>
-              <p>Stake USDC for 10-20% APY, withdraw anytime with zk-proofs.</p>
+            <h2 className={styles.featuresTitle}>
+              <span className={styles.titleGradient}>The Future of Prediction Trading</span>
+            </h2>
+          </div>
+          
+          <div className={styles.hexagonGrid}>
+            <div className={styles.hexagonRow}>
+              <div className={`${styles.hexagonCard} ${styles.hexagonPrimary}`}>
+                <div className={styles.hexagonContent}>
+                  <div className={styles.hexagonIcon}>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+                    </svg>
+                    <div className={styles.hexagonGlow}></div>
+                  </div>
+                  <h3>Funded Trading</h3>
+                  <p>Trade with up to $100k, keeping 80% of profits.</p>
+                  <div className={styles.hexagonStats}>
+                    <span className={styles.statValue}>$100K</span>
+                    <span className={styles.statLabel}>Max Capital</span>
+                  </div>
+                </div>
+                <div className={styles.hexagonBorder}></div>
+              </div>
+              
+              <div className={`${styles.hexagonCard} ${styles.hexagonSecondary}`}>
+                <div className={styles.hexagonContent}>
+                  <div className={styles.hexagonIcon}>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+                    </svg>
+                    <div className={styles.hexagonGlow}></div>
+                  </div>
+                  <h3>High-Yield Staking</h3>
+                  <p>Stake USDC for 10-20% APY, withdraw anytime with zk-proofs.</p>
+                  <div className={styles.hexagonStats}>
+                    <span className={styles.statValue}>20%</span>
+                    <span className={styles.statLabel}>Max APY</span>
+                  </div>
+                </div>
+                <div className={styles.hexagonBorder}></div>
+              </div>
+              
+              <div className={`${styles.hexagonCard} ${styles.hexagonTertiary}`}>
+                <div className={styles.hexagonContent}>
+                  <div className={styles.hexagonIcon}>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+                    </svg>
+                    <div className={styles.hexagonGlow}></div>
+                  </div>
+                  <h3>Real-Time Integrations</h3>
+                  <p>Growing Fast: Billions traded across Polymarket with advanced tools.</p>
+                  <div className={styles.hexagonStats}>
+                    <span className={styles.statValue}>$2B+</span>
+                    <span className={styles.statLabel}>Volume</span>
+                  </div>
+                </div>
+                <div className={styles.hexagonBorder}></div>
+              </div>
             </div>
-            <div className={styles.featureCard}>
-              <svg viewBox="0 0 24 24" fill="#2DD4BF">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
-              </svg>
-              <h3>Real-Time Integrations</h3>
-              <p>Growing Fast: Billions traded across Polymarket with advanced tools.</p>
-            </div>
-            <div className={styles.featureCard}>
-              <svg viewBox="0 0 24 24" fill="#1E3A8A">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
-              </svg>
-              <h3>Referral Rewards</h3>
-              <p>Earn 10% of trader fees or 5% of LP yields in USDC.</p>
-            </div>
-            <div className={styles.featureCard}>
-              <svg viewBox="0 0 24 24" fill="#2DD4BF">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
-              </svg>
-              <h3>Instant Payouts</h3>
-              <p>Get paid immediately when you win trades.</p>
-            </div>
-            <div className={styles.featureCard}>
-              <svg viewBox="0 0 24 24" fill="#1E3A8A">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
-              </svg>
-              <h3>Non-correlated Asset</h3>
-              <p>trade politics, sports, macro events & more unaffected by stocks or crypto</p>
+            
+            <div className={styles.hexagonRow}>
+              <div className={`${styles.hexagonCard} ${styles.hexagonSecondary}`}>
+                <div className={styles.hexagonContent}>
+                  <div className={styles.hexagonIcon}>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+                    </svg>
+                    <div className={styles.hexagonGlow}></div>
+                  </div>
+                  <h3>Referral Rewards</h3>
+                  <p>Earn 10% of trader fees or 5% of LP yields in USDC.</p>
+                  <div className={styles.hexagonStats}>
+                    <span className={styles.statValue}>10%</span>
+                    <span className={styles.statLabel}>Commission</span>
+                  </div>
+                </div>
+                <div className={styles.hexagonBorder}></div>
+              </div>
+              
+              <div className={`${styles.hexagonCard} ${styles.hexagonPrimary}`}>
+                <div className={styles.hexagonContent}>
+                  <div className={styles.hexagonIcon}>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+                    </svg>
+                    <div className={styles.hexagonGlow}></div>
+                  </div>
+                  <h3>Instant Payouts</h3>
+                  <p>Get paid immediately when you win trades.</p>
+                  <div className={styles.hexagonStats}>
+                    <span className={styles.statValue}>24h</span>
+                    <span className={styles.statLabel}>Payout</span>
+                  </div>
+                </div>
+                <div className={styles.hexagonBorder}></div>
+              </div>
+              
+              <div className={`${styles.hexagonCard} ${styles.hexagonTertiary}`}>
+                <div className={styles.hexagonContent}>
+                  <div className={styles.hexagonIcon}>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+                    </svg>
+                    <div className={styles.hexagonGlow}></div>
+                  </div>
+                  <h3>Non-correlated Asset</h3>
+                  <p>Trade politics, sports, macro events & more unaffected by stocks or crypto</p>
+                  <div className={styles.hexagonStats}>
+                    <span className={styles.statValue}>∞</span>
+                    <span className={styles.statLabel}>Markets</span>
+                  </div>
+                </div>
+                <div className={styles.hexagonBorder}></div>
+              </div>
             </div>
           </div>
         </div>

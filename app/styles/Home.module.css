@@ -518,7 +518,7 @@
     font-weight: 700;
     margin: 0;
     line-height: 1.4;
-    color: var(--text-color);
+    color: #ffffff;
     flex: 1;
   }
   
@@ -692,108 +692,532 @@
     100% { transform: translateX(-100%); }
   }
   
+  /* How It Works Section - Timeline Design */
   .howItWorks {
-    padding: 80px 0;
-    background: var(--background);
+    padding: 60px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .howItWorksBackground {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+  }
+  
+  .howItWorksGradient {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+      rgba(15, 23, 42, 0.95) 0%,
+      rgba(30, 58, 138, 0.1) 25%,
+      rgba(15, 23, 42, 0.95) 50%,
+      rgba(45, 212, 191, 0.1) 75%,
+      rgba(15, 23, 42, 0.95) 100%);
+  }
+  
+  .howItWorksPattern {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      radial-gradient(circle at 20% 20%, rgba(45, 212, 191, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(30, 58, 138, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 40% 60%, rgba(45, 212, 191, 0.05) 0%, transparent 50%);
+    animation: patternFloat 20s ease-in-out infinite;
+  }
+  
+  .howItWorksGlow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(45, 212, 191, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: glowPulse 8s ease-in-out infinite;
+  }
+  
+  .howItWorksHeader {
     text-align: center;
-  }
-  
-  .howItWorks h2 {
-    font-family: 'Inter', sans-serif;
-    font-size: 36px;
-    font-weight: 800;
-    color: var(--text-color);
     margin-bottom: 40px;
+    position: relative;
+    z-index: 2;
   }
   
-  .howSteps {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 30px;
+  .howItWorksTitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 40px;
+    font-weight: 900;
+    margin-bottom: 0;
+    line-height: 1.2;
   }
   
-  .step {
-    background: var(--background);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--accent-color);
-    border-radius: 12px;
-    padding: 32px;
-    transition: all 0.3s ease;
-  }
-  
-  .step:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-  
-  .step svg {
-    width: 40px;
-    height: 40px;
-    margin-bottom: 20px;
-  }
-  
-  .step h3 {
-    font-size: 28px;
-    font-weight: 600;
-    color: var(--text-color);
-    margin-bottom: 16px;
-  }
-  
-  .step p {
-    font-size: 18px;
+  .howItWorksSubtitle {
+    font-size: 20px;
     color: var(--foreground);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
   }
   
-  .features {
-    padding: 80px 0;
-    background: var(--background);
-    text-align: center;
+  .timelineContainer {
+    position: relative;
+    max-width: 1000px;
+    margin: 0 auto;
+    z-index: 2;
   }
   
-  .features h2 {
-    font-family: 'Inter', sans-serif;
-    font-size: 36px;
-    font-weight: 800;
-    color: var(--text-color);
-    margin-bottom: 40px;
+  .timelineLine {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, 
+      transparent 0%,
+      rgba(45, 212, 191, 0.3) 20%,
+      rgba(45, 212, 191, 0.8) 50%,
+      rgba(45, 212, 191, 0.3) 80%,
+      transparent 100%);
+    transform: translateX(-50%);
+    border-radius: 2px;
+    animation: timelineFlow 3s ease-in-out infinite;
   }
   
-  .featureGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 30px;
+  .timelineSteps {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
   }
   
-  .featureCard {
-    background: var(--background);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--accent-color);
-    border-radius: 12px;
-    padding: 32px;
-    transition: all 0.3s ease;
+  .timelineStep {
+    display: flex;
+    align-items: center;
+    position: relative;
+    opacity: 0;
+    transform: translateY(50px);
+    animation: timelineStepReveal 0.8s ease-out forwards;
   }
   
-  .featureCard:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  .timelineStep:nth-child(1) { animation-delay: 0.2s; }
+  .timelineStep:nth-child(2) { animation-delay: 0.4s; }
+  .timelineStep:nth-child(3) { animation-delay: 0.6s; }
+  
+  .timelineStep:nth-child(odd) {
+    flex-direction: row;
   }
   
-  .featureCard svg {
-    width: 40px;
-    height: 40px;
-    margin-bottom: 20px;
+  .timelineStep:nth-child(even) {
+    flex-direction: row-reverse;
   }
   
-  .featureCard h3 {
+  .stepNumber {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #2dd4bf, #14b8a6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 900;
+    color: white;
+    box-shadow: 0 6px 24px rgba(45, 212, 191, 0.4);
+    z-index: 3;
+    margin: 0 30px;
+  }
+  
+  .stepProgress {
+    position: absolute;
+    top: -15px;
+    left: -15px;
+    right: -15px;
+    bottom: -15px;
+    border: 2px solid rgba(45, 212, 191, 0.3);
+    border-radius: 50%;
+    animation: stepPulse 2s ease-in-out infinite;
+  }
+  
+  .stepContent {
+    flex: 1;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(45, 212, 191, 0.2);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .stepContent::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(45, 212, 191, 0.1), transparent);
+    transition: left 0.6s ease;
+  }
+  
+  .stepContent:hover::before {
+    left: 100%;
+  }
+  
+  .stepContent:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 60px rgba(45, 212, 191, 0.3);
+    border-color: rgba(45, 212, 191, 0.4);
+  }
+  
+  .stepIcon {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+    color: #2dd4bf;
+  }
+  
+  .stepIcon svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 4px 12px rgba(45, 212, 191, 0.3));
+  }
+  
+  .stepGlow {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background: radial-gradient(circle, rgba(45, 212, 191, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: iconGlow 3s ease-in-out infinite;
+  }
+  
+  .stepContent h3 {
     font-size: 24px;
-    font-weight: 600;
+    font-weight: 800;
     color: var(--text-color);
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, #2dd4bf, #14b8a6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .stepContent p {
+    font-size: 16px;
+    color: #ffffff;
+    line-height: 1.5;
     margin-bottom: 16px;
   }
   
-  .featureCard p {
-    font-size: 18px;
+  .stepMeta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  
+  .stepDuration,
+  .stepDifficulty {
+    background: rgba(45, 212, 191, 0.1);
+    color: #2dd4bf;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid rgba(45, 212, 191, 0.2);
+  }
+  
+  .stepDifficulty {
+    background: rgba(30, 58, 138, 0.1);
+    color: #3b82f6;
+    border-color: rgba(30, 58, 138, 0.2);
+  }
+  
+  /* Features Section - Hexagonal Grid Design */
+  .features {
+    padding: 120px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .featuresBackground {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+  }
+  
+  .featuresGradient {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+      rgba(15, 23, 42, 0.95) 0%,
+      rgba(45, 212, 191, 0.1) 25%,
+      rgba(15, 23, 42, 0.95) 50%,
+      rgba(30, 58, 138, 0.1) 75%,
+      rgba(15, 23, 42, 0.95) 100%);
+  }
+  
+  .featuresPattern {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      radial-gradient(circle at 10% 20%, rgba(30, 58, 138, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 90% 80%, rgba(45, 212, 191, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(30, 58, 138, 0.05) 0%, transparent 50%);
+    animation: patternFloat 25s ease-in-out infinite reverse;
+  }
+  
+  .featuresParticles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      radial-gradient(2px 2px at 20px 30px, rgba(45, 212, 191, 0.3), transparent),
+      radial-gradient(2px 2px at 40px 70px, rgba(30, 58, 138, 0.3), transparent),
+      radial-gradient(1px 1px at 90px 40px, rgba(45, 212, 191, 0.2), transparent),
+      radial-gradient(1px 1px at 130px 80px, rgba(30, 58, 138, 0.2), transparent);
+    background-repeat: repeat;
+    background-size: 200px 200px;
+    animation: particleFloat 30s linear infinite;
+  }
+  
+  .featuresGlow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 1000px;
+    height: 1000px;
+    background: radial-gradient(circle, rgba(30, 58, 138, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: glowPulse 10s ease-in-out infinite;
+  }
+  
+  .featuresHeader {
+    text-align: center;
+    margin-bottom: 80px;
+    position: relative;
+    z-index: 2;
+  }
+  
+  .featuresTitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 48px;
+    font-weight: 900;
+    margin-bottom: 24px;
+    line-height: 1.2;
+  }
+  
+  .featuresSubtitle {
+    font-size: 20px;
     color: var(--foreground);
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+  
+  .hexagonGrid {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+    align-items: center;
+  }
+  
+  .hexagonRow {
+    display: contents;
+  }
+  
+  .hexagonCard {
+    position: relative;
+    width: 300px;
+    height: 350px;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    cursor: pointer;
+  }
+  
+  .hexagonCard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+      rgba(45, 212, 191, 0.1) 0%,
+      rgba(30, 58, 138, 0.1) 50%,
+      rgba(45, 212, 191, 0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    border-radius: 20px;
+  }
+  
+  .hexagonCard:hover::before {
+    opacity: 1;
+  }
+  
+  .hexagonCard:hover {
+    transform: translateY(-20px) scale(1.05);
+    box-shadow: 0 30px 80px rgba(45, 212, 191, 0.3);
+  }
+  
+  .hexagonPrimary {
+    border: 2px solid rgba(45, 212, 191, 0.3);
+  }
+  
+  .hexagonPrimary:hover {
+    border-color: rgba(45, 212, 191, 0.6);
+    box-shadow: 0 30px 80px rgba(45, 212, 191, 0.4);
+  }
+  
+  .hexagonSecondary {
+    border: 2px solid rgba(30, 58, 138, 0.3);
+  }
+  
+  .hexagonSecondary:hover {
+    border-color: rgba(30, 58, 138, 0.6);
+    box-shadow: 0 30px 80px rgba(30, 58, 138, 0.4);
+  }
+  
+  .hexagonTertiary {
+    border: 2px solid rgba(139, 92, 246, 0.3);
+  }
+  
+  .hexagonTertiary:hover {
+    border-color: rgba(139, 92, 246, 0.6);
+    box-shadow: 0 30px 80px rgba(139, 92, 246, 0.4);
+  }
+  
+  .hexagonContent {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+  }
+  
+  .hexagonIcon {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 24px;
+    color: #2dd4bf;
+  }
+  
+  .hexagonIcon svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 8px 16px rgba(45, 212, 191, 0.3));
+  }
+  
+  .hexagonGlow {
+    position: absolute;
+    top: -15px;
+    left: -15px;
+    right: -15px;
+    bottom: -15px;
+    background: radial-gradient(circle, rgba(45, 212, 191, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: iconGlow 4s ease-in-out infinite;
+  }
+  
+  .hexagonContent h3 {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-color);
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #2dd4bf, #14b8a6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .hexagonContent p {
+    font-size: 16px;
+    color: var(--foreground);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+  
+  .hexagonStats {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .statValue {
+    font-size: 32px;
+    font-weight: 900;
+    color: #2dd4bf;
+    font-family: 'Courier New', monospace;
+  }
+  
+  .statLabel {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--foreground);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .hexagonBorder {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, 
+      rgba(45, 212, 191, 0.5),
+      rgba(30, 58, 138, 0.5),
+      rgba(139, 92, 246, 0.5),
+      rgba(45, 212, 191, 0.5));
+    border-radius: 22px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  
+  .hexagonCard:hover .hexagonBorder {
+    opacity: 1;
+    animation: borderRotate 3s linear infinite;
   }
   
   .challengePlans {
@@ -1027,7 +1451,7 @@
       gap: 10px;
     }
   
-    .marketTicker h2, .howItWorks h2, .features h2, .challengePlans h2, .trust h2 {
+    .marketTicker h2, .howItWorksTitle, .featuresTitle, .challengePlans h2, .trust h2 {
       font-size: 30px;
     }
   
@@ -1036,17 +1460,64 @@
       min-width: 300px;
     }
   
-    .step svg, .featureCard svg {
-      width: 32px;
-      height: 32px;
+    /* Timeline Mobile Responsive */
+    .timelineStep {
+      flex-direction: column !important;
+      text-align: center;
     }
-  
-    .step h3, .featureCard h3 {
+    
+    .stepNumber {
+      margin: 0 0 20px 0;
+    }
+    
+    .stepContent {
+      padding: 24px;
+    }
+    
+    .stepContent h3 {
       font-size: 24px;
     }
-  
-    .step p, .featureCard p, .featureItem {
+    
+    .stepContent p {
       font-size: 16px;
+    }
+    
+    /* Hexagon Grid Mobile Responsive */
+    .hexagonGrid {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+  }
+  
+  @media (max-width: 1024px) and (min-width: 769px) {
+    .hexagonGrid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 30px;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .hexagonGrid {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    
+    .hexagonCard {
+      width: 280px;
+      height: 320px;
+      padding: 24px;
+    }
+    
+    .hexagonContent h3 {
+      font-size: 24px;
+    }
+    
+    .hexagonContent p {
+      font-size: 14px;
+    }
+    
+    .statValue {
+      font-size: 28px;
     }
   
     .evaluationToggle {
@@ -1090,6 +1561,95 @@
     }
     100% {
       transform: translate(0, 0);
+    }
+  }
+
+  /* Timeline Animations */
+  @keyframes timelineFlow {
+    0% {
+      background: linear-gradient(180deg, 
+        transparent 0%,
+        rgba(45, 212, 191, 0.3) 20%,
+        rgba(45, 212, 191, 0.8) 50%,
+        rgba(45, 212, 191, 0.3) 80%,
+        transparent 100%);
+    }
+    50% {
+      background: linear-gradient(180deg, 
+        transparent 0%,
+        rgba(45, 212, 191, 0.5) 20%,
+        rgba(45, 212, 191, 1) 50%,
+        rgba(45, 212, 191, 0.5) 80%,
+        transparent 100%);
+    }
+    100% {
+      background: linear-gradient(180deg, 
+        transparent 0%,
+        rgba(45, 212, 191, 0.3) 20%,
+        rgba(45, 212, 191, 0.8) 50%,
+        rgba(45, 212, 191, 0.3) 80%,
+        transparent 100%);
+    }
+  }
+
+  @keyframes timelineStepReveal {
+    0% {
+      opacity: 0;
+      transform: translateY(50px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes stepPulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 0.3;
+    }
+    50% {
+      transform: scale(1.1);
+      opacity: 0.6;
+    }
+  }
+
+  @keyframes iconGlow {
+    0%, 100% {
+      opacity: 0.2;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.4;
+      transform: scale(1.1);
+    }
+  }
+
+  /* Hexagon Grid Animations */
+  @keyframes particleFloat {
+    0% {
+      transform: translateY(0px) translateX(0px);
+    }
+    25% {
+      transform: translateY(-20px) translateX(10px);
+    }
+    50% {
+      transform: translateY(-10px) translateX(-15px);
+    }
+    75% {
+      transform: translateY(-30px) translateX(5px);
+    }
+    100% {
+      transform: translateY(0px) translateX(0px);
+    }
+  }
+
+  @keyframes borderRotate {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
     }
   }
 
