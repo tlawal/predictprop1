@@ -101,15 +101,18 @@ Test MVP, train AI (15% APY), beta test (20-30 users), plan mainnet.
    npm run dev
    ```
 
-5. **Deploy contracts:**
+5. **Deploy contracts (Coming Soon):**
    ```bash
    npx hardhat run scripts/deploy.js --network mumbai
    ```
 
-6. **Test AI:**
+6. **Test AI (Coming Soon):**
    ```bash
    python scripts/train_stable_baselines.py
    ```
+
+7. **Access the application:**
+   Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ### Available Scripts
 
@@ -117,8 +120,8 @@ Test MVP, train AI (15% APY), beta test (20-30 users), plan mainnet.
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
-- `npx hardhat test` - Run smart contract tests
-- `npx hardhat deploy` - Deploy contracts
+- `npx hardhat test` - Run smart contract tests (Coming Soon)
+- `npx hardhat deploy` - Deploy contracts (Coming Soon)
 
 ## Project Structure
 
@@ -126,13 +129,37 @@ Test MVP, train AI (15% APY), beta test (20-30 users), plan mainnet.
 predictprop1/
 ├── app/                    # Next.js app directory
 │   ├── api/               # API routes
+│   │   ├── kalshi/       # Kalshi API integration
+│   │   ├── polymarket/   # Polymarket API integration
+│   │   └── test-markets/ # Test market endpoints
 │   ├── components/        # React components
+│   │   ├── Footer.js     # Footer component
+│   │   └── Header.js     # Header component
 │   ├── styles/           # CSS modules
-│   └── page.js           # Home page
-├── contracts/            # Smart contracts
-├── scripts/              # Deployment & utility scripts
+│   │   ├── Home.module.css
+│   │   ├── Header.module.css
+│   │   ├── Footer.module.css
+│   │   └── [Page].module.css files
+│   ├── leaderboard/      # Leaderboard page
+│   ├── lps/             # Liquidity providers page
+│   ├── markets/         # Markets page
+│   ├── traders/         # Traders page
+│   ├── pages/           # Additional pages
+│   ├── page.js          # Home page
+│   ├── layout.js        # Root layout
+│   ├── globals.css      # Global styles
+│   └── ThemeContext.js  # Theme context provider
 ├── public/               # Static assets
-└── README.md            # This file
+│   ├── *.svg           # SVG icons
+│   └── index.html      # Static HTML
+├── src/                 # Additional source files (empty)
+├── contracts/           # Smart contracts (Coming Soon)
+├── scripts/             # Deployment & utility scripts (Coming Soon)
+├── package.json         # Dependencies and scripts
+├── next.config.mjs      # Next.js configuration
+├── eslint.config.mjs    # ESLint configuration
+├── postcss.config.mjs   # PostCSS configuration
+└── README.md           # This file
 ```
 
 ## Contributing
