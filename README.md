@@ -1,36 +1,169 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# PolyProp
+
+## Overview
+
+PolyProp is the first decentralized prop trading platform for prediction markets, enabling traders to access LP-funded capital after passing a paid evaluation challenge (8-10% ROI, <5% drawdown, 30 days) using Polymarket's markets. Retail users deposit USDC into stablecoin vaults, earning 10-20% APY from 1-2% trade fees and 10-20% profit splits, with the platform taking a 5-10% yield cut. AI optimizes vault yields and manages risks. Built on Polygon with Next.js, Privy, and smart contracts, it addresses liquidity constraints in long-tail prediction markets.
+
+## Core Features
+
+### Trader Evaluation Challenge
+Traders manage $10k virtual capital in demo mode (Supabase/Mumbai testnet), placing Polymarket bets (POST /order). Passers unlock $100k LP funds.
+
+### Liquidity Vaults
+Retail LPs deposit USDC into ERC4626 vaults, minting ppLP-USDC tokens. Bots provide market-making liquidity, generating 10-20% APY. Uniswap V3 fork enables token trading.
+
+### AI Optimization
+Stable Baselines3 for yield optimization (15% APY), LSTM for drawdown alerts.
+
+### Compliance
+Privy's Persona for KYC (non-US), GeoJS for IP bans, Chainalysis for AML.
+
+## Tech Stack
+
+### Frontend
+- Next.js
+- Tailwind CSS
+- Chart.js (equity/yield graphs)
+
+### Backend
+- Node.js
+- Next.js API routes
+- py-clob-client (Polymarket)
+- Privy SDK
+
+### Smart Contracts
+- Solidity (Hardhat, OpenZeppelin)
+- Polygon (Mumbai, mainnet)
+
+### Database
+- Supabase for user/trade data
+
+### AI
+- Stable Baselines3
+- LSTM (FastAPI/AWS SageMaker)
+
+### Other
+- The Graph
+- Alchemy
+- Sentry
+- GeoJS
+
+## Development Roadmap
+
+### Weeks 1-2
+Deploy ERC4626 vault, challenge, and Uniswap V3 fork contracts on Mumbai. Setup Next.js with Privy.
+
+### Weeks 3-4
+Build MVP (dashboard, markets, order modal, KYC).
+
+### Weeks 5-6
+Test MVP, train AI (15% APY), beta test (20-30 users), plan mainnet.
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Git
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### Installation
+
+1. **Clone repo:**
+   ```bash
+   git clone https://github.com/tlawal/predictprop1
+   cd predictprop1
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Setup environment variables:**
+   Create `.env.local` file and add:
+   ```env
+   # Polymarket API
+   POLYMARKET_API_KEY=your_api_key_here
+   
+   # Privy
+   NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id
+   
+   # Supabase
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   
+   # Alchemy
+   ALCHEMY_API_KEY=your_alchemy_key
+   ```
+
+4. **Run development server:**
+   ```bash
+   npm run dev
+   ```
+
+5. **Deploy contracts:**
+   ```bash
+   npx hardhat run scripts/deploy.js --network mumbai
+   ```
+
+6. **Test AI:**
+   ```bash
+   python scripts/train_stable_baselines.py
+   ```
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npx hardhat test` - Run smart contract tests
+- `npx hardhat deploy` - Deploy contracts
+
+## Project Structure
+
+```
+predictprop1/
+├── app/                    # Next.js app directory
+│   ├── api/               # API routes
+│   ├── components/        # React components
+│   ├── styles/           # CSS modules
+│   └── page.js           # Home page
+├── contracts/            # Smart contracts
+├── scripts/              # Deployment & utility scripts
+├── public/               # Static assets
+└── README.md            # This file
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Contributing
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Focus Areas
+- DeFi protocols and mechanisms
+- Prediction markets integration
+- Polygon ecosystem development
+- AI/ML optimization algorithms
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### How to Contribute
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Learn More
+### Guidelines
+- Submit issues/PRs for bugs, UI improvements, or AI enhancements
+- Test on Mumbai testnet before mainnet deployment
+- Follow existing code style and conventions
+- Add tests for new features
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Support
 
-## Deploy on Vercel
+For support, email support@polyprop.com or join our Discord community.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Disclaimer
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This software is for educational and research purposes. Trading involves risk of loss. Please do your own research before investing.
