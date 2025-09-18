@@ -42,11 +42,55 @@ export async function GET(request) {
 
     // Override parameters for ticker data
     if (isTicker) {
-      params.limit = 40; // Get 40 markets for ticker
-      params.tickerMode = true;
+      // For ticker mode, fetch directly from Gamma API events endpoint
+      console.log('Fetching ticker data from Gamma API events endpoint');
+      const response = await fetch('https://gamma-api.polymarket.com/events?featured=true&closed=false&limit=40', {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'PredictProp/1.0'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gamma API error: ${response.status} ${response.statusText}`);
+      }
+
+      const events = await response.json();
+
+      // Transform events to our format and return
+      const transformedMarkets = events.map(event => ({
+        id: event.id,
+        slug: event.slug, // Preserve the slug field
+        question: event.title || event.question,
+        description: event.description,
+        yesOdds: parseFloat(event.outcomePrices?.[0] || '0.5'),
+        noOdds: parseFloat(event.outcomePrices?.[1] || '0.5'),
+        volume: parseFloat(event.volume || 0),
+        endDate: event.endDate,
+        endDateIso: event.endDate ? new Date(event.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
+        category: 'Featured',
+        status: event.closed ? 'closed' : 'open',
+        source: 'polymarket',
+        url: `https://polymarket.com/event/${event.slug || event.id}`,
+        featured: true
+      }));
+
+      const data = {
+        markets: transformedMarkets,
+        next: null,
+        total: transformedMarkets.length
+      };
+
+      // Cache the result
+      cache.set(cacheKey, {
+        data,
+        timestamp: Date.now()
+      });
+
+      return NextResponse.json(data);
     }
 
-    // Fetch from Polymarket
+    // Fetch from Polymarket service for regular requests
     const data = await polymarketService.fetchMarkets(params);
 
     // Cache the result

@@ -17,26 +17,32 @@ export default function Home() {
   // SWR fetcher function
   const fetcher = (url) => fetch(url).then((res) => res.json());
   
-  // Fetch ticker markets using SWR - featured events
-  const { data: marketsData, error: marketsError, isLoading: marketsLoading } = useSWR('/api/markets?ticker=true&limit=40', fetcher, {
-    refreshInterval: 30000, // Refresh every 30 seconds
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true
-  });
+  // Fetch ticker markets via our API route to avoid CORS issues
+  const { data: marketsData, error: marketsError, isLoading: marketsLoading } = useSWR(
+    '/api/markets?ticker=true&limit=40',
+    fetcher,
+    {
+      refreshInterval: 30000, // Refresh every 30 seconds
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 5000,
+      revalidateOnMount: true,
+      dedupingInterval: 0
+    }
+  );
 
-  // Extract markets array from the API response
+  // Extract markets array from the API response - via our API route
   const markets = marketsData?.markets || [];
 
-  // Transform markets data for display
-  const transformedMarkets = markets.map(market => ({
-    title: market.question,
-    yesPrice: market.yesOdds,
-    noPrice: market.noOdds,
-    source: market.source || 'polymarket',
-    url: market.url || `https://polymarket.com/event/${market.id}`,
-    volume: market.volume,
-    endDate: market.endDate
-  }));
+  // Debug logging
+  console.log('Homepage ticker data:', {
+    marketsLoading,
+    marketsError,
+    marketsCount: markets.length,
+    firstMarket: markets[0]
+  });
+
 
   // Add hover pause functionality for marquee
   useEffect(() => {
@@ -206,8 +212,9 @@ export default function Home() {
                 </div>
           {marketsLoading && <p className={styles.loadingMessage}>Loading markets...</p>}
           {marketsError && <p className={styles.errorMessage}>Error: {marketsError.message}</p>}
-          
-          <div className={styles.marqueeContainer} 
+
+          {/* Always show marquee with data or placeholders */}
+          <div className={styles.marqueeContainer}
                onMouseEnter={() => console.log('Container mouse enter')}
                onMouseLeave={() => console.log('Container mouse leave')}
                style={{ position: 'relative', zIndex: 100 }}>
@@ -216,100 +223,181 @@ export default function Home() {
                  onMouseLeave={() => console.log('Marquee mouse leave')}
                  style={{ position: 'relative', zIndex: 101 }}>
               {/* First set of ticker items */}
-              {transformedMarkets.map((market, index) => (
-                <a
-                  key={`first-${index}`}
-                  href={market.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.tickerItem}
-                  style={{ position: 'relative', zIndex: 102 }}
-                  onClick={(e) => {
-                    console.log('Market clicked:', market.title, market.url);
-                    e.preventDefault();
-                    window.open(market.url, '_blank');
-                  }}
-                >
-                  <div className={styles.marketContent}>
-                    <div className={styles.marketHeader}>
-                      <h3 className={styles.marketTitle}>{market.title}</h3>
-                      <div className={styles.marketSource}>
-                        <span className={styles.sourceBadge}>{market.source}</span>
-                      </div>
-                    </div>
-                    <div className={styles.marketData}>
-                      <div className={styles.priceContainer}>
-                        <div className={styles.priceItem}>
-                          <span className={styles.priceLabel}>Yes Odds</span>
-                          <span className={`${styles.priceValue} ${styles.yes}`}>${(market.yesPrice || 0).toFixed(2)}</span>
-                        </div>
-                      </div>
-                      <div className={styles.marketMeta}>
-                        {market.endDate && (
-                          <div className={styles.endDateTag}>Ends: {new Date(market.endDate).toLocaleDateString()}</div>
-                        )}
-                        {market.volume > 0 && (
-                          <div className={styles.volumeTag}>Vol: ${(market.volume / 1000).toFixed(0)}k</div>
-                        )}
-                      </div>
+              {(markets.length > 0 ? markets : [1, 2, 3, 4, 5]).map((market, index) => {
+                // If we have real market data
+                if (markets.length > 0) {
+                  return (
+              <a
+                key={`first-${index}`}
+                href={`https://polymarket.com/event/${market.slug || market.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.tickerItem}
+                style={{ position: 'relative', zIndex: 102 }}
+                onClick={(e) => {
+                  console.log('Market clicked:', market.title || market.question);
+                  e.preventDefault();
+                  window.open(`https://polymarket.com/event/${market.slug || market.id}`, '_blank');
+                }}
+              >
+                <div className={styles.marketContent}>
+                  <div className={styles.marketHeader}>
+                    <h3 className={styles.marketTitle}>{market.title || market.question}</h3>
+                    <div className={styles.marketSource}>
+                      <span className={styles.sourceBadge}>Polymarket</span>
                     </div>
                   </div>
-                  <div className={styles.tickerArrow}>
-                    <svg viewBox="0 0 24 24">
-                      <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
-                    </svg>
+                  <div className={styles.marketData}>
+                    <div className={styles.priceContainer}>
+                      <div className={styles.priceItem}>
+                        <span className={styles.priceLabel}>Yes Odds</span>
+                        <span className={`${styles.priceValue} ${styles.yes}`}>${(market.yesPrice || 0.5).toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <div className={styles.marketMeta}>
+                      {market.endDate && (
+                        <div className={styles.endDateTag}>Ends: {new Date(market.endDate).toLocaleDateString()}</div>
+                      )}
+                      {market.volume && (
+                        <div className={styles.volumeTag}>Vol: ${(market.volume / 1000).toFixed(0)}k</div>
+                      )}
+                    </div>
                   </div>
-                </a>
-              ))}
+                </div>
+                <div className={styles.tickerArrow}>
+                  <svg viewBox="0 0 24 24">
+                    <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+                  </svg>
+                </div>
+              </a>
+                  );
+                } else {
+                  // Placeholder item
+                  return (
+              <div
+                key={`placeholder-${index}`}
+                className={styles.tickerItem}
+                style={{ position: 'relative', zIndex: 102 }}
+              >
+                <div className={styles.marketContent}>
+                  <div className={styles.marketHeader}>
+                    <h3 className={styles.marketTitle}>Loading Featured Events...</h3>
+                    <div className={styles.marketSource}>
+                      <span className={styles.sourceBadge}>Polymarket</span>
+                    </div>
+                  </div>
+                  <div className={styles.marketData}>
+                    <div className={styles.priceContainer}>
+                      <div className={styles.priceItem}>
+                        <span className={styles.priceLabel}>Yes Odds</span>
+                        <span className={`${styles.priceValue} ${styles.yes}`}>$0.50</span>
+                      </div>
+                    </div>
+                    <div className={styles.marketMeta}>
+                      <div className={styles.endDateTag}>Loading...</div>
+                      <div className={styles.volumeTag}>Featured</div>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.tickerArrow}>
+                  <svg viewBox="0 0 24 24">
+                    <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+                  </svg>
+                </div>
+              </div>
+                  );
+                }
+              })}
 
               {/* Duplicate set for seamless scrolling */}
-              {transformedMarkets.map((market, index) => (
-                <a
-                  key={`second-${index}`}
-                  href={market.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.tickerItem}
-                  style={{ position: 'relative', zIndex: 102 }}
-                  onClick={(e) => {
-                    console.log('Market clicked:', market.title, market.url);
-                    e.preventDefault();
-                    window.open(market.url, '_blank');
-                  }}
-                >
-                  <div className={styles.marketContent}>
-                    <div className={styles.marketHeader}>
-                      <h3 className={styles.marketTitle}>{market.title}</h3>
-                      <div className={styles.marketSource}>
-                        <span className={styles.sourceBadge}>{market.source}</span>
-                      </div>
-                    </div>
-                    <div className={styles.marketData}>
-                      <div className={styles.priceContainer}>
-                        <div className={styles.priceItem}>
-                          <span className={styles.priceLabel}>Yes Odds</span>
-                          <span className={`${styles.priceValue} ${styles.yes}`}>${(market.yesPrice || 0).toFixed(2)}</span>
-                        </div>
-                      </div>
-                      <div className={styles.marketMeta}>
-                        {market.endDate && (
-                          <div className={styles.endDateTag}>Ends: {new Date(market.endDate).toLocaleDateString()}</div>
-                        )}
-                        {market.volume > 0 && (
-                          <div className={styles.volumeTag}>Vol: ${(market.volume / 1000).toFixed(0)}k</div>
-                        )}
-                      </div>
+              {(markets.length > 0 ? markets : [1, 2, 3, 4, 5]).map((market, index) => {
+                // If we have real market data
+                if (markets.length > 0) {
+                  return (
+              <a
+                key={`second-${index}`}
+                href={`https://polymarket.com/event/${market.slug || market.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.tickerItem}
+                style={{ position: 'relative', zIndex: 102 }}
+                onClick={(e) => {
+                  console.log('Market clicked:', market.title || market.question);
+                  e.preventDefault();
+                  window.open(`https://polymarket.com/event/${market.slug || market.id}`, '_blank');
+                }}
+              >
+                <div className={styles.marketContent}>
+                  <div className={styles.marketHeader}>
+                    <h3 className={styles.marketTitle}>{market.title || market.question}</h3>
+                    <div className={styles.marketSource}>
+                      <span className={styles.sourceBadge}>Polymarket</span>
                     </div>
                   </div>
-                  <div className={styles.tickerArrow}>
-                    <svg viewBox="0 0 24 24">
-                      <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
-                    </svg>
+                  <div className={styles.marketData}>
+                    <div className={styles.priceContainer}>
+                      <div className={styles.priceItem}>
+                        <span className={styles.priceLabel}>Yes Odds</span>
+                        <span className={`${styles.priceValue} ${styles.yes}`}>${(market.yesPrice || 0.5).toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <div className={styles.marketMeta}>
+                      {market.endDate && (
+                        <div className={styles.endDateTag}>Ends: {new Date(market.endDate).toLocaleDateString()}</div>
+                      )}
+                      {market.volume && (
+                        <div className={styles.volumeTag}>Vol: ${(market.volume / 1000).toFixed(0)}k</div>
+                      )}
+                    </div>
                   </div>
-                </a>
-              ))}
+                </div>
+                <div className={styles.tickerArrow}>
+                  <svg viewBox="0 0 24 24">
+                    <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+                  </svg>
+                </div>
+              </a>
+                  );
+                } else {
+                  // Placeholder item
+                  return (
+              <div
+                key={`placeholder-${index}`}
+                className={styles.tickerItem}
+                style={{ position: 'relative', zIndex: 102 }}
+              >
+                <div className={styles.marketContent}>
+                  <div className={styles.marketHeader}>
+                    <h3 className={styles.marketTitle}>Loading Featured Events...</h3>
+                    <div className={styles.marketSource}>
+                      <span className={styles.sourceBadge}>Polymarket</span>
+                    </div>
+                  </div>
+                  <div className={styles.marketData}>
+                    <div className={styles.priceContainer}>
+                      <div className={styles.priceItem}>
+                        <span className={styles.priceLabel}>Yes Odds</span>
+                        <span className={`${styles.priceValue} ${styles.yes}`}>$0.50</span>
+                      </div>
+                    </div>
+                    <div className={styles.marketMeta}>
+                      <div className={styles.endDateTag}>Loading...</div>
+                      <div className={styles.volumeTag}>Featured</div>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.tickerArrow}>
+                  <svg viewBox="0 0 24 24">
+                    <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+                  </svg>
+                </div>
+              </div>
+                  );
+                }
+              })}
             </div>
           </div>
+
         </div>
       </section>
       <section className={styles.howItWorks} id="how-it-works">
