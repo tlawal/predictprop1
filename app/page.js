@@ -634,9 +634,9 @@ export default function Home() {
           <h2>Built on Trusted Platforms</h2>
           <p>Secure, transparent, and powered by leading blockchain and prediction market tech.</p>
           <div className={styles.trustLogos}>
-            <Image src="https://polygon.technology/images/polygon-logo.svg" alt="Polygon" width={120} height={40} />
-            <Image src="https://polymarket.com/images/logo.svg" alt="Polymarket" width={120} height={40} />
-            <Image src="https://privy.io/images/logo.svg" alt="Privy" width={120} height={40} />
+            <Image src="/Polygon_Primary_Light.svg" alt="Polygon" width={120} height={40} />
+            <Image src="/polymarket.png" alt="Polymarket" width={120} height={40} />
+            <Image src="/privy_coral.png" alt="Privy" width={120} height={40} />
           </div>
           <Link href="#waitlist">
             <button className={`${styles.ctaButton} ${styles.secondary}`}>Join the Waitlist</button>
