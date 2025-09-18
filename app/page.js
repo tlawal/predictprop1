@@ -3,93 +3,37 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import axios from 'axios';
+import useSWR from 'swr';
+import ChallengePlansTable from './components/ChallengePlansTable';
 import styles from './styles/Home.module.css';
 
 export default function Home() {
   const canvasRef = useRef(null);
   const marqueeRef = useRef(null);
-  const [markets, setMarkets] = useState([
-    { title: 'Will Bitcoin reach $150,000 by end of 2025?', yesPrice: 0.25, noPrice: 0.75, source: 'Polymarket', url: 'https://polymarket.com' },
-    { title: 'Will the S&P 500 close above 6,000 by end of 2025?', yesPrice: 0.40, noPrice: 0.60, source: 'Polymarket', url: 'https://polymarket.com' },
-    { title: 'Will there be a recession in 2025?', yesPrice: 0.30, noPrice: 0.70, source: 'Polymarket', url: 'https://polymarket.com' },
-    { title: 'Will the Fed cut rates by 100+ bps in 2025?', yesPrice: 0.55, noPrice: 0.45, source: 'Polymarket', url: 'https://polymarket.com' },
-    { title: 'Will AI stocks outperform the market in 2025?', yesPrice: 0.60, noPrice: 0.40, source: 'Polymarket', url: 'https://polymarket.com' },
-    { title: 'Will Ethereum reach $10,000 by end of 2025?', yesPrice: 0.35, noPrice: 0.65, source: 'Polymarket', url: 'https://polymarket.com' },
-    { title: 'Will the US election be decided by less than 5% margin?', yesPrice: 0.45, noPrice: 0.55, source: 'Polymarket', url: 'https://polymarket.com' },
-    { title: 'Will the housing market crash in 2025?', yesPrice: 0.20, noPrice: 0.80, source: 'Polymarket', url: 'https://polymarket.com' }
-  ]);
   const [evaluationType, setEvaluationType] = useState('one-phase');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch active markets from Polymarket API
-  useEffect(() => {
-    const fetchMarkets = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Fetch from our internal API route (which proxies to Polymarket)
-        const polymarketResponse = await axios.get('/api/polymarket', {
-          timeout: 5000 // Reduced timeout to match API route
-        });
-        
-        console.log('Polymarket API response:', polymarketResponse.data);
-        
-        const polymarketMarkets = Array.isArray(polymarketResponse.data)
-          ? polymarketResponse.data.slice(0, 10).map(market => {
-              // Extract prices from outcomes array
-              let yesPrice = 0.5;
-              let noPrice = 0.5;
-              
-              if (market.outcomes && Array.isArray(market.outcomes) && market.outcomes.length >= 2) {
-                yesPrice = market.outcomes[0].price || 0.5;
-                noPrice = market.outcomes[1].price || 0.5;
-              }
-              
-              return {
-                title: market.question || market.name || 'Untitled Market',
-                yesPrice: yesPrice,
-                noPrice: noPrice,
-                source: 'Polymarket',
-                url: market.url,
-                category: market.category || 'General',
-                volume: market.volume || 0,
-                liquidity: market.liquidity || 0,
-                endDate: market.end_date_iso,
-                active: market.active
-              };
-            })
-          : [];
+  // SWR fetcher function
+  const fetcher = (url) => fetch(url).then((res) => res.json());
+  
+  // Fetch markets using SWR
+  const { data: markets = [], error: marketsError, isLoading: marketsLoading } = useSWR('/api/markets', fetcher, {
+    refreshInterval: 30000, // Refresh every 30 seconds
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true
+  });
 
-        setMarkets(polymarketMarkets.length > 0 ? polymarketMarkets : [
-          { title: 'Will Bitcoin reach $150,000 by end of 2025?', yesPrice: 0.25, noPrice: 0.75, source: 'Polymarket', url: 'https://polymarket.com' },
-          { title: 'Will the S&P 500 close above 6,000 by end of 2025?', yesPrice: 0.40, noPrice: 0.60, source: 'Polymarket', url: 'https://polymarket.com' },
-          { title: 'Will there be a recession in 2025?', yesPrice: 0.30, noPrice: 0.70, source: 'Polymarket', url: 'https://polymarket.com' },
-          { title: 'Will the Fed cut rates by 100+ bps in 2025?', yesPrice: 0.55, noPrice: 0.45, source: 'Polymarket', url: 'https://polymarket.com' },
-          { title: 'Will AI stocks outperform the market in 2025?', yesPrice: 0.60, noPrice: 0.40, source: 'Polymarket', url: 'https://polymarket.com' },
-          { title: 'Will Ethereum reach $10,000 by end of 2025?', yesPrice: 0.35, noPrice: 0.65, source: 'Polymarket', url: 'https://polymarket.com' },
-          { title: 'Will the US election be decided by less than 5% margin?', yesPrice: 0.45, noPrice: 0.55, source: 'Polymarket', url: 'https://polymarket.com' },
-          { title: 'Will the housing market crash in 2025?', yesPrice: 0.20, noPrice: 0.80, source: 'Polymarket', url: 'https://polymarket.com' }
-        ]);
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching markets from Polymarket API:', error);
-        console.error('Error details:', error.message, error.response?.data);
-        setError(error.message);
-        setMarkets([
-          { title: 'Will Bitcoin reach $150,000 by end of 2025?', yesPrice: 0.25, noPrice: 0.75, source: 'Polymarket', url: 'https://polymarket.com' },
-          { title: 'Will the S&P 500 close above 6,000 by end of 2025?', yesPrice: 0.40, noPrice: 0.60, source: 'Polymarket', url: 'https://polymarket.com' },
-          { title: 'Will there be a recession in 2025?', yesPrice: 0.30, noPrice: 0.70, source: 'Polymarket', url: 'https://polymarket.com' }
-        ]);
-        setLoading(false);
-      }
-    };
-
-    fetchMarkets();
-  }, []);
+  // Transform markets data for display
+  const transformedMarkets = markets.map(market => ({
+    title: market.question,
+    yesPrice: market.yesOdds,
+    noPrice: 1 - market.yesOdds,
+    source: market.source,
+    url: market.url,
+    volume: market.volume,
+    endDate: market.endDate
+  }));
 
   // Add hover pause functionality for marquee
   useEffect(() => {
@@ -185,21 +129,6 @@ export default function Home() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Challenge plan data
-  const challengePlans = {
-    'one-phase': [
-      { size: '$10,000', profitTarget: '10% ($1,000)', dailyLoss: '5% ($500)', drawdown: '8% ($800)', fee: '$100' },
-      { size: '$25,000', profitTarget: '10% ($2,500)', dailyLoss: '5% ($1,250)', drawdown: '8% ($2,000)', fee: '$250' },
-      { size: '$50,000', profitTarget: '10% ($5,000)', dailyLoss: '5% ($2,500)', drawdown: '8% ($4,000)', fee: '$400' },
-      { size: '$100,000', profitTarget: '10% ($10,000)', dailyLoss: '5% ($5,000)', drawdown: '8% ($8,000)', fee: '$500' },
-    ],
-    'two-phase': [
-      { size: '$10,000', profitTarget: '10% ($1,000)', dailyLoss: '5% ($500)', drawdown: '10% ($1,000)', fee: '$120' },
-      { size: '$25,000', profitTarget: '10% ($2,500)', dailyLoss: '5% ($1,250)', drawdown: '10% ($2,500)', fee: '$275' },
-      { size: '$50,000', profitTarget: '10% ($5,000)', dailyLoss: '5% ($2,500)', drawdown: '10% ($5,000)', fee: '$450' },
-      { size: '$100,000', profitTarget: '10% ($10,000)', dailyLoss: '5% ($5,000)', drawdown: '10% ($10,000)', fee: '$650' },
-    ]
-  };
 
   return (
     <>
@@ -272,8 +201,8 @@ export default function Home() {
             </div>
             <p className={styles.tickerSubtitle}>Real-time market data from leading prediction platforms</p>
           </div>
-          {markets.length === 0 && <p className={styles.loadingMessage}>Loading markets...</p>}
-          {error && <p className={styles.errorMessage}>Error: {error}</p>}
+          {marketsLoading && <p className={styles.loadingMessage}>Loading markets...</p>}
+          {marketsError && <p className={styles.errorMessage}>Error: {marketsError.message}</p>}
           
           <div className={styles.marqueeContainer} 
                onMouseEnter={() => console.log('Container mouse enter')}
@@ -283,7 +212,7 @@ export default function Home() {
                  onMouseEnter={() => console.log('Marquee mouse enter')}
                  onMouseLeave={() => console.log('Marquee mouse leave')}
                  style={{ position: 'relative', zIndex: 101 }}>
-              {markets.map((market, index) => (
+              {transformedMarkets.map((market, index) => (
                 <a 
                   key={index} 
                   href={market.url} 
@@ -307,21 +236,16 @@ export default function Home() {
                     <div className={styles.marketData}>
                       <div className={styles.priceContainer}>
                         <div className={styles.priceItem}>
-                          <span className={styles.priceLabel}>Yes</span>
+                          <span className={styles.priceLabel}>Yes Odds</span>
                           <span className={`${styles.priceValue} ${styles.yes}`}>${(market.yesPrice || 0).toFixed(2)}</span>
-                        </div>
-                        <div className={styles.priceDivider}></div>
-                        <div className={styles.priceItem}>
-                          <span className={styles.priceLabel}>No</span>
-                          <span className={`${styles.priceValue} ${styles.no}`}>${(market.noPrice || 0).toFixed(2)}</span>
                         </div>
                       </div>
                       <div className={styles.marketMeta}>
-                        {market.category && (
-                          <div className={styles.categoryTag}>{market.category}</div>
+                        {market.endDate && (
+                          <div className={styles.endDateTag}>Ends: {new Date(market.endDate).toLocaleDateString()}</div>
                         )}
                         {market.volume > 0 && (
-                          <div className={styles.volumeTag}>Vol: ${market.volume.toLocaleString()}</div>
+                          <div className={styles.volumeTag}>Vol: ${(market.volume / 1000).toFixed(0)}k</div>
                         )}
                       </div>
                     </div>
@@ -407,8 +331,8 @@ export default function Home() {
                     </svg>
                     <div className={styles.stepGlow}></div>
                   </div>
-                  <h3>Earn Payouts</h3>
-                  <p>Keep up to 90% of profits, paid within 24 hours via USDC.</p>
+                  <h3>Keep 80% of profits (20% platform cut)</h3>
+                  <p>Keep up to 80% of profits, paid within 24 hours via USDC.</p>
                   <div className={styles.stepMeta}>
                     <span className={styles.stepDuration}>24 hours</span>
                     <span className={styles.stepDifficulty}>Guaranteed</span>
@@ -465,8 +389,8 @@ export default function Home() {
                     </svg>
                     <div className={styles.hexagonGlow}></div>
                   </div>
-                  <h3>High-Yield Staking</h3>
-                  <p>Stake USDC for 10-20% APY, withdraw anytime with zk-proofs.</p>
+                  <h3>High-Yield</h3>
+                  <p>Stake USDC for 10-20% APY, withdraw anytime.</p>
                   <div className={styles.hexagonStats}>
                     <span className={styles.statValue}>20%</span>
                     <span className={styles.statLabel}>Max APY</span>
@@ -483,7 +407,7 @@ export default function Home() {
                     </svg>
                     <div className={styles.hexagonGlow}></div>
                   </div>
-                  <h3>Real-Time Integrations</h3>
+                  <h3>Real Time</h3>
                   <p>Growing Fast: Billions traded across Polymarket with advanced tools.</p>
                   <div className={styles.hexagonStats}>
                     <span className={styles.statValue}>$2B+</span>
@@ -503,7 +427,7 @@ export default function Home() {
                     </svg>
                     <div className={styles.hexagonGlow}></div>
                   </div>
-                  <h3>Referral Rewards</h3>
+                  <h3>Referrals</h3>
                   <p>Earn 10% of trader fees or 5% of LP yields in USDC.</p>
                   <div className={styles.hexagonStats}>
                     <span className={styles.statValue}>10%</span>
@@ -539,7 +463,7 @@ export default function Home() {
                     </svg>
                     <div className={styles.hexagonGlow}></div>
                   </div>
-                  <h3>Non-correlated Asset</h3>
+                  <h3>Non-correlated</h3>
                   <p>Trade politics, sports, macro events & more unaffected by stocks or crypto</p>
                   <div className={styles.hexagonStats}>
                     <span className={styles.statValue}>∞</span>
@@ -558,49 +482,7 @@ export default function Home() {
             <h2>Choose Your Challenge Plan</h2>
             <p>Clear, fair rules designed for trader success and risk management.</p>
           </div>
-          <div className={styles.evaluationToggle}>
-            <button
-              className={`${styles.toggleButton} ${evaluationType === 'one-phase' ? styles.active : ''}`}
-              onClick={() => setEvaluationType('one-phase')}
-            >
-              One-Phase Evaluation
-            </button>
-            <button
-              className={`${styles.toggleButton} ${evaluationType === 'two-phase' ? styles.active : ''}`}
-              onClick={() => setEvaluationType('two-phase')}
-            >
-              Two-Phase Evaluation
-            </button>
-          </div>
-          <div className={styles.plansGrid}>
-            {challengePlans[evaluationType].map((plan, index) => (
-              <div key={index} className={`${styles.planCard} ${index === 1 ? styles.featured : ''}`}>
-                <div className={styles.planHeader}>
-                  <h3>{plan.size}</h3>
-                  <div className={styles.planPrice}>{plan.fee}</div>
-                </div>
-                <div className={styles.planFeatures}>
-                  <div className={styles.featureItem}>
-                    <span className={styles.featureLabel}>Profit Target</span>
-                    <span className={styles.featureValue}>{plan.profitTarget}</span>
-                  </div>
-                  <div className={styles.featureItem}>
-                    <span className={styles.featureLabel}>Max Daily Loss</span>
-                    <span className={styles.featureValue}>{plan.dailyLoss}</span>
-                  </div>
-                  <div className={styles.featureItem}>
-                    <span className={styles.featureLabel}>Max Drawdown</span>
-                    <span className={styles.featureValue}>{plan.drawdown}</span>
-                  </div>
-                </div>
-                <div className={styles.planFooter}>
-                  <Link href="/traders">
-                    <button className={styles.planButton}>{index === 1 ? 'Most Popular' : 'Select Plan'}</button>
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ChallengePlansTable />
           <div className={styles.sectionFooter}>
             <Link href="/docs">
               <button className={`${styles.ctaButton} ${styles.secondary}`}>Explore Rules & FAQ</button>
