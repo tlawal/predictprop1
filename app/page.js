@@ -17,20 +17,23 @@ export default function Home() {
   // SWR fetcher function
   const fetcher = (url) => fetch(url).then((res) => res.json());
   
-  // Fetch markets using SWR
-  const { data: markets = [], error: marketsError, isLoading: marketsLoading } = useSWR('/api/markets', fetcher, {
+  // Fetch ticker markets using SWR - featured events
+  const { data: marketsData, error: marketsError, isLoading: marketsLoading } = useSWR('http://localhost:3000/api/markets?ticker=true&limit=40', fetcher, {
     refreshInterval: 30000, // Refresh every 30 seconds
     revalidateOnFocus: true,
     revalidateOnReconnect: true
   });
 
+  // Extract markets array from the API response
+  const markets = marketsData?.markets || [];
+
   // Transform markets data for display
   const transformedMarkets = markets.map(market => ({
     title: market.question,
     yesPrice: market.yesOdds,
-    noPrice: 1 - market.yesOdds,
-    source: market.source,
-    url: market.url,
+    noPrice: market.noOdds,
+    source: market.source || 'polymarket',
+    url: market.url || `https://polymarket.com/event/${market.id}`,
     volume: market.volume,
     endDate: market.endDate
   }));
@@ -190,17 +193,17 @@ export default function Home() {
           <div className={styles.tickerPattern}></div>
         </div>
         <div className={styles.container}>
-          <div className={styles.tickerHeader}>
-            <div className={styles.tickerTitle}>
-              <div className={styles.titleIcon}>📊</div>
-              <h2>Live Prediction Markets</h2>
-              <div className={styles.liveIndicator}>
-                <div className={styles.liveDot}></div>
-                <span>LIVE</span>
-              </div>
-            </div>
-            <p className={styles.tickerSubtitle}>Real-time market data from leading prediction platforms</p>
-          </div>
+                <div className={styles.tickerHeader}>
+                  <div className={styles.tickerTitle}>
+                    <div className={styles.titleIcon}>📊</div>
+                    <h2>Live Prediction Markets</h2>
+                    <div className={styles.liveIndicator}>
+                      <div className={styles.liveDot}></div>
+                      <span>LIVE</span>
+                    </div>
+                  </div>
+                  <p className={styles.tickerSubtitle}>Real-time market data from leading prediction platforms</p>
+                </div>
           {marketsLoading && <p className={styles.loadingMessage}>Loading markets...</p>}
           {marketsError && <p className={styles.errorMessage}>Error: {marketsError.message}</p>}
           
@@ -212,11 +215,59 @@ export default function Home() {
                  onMouseEnter={() => console.log('Marquee mouse enter')}
                  onMouseLeave={() => console.log('Marquee mouse leave')}
                  style={{ position: 'relative', zIndex: 101 }}>
+              {/* First set of ticker items */}
               {transformedMarkets.map((market, index) => (
-                <a 
-                  key={index} 
-                  href={market.url} 
-                  target="_blank" 
+                <a
+                  key={`first-${index}`}
+                  href={market.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.tickerItem}
+                  style={{ position: 'relative', zIndex: 102 }}
+                  onClick={(e) => {
+                    console.log('Market clicked:', market.title, market.url);
+                    e.preventDefault();
+                    window.open(market.url, '_blank');
+                  }}
+                >
+                  <div className={styles.marketContent}>
+                    <div className={styles.marketHeader}>
+                      <h3 className={styles.marketTitle}>{market.title}</h3>
+                      <div className={styles.marketSource}>
+                        <span className={styles.sourceBadge}>{market.source}</span>
+                      </div>
+                    </div>
+                    <div className={styles.marketData}>
+                      <div className={styles.priceContainer}>
+                        <div className={styles.priceItem}>
+                          <span className={styles.priceLabel}>Yes Odds</span>
+                          <span className={`${styles.priceValue} ${styles.yes}`}>${(market.yesPrice || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+                      <div className={styles.marketMeta}>
+                        {market.endDate && (
+                          <div className={styles.endDateTag}>Ends: {new Date(market.endDate).toLocaleDateString()}</div>
+                        )}
+                        {market.volume > 0 && (
+                          <div className={styles.volumeTag}>Vol: ${(market.volume / 1000).toFixed(0)}k</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.tickerArrow}>
+                    <svg viewBox="0 0 24 24">
+                      <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+                    </svg>
+                  </div>
+                </a>
+              ))}
+
+              {/* Duplicate set for seamless scrolling */}
+              {transformedMarkets.map((market, index) => (
+                <a
+                  key={`second-${index}`}
+                  href={market.url}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className={styles.tickerItem}
                   style={{ position: 'relative', zIndex: 102 }}

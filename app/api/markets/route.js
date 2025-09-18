@@ -1,52 +1,76 @@
-export async function GET() {
-  // Mock data for 3-5 active prediction markets
-  const mockMarkets = [
-    {
-      id: 1,
-      question: "Will Bitcoin reach $150,000 by end of 2025?",
-      endDate: "2025-12-31T23:59:59Z",
-      yesOdds: 0.25,
-      volume: 1250000,
-      source: "Polymarket",
-      url: "https://polymarket.com/event/will-bitcoin-reach-150k-2025"
-    },
-    {
-      id: 2,
-      question: "Will the S&P 500 close above 6,000 by end of 2025?",
-      endDate: "2025-12-31T23:59:59Z",
-      yesOdds: 0.40,
-      volume: 890000,
-      source: "Polymarket",
-      url: "https://polymarket.com/event/sp500-6000-2025"
-    },
-    {
-      id: 3,
-      question: "Will there be a recession in 2025?",
-      endDate: "2025-12-31T23:59:59Z",
-      yesOdds: 0.30,
-      volume: 2100000,
-      source: "Polymarket",
-      url: "https://polymarket.com/event/recession-2025"
-    },
-    {
-      id: 4,
-      question: "Will the Fed cut rates by 100+ bps in 2025?",
-      endDate: "2025-12-31T23:59:59Z",
-      yesOdds: 0.55,
-      volume: 675000,
-      source: "Polymarket",
-      url: "https://polymarket.com/event/fed-rates-100bps-2025"
-    },
-    {
-      id: 5,
-      question: "Will AI stocks outperform the market in 2025?",
-      endDate: "2025-12-31T23:59:59Z",
-      yesOdds: 0.60,
-      volume: 445000,
-      source: "Polymarket",
-      url: "https://polymarket.com/event/ai-stocks-outperform-2025"
-    }
-  ];
+import { NextResponse } from 'next/server';
+import polymarketService from '../../../lib/services/polymarket';
 
-  return Response.json(mockMarkets);
+// Simple in-memory cache (in production, use Redis)
+const cache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+export async function GET(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const q = searchParams.get('q') || '';
+    const category = searchParams.get('category') || '';
+    const status = searchParams.get('status') || 'open'; // Default to open/active markets
+    const limit = searchParams.get('limit') || '50'; // Default to 50 markets
+    const cursor = searchParams.get('cursor') || '';
+    const isTicker = searchParams.get('ticker') === 'true';
+
+    // Build cache key
+    const cacheKey = `markets:${q}:${category}:${status}:${limit}:${cursor}`;
+
+    // Check cache first
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return NextResponse.json(cached.data);
+    }
+
+    // Fetch from Polymarket - request more to get better selection
+    let params = {
+      q: q || undefined,
+      category: category || undefined,
+      status: status || undefined,
+      limit: Math.min(parseInt(limit) || 100, 500), // Request more from Polymarket (up to 500)
+      cursor: cursor || undefined
+    };
+
+    // Override parameters for ticker data
+    if (isTicker) {
+      params = {
+        ...params,
+        limit: 40, // Get 40 featured events
+        tickerMode: true // Special flag for ticker filtering
+      };
+    }
+
+    const data = await polymarketService.fetchMarkets(params);
+
+    // Cache the result
+    cache.set(cacheKey, {
+      data,
+      timestamp: Date.now()
+    });
+
+    // Clean up old cache entries
+    if (cache.size > 100) {
+      const entries = Array.from(cache.entries());
+      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+      entries.slice(0, 20).forEach(([key]) => cache.delete(key));
+    }
+
+    return NextResponse.json(data);
+
+  } catch (error) {
+    console.error('Markets API error:', error);
+
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch markets',
+        message: error.message,
+        markets: [],
+        next: null,
+        total: 0
+      },
+      { status: 500 }
+    );
+  }
 }

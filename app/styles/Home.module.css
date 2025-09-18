@@ -437,7 +437,7 @@
   
   .marqueeContent {
     display: inline-flex;
-    animation: marquee 90s linear infinite;
+    animation: marquee 160s linear infinite;
     gap: 40px;
     align-items: center;
   }
@@ -1562,9 +1562,9 @@
     .trustLogos img {
       height: 60px;
     }
-  
+
     .marqueeContent {
-      animation-duration: 40s;
+      animation-duration: 160s;
     }
   }
 
