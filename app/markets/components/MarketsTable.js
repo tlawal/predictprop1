@@ -107,53 +107,6 @@ export default function MarketsTable({ searchQuery, category, status, onMarketCl
     return () => observer.disconnect();
   }, [loadMoreRef, hasMore, isLoading, loadMore]);
 
-  // WebSocket connection and price updates
-  useEffect(() => {
-    // Connect to WebSocket on mount
-    polymarketWebSocket.connect().then(() => {
-      setConnectionStatus('connected');
-    }).catch(() => {
-      setConnectionStatus('polling');
-      startPolling();
-    });
-
-    // Listen for price updates
-    const handlePriceUpdate = (event) => {
-      const { tokenId, yesPrice, noPrice } = event.detail;
-
-      setAllMarkets(prevMarkets =>
-        prevMarkets.map(market => {
-          if (market.tokenId === tokenId) {
-            return {
-              ...market,
-              yesOdds: yesPrice,
-              noOdds: noPrice,
-              lastUpdate: Date.now()
-            };
-          }
-          return market;
-        })
-      );
-    };
-
-    window.addEventListener('polymarket:price_update', handlePriceUpdate);
-
-    return () => {
-      window.removeEventListener('polymarket:price_update', handlePriceUpdate);
-      polymarketWebSocket.disconnect();
-    };
-  }, [startPolling]);
-
-  // Subscribe to visible markets
-  useEffect(() => {
-    if (markets.length > 0) {
-      const tokenIds = markets.map(market => market.tokenId).filter(Boolean);
-      if (tokenIds.length > 0) {
-        polymarketWebSocket.subscribeToPriceUpdates(tokenIds);
-      }
-    }
-  }, [markets]);
-
   // Polling fallback
   const startPolling = useCallback(() => {
     const pollInterval = setInterval(async () => {
@@ -185,6 +138,53 @@ export default function MarketsTable({ searchQuery, category, status, onMarketCl
     }, 5000); // Poll every 5 seconds
 
     return () => clearInterval(pollInterval);
+  }, [markets]);
+
+  // WebSocket connection and price updates
+  useEffect(() => {
+    // Connect to WebSocket on mount
+    polymarketWebSocket.connect().then(() => {
+      setConnectionStatus('connected');
+    }).catch(() => {
+      setConnectionStatus('polling');
+      startPolling();
+    });
+
+    // Listen for price updates
+    const handlePriceUpdate = (event) => {
+      const { tokenId, yesPrice, noPrice } = event.detail;
+
+      setAllMarkets(prevMarkets =>
+        prevMarkets.map(market => {
+          if (market.tokenId === tokenId) {
+            return {
+              ...market,
+              yesOdds: yesPrice,
+              noOdds: noOdds,
+              lastUpdate: Date.now()
+            };
+          }
+          return market;
+        })
+      );
+    };
+
+    window.addEventListener('polymarket:price_update', handlePriceUpdate);
+
+    return () => {
+      window.removeEventListener('polymarket:price_update', handlePriceUpdate);
+      polymarketWebSocket.disconnect();
+    };
+  }, [startPolling]);
+
+  // Subscribe to visible markets
+  useEffect(() => {
+    if (markets.length > 0) {
+      const tokenIds = markets.map(market => market.tokenId).filter(Boolean);
+      if (tokenIds.length > 0) {
+        polymarketWebSocket.subscribeToPriceUpdates(tokenIds);
+      }
+    }
   }, [markets]);
 
   const formatDate = (dateString) => {

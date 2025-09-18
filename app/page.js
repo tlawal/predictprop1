@@ -18,7 +18,7 @@ export default function Home() {
   const fetcher = (url) => fetch(url).then((res) => res.json());
   
   // Fetch ticker markets using SWR - featured events
-  const { data: marketsData, error: marketsError, isLoading: marketsLoading } = useSWR('http://localhost:3000/api/markets?ticker=true&limit=40', fetcher, {
+  const { data: marketsData, error: marketsError, isLoading: marketsLoading } = useSWR('/api/markets?ticker=true&limit=40', fetcher, {
     refreshInterval: 30000, // Refresh every 30 seconds
     revalidateOnFocus: true,
     revalidateOnReconnect: true

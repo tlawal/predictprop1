@@ -12,7 +12,7 @@ export async function GET(request) {
     const category = searchParams.get('category') || '';
     const active = searchParams.get('active');
     const closed = searchParams.get('closed');
-    const order = searchParams.get('order') || 'volume24hr,desc';
+    const order = searchParams.get('order');
     const limit = searchParams.get('limit') || '20'; // Default to 20 markets per page
     const offset = searchParams.get('offset') || '0';
     const isTicker = searchParams.get('ticker') === 'true';
@@ -26,21 +26,23 @@ export async function GET(request) {
       return NextResponse.json(cached.data);
     }
 
-    // Build parameters for Polymarket service
+    // Build parameters for Polymarket service - only include defined values
     const params = {
-      q: q || undefined,
-      category: category || undefined,
-      active: active ? active === 'true' : undefined,
-      closed: closed ? closed === 'true' : undefined,
-      order: order || undefined,
       limit: parseInt(limit) || 20,
       offset: parseInt(offset) || 0,
       tickerMode: isTicker || false
     };
 
+    // Add optional parameters only if they have values
+    if (q) params.q = q;
+    if (category) params.category = category;
+    if (active !== null) params.active = active === 'true';
+    if (closed !== null) params.closed = closed === 'true';
+    if (order) params.order = order;
+
     // Override parameters for ticker data
     if (isTicker) {
-      params.limit = 40; // Get 40 featured events for ticker
+      params.limit = 40; // Get 40 markets for ticker
       params.tickerMode = true;
     }
 
