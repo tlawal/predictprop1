@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import MarketsTable from './components/MarketsTable';
 import OrderModal from './components/OrderModal';
 // Removed old oddsStore import - now using usePolymarketWebSocket hook
 
-export default function MarketsPage() {
+function MarketsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
@@ -232,5 +232,17 @@ export default function MarketsPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function MarketsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-lg">Loading markets...</div>
+      </div>
+    }>
+      <MarketsPageContent />
+    </Suspense>
   );
 }
