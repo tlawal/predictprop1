@@ -3,9 +3,23 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
+import Redis from 'ioredis';
 
-// Simple in-memory cache (in production, use Redis)
-const cache = new Map();
+// Redis client for production caching
+let redisClient;
+try {
+  if (process.env.REDIS_URL) {
+    redisClient = new Redis(process.env.REDIS_URL);
+  } else {
+    // Fallback to in-memory cache for development
+    console.warn('⚠️  REDIS_URL not found, using in-memory cache');
+  }
+} catch (error) {
+  console.warn('⚠️  Redis connection failed, using in-memory cache:', error.message);
+}
+
+// In-memory cache fallback
+const memoryCache = new Map();
 const CACHE_TTL = 30 * 1000; // 30 seconds
 
 // Model paths
@@ -18,10 +32,27 @@ export async function GET(request) {
     const userId = searchParams.get('userId') || 'demo_user';
     const cacheKey = `yield_${userId}_${tvl}`;
 
-    // Check cache first
-    const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return NextResponse.json(cached.data);
+    // Check cache first (Redis or in-memory)
+    let cachedData = null;
+    if (redisClient) {
+      try {
+        const cachedJson = await redisClient.get(`yield:${cacheKey}`);
+        if (cachedJson) {
+          cachedData = JSON.parse(cachedJson);
+        }
+      } catch (redisError) {
+        console.warn('⚠️  Redis cache read failed:', redisError.message);
+      }
+    } else {
+      // Fallback to in-memory cache
+      const cached = memoryCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        cachedData = cached.data;
+      }
+    }
+
+    if (cachedData) {
+      return NextResponse.json(cachedData);
     }
 
     let yieldData;
@@ -40,17 +71,31 @@ export async function GET(request) {
       yieldData = generateRuleBasedYield(tvl);
     }
 
-    // Cache the result
-    cache.set(cacheKey, {
-      data: yieldData,
-      timestamp: Date.now()
-    });
+    // Cache the result (Redis or in-memory)
+    if (redisClient) {
+      try {
+        await redisClient.setex(`yield:${cacheKey}`, 1800, JSON.stringify(yieldData)); // 30 minutes TTL
+      } catch (redisError) {
+        console.warn('⚠️  Redis cache write failed:', redisError.message);
+        // Fallback to in-memory cache
+        memoryCache.set(cacheKey, {
+          data: yieldData,
+          timestamp: Date.now()
+        });
+      }
+    } else {
+      // Use in-memory cache
+      memoryCache.set(cacheKey, {
+        data: yieldData,
+        timestamp: Date.now()
+      });
 
-    // Clean up old cache entries
-    if (cache.size > 10) {
-      const entries = Array.from(cache.entries());
-      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-      entries.slice(0, 5).forEach(([key]) => cache.delete(key));
+      // Clean up old in-memory cache entries
+      if (memoryCache.size > 10) {
+        const entries = Array.from(memoryCache.entries());
+        entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+        entries.slice(0, 5).forEach(([key]) => memoryCache.delete(key));
+      }
     }
 
     return NextResponse.json(yieldData);

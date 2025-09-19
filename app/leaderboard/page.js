@@ -32,15 +32,17 @@ function LeaderboardPageContent() {
     router.replace(newUrl, { scroll: false });
   }, [debouncedSearch, router]);
 
-  // Fetch leaderboard data
+  // Fetch leaderboard data with optimized SWR config
   const { data: leaderboardData, error, isLoading } = useSWR(
     debouncedSearch ? `/api/leaderboard?search=${debouncedSearch}` : '/api/leaderboard',
     fetcher,
     {
       refreshInterval: 300000, // 5 minutes
-      revalidateOnFocus: false,
-      errorRetryCount: 3,
-      errorRetryInterval: 5000,
+      revalidateOnFocus: false, // Don't revalidate on window focus
+      dedupingInterval: 60000, // 1 minute deduping interval
+      errorRetryCount: 2, // Retry failed requests 2 times
+      errorRetryInterval: 10000, // Wait 10 seconds between retries
+      suspense: false, // Don't use React Suspense
     }
   );
 
@@ -66,12 +68,12 @@ function LeaderboardPageContent() {
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 mb-4">
             <span className="text-2xl">🏆</span>
             <span className="text-sm font-semibold text-white">Top Traders</span>
-          </div>
-
+                  </div>
+                  
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-3">
             <span className="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
               Top Polymarket Traders by PnL
-            </span>
+                    </span>
           </h1>
 
           <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-6">
@@ -92,7 +94,7 @@ function LeaderboardPageContent() {
                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-              </div>
+                </div>
             </div>
 
             <button

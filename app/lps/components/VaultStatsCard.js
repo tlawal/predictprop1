@@ -15,11 +15,17 @@ export default function VaultStatsCard({
 }) {
   const [isHovered, setIsHovered] = useState(false);
 
-  // Fetch yield data for APY card
+  // Fetch yield data for APY card with optimized SWR config
   const { data: yieldData } = useSWR(
     title === 'Projected APY' ? '/api/yield?tvl=50000' : null,
     (url) => fetch(url).then(res => res.json()),
-    { refreshInterval: 300000 } // 5 minutes
+    {
+      refreshInterval: 300000, // 5 minutes
+      revalidateOnFocus: false, // Don't revalidate on window focus
+      dedupingInterval: 60000, // 1 minute deduping interval
+      errorRetryCount: 2, // Retry failed requests 2 times
+      errorRetryInterval: 10000, // Wait 10 seconds between retries
+    }
   );
 
   // Update value if we have yield data

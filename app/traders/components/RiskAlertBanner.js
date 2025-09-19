@@ -9,11 +9,18 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 export default function RiskAlertBanner({ onViewPositions }) {
   const [dismissed, setDismissed] = useState(false);
 
-  // Fetch risk data from ML-powered API
+  // Fetch risk data from ML-powered API with optimized config
   const { data: riskData, error } = useSWR(
     '/api/risk',
     fetcher,
-    { refreshInterval: 300000 } // 5 minutes
+    {
+      refreshInterval: 300000, // 5 minutes
+      revalidateOnFocus: false, // Don't revalidate on window focus
+      dedupingInterval: 60000, // 1 minute deduping interval
+      errorRetryCount: 2, // Retry failed requests 2 times
+      errorRetryInterval: 10000, // Wait 10 seconds between retries
+      suspense: false, // Don't use React Suspense
+    }
   );
 
   if (dismissed || !riskData?.alert) return null;
