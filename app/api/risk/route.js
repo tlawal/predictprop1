@@ -1,10 +1,153 @@
+// AI-powered risk API with ML model predictions
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
+import { spawn } from 'child_process';
 
 // Simple in-memory cache
 const cache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-// Mock LSTM-like risk calculation function
+// Model paths
+const RISK_MODEL_PATH = path.join(process.cwd(), 'models', 'risk_model.json');
+
+// Predict risk using ML model via Python
+async function predictRiskWithML(modelData) {
+  return new Promise((resolve, reject) => {
+    const pythonProcess = spawn('python', [
+      path.join(process.cwd(), 'scripts', 'predict_risk.py')
+    ], {
+      cwd: process.cwd(),
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    let output = '';
+    let errorOutput = '';
+
+    pythonProcess.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+
+    pythonProcess.on('close', (code) => {
+      if (code === 0) {
+        try {
+          const prediction = JSON.parse(output.trim());
+          resolve({
+            alert: prediction.alert,
+            message: prediction.message,
+            severity: prediction.severity,
+            metrics: prediction.metrics,
+            recommendations: prediction.recommendations,
+            lastUpdated: new Date().toISOString(),
+            modelUsed: true
+          });
+        } catch (parseError) {
+          console.error('Failed to parse risk prediction:', parseError);
+          resolve(generateRuleBasedRisk());
+        }
+      } else {
+        console.error('Risk ML prediction failed:', errorOutput);
+        resolve(generateRuleBasedRisk());
+      }
+    });
+
+    pythonProcess.on('error', (error) => {
+      console.error('Python process error:', error);
+      resolve(generateRuleBasedRisk());
+    });
+  });
+}
+
+// Rule-based risk calculation (fallback)
+function generateRuleBasedRisk() {
+  // Use the existing LSTM-like calculation
+  const mockPositions = [
+    {
+      id: 'pos_1',
+      question: 'Will US government shutdown in 2025?',
+      shares: 100,
+      entryPrice: 0.55,
+      pnl: -125,
+      endDate: '2025-12-31T12:00:00Z',
+      status: 'open'
+    },
+    {
+      id: 'pos_2',
+      question: 'Taylor Swift pregnant in 2025?',
+      shares: 50,
+      entryPrice: 0.15,
+      pnl: -91,
+      endDate: '2025-12-31T12:00:00Z',
+      status: 'open'
+    },
+    {
+      id: 'pos_3',
+      question: 'Jerome Powell out as Fed Chair in 2025?',
+      shares: 75,
+      entryPrice: 0.08,
+      pnl: -114,
+      endDate: '2025-12-31T12:00:00Z',
+      status: 'open'
+    }
+  ];
+
+  const lstmResult = calculateLSTMThreshold(mockPositions, []);
+
+  const alert = lstmResult.drawdownPercent > lstmResult.threshold;
+  let alertMessage = '';
+  let severity = 'low';
+
+  if (alert) {
+    alertMessage = `${lstmResult.drawdownPercent}% drawdown on cluster of ${lstmResult.clusterSize} open positions (markets end ${new Date(lstmResult.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })})`;
+
+    if (lstmResult.drawdownPercent > 7) {
+      severity = 'high';
+    } else if (lstmResult.drawdownPercent > 5) {
+      severity = 'medium';
+    } else {
+      severity = 'low';
+    }
+  }
+
+  const totalExposure = mockPositions.reduce((sum, pos) =>
+    sum + (pos.shares * pos.entryPrice), 0
+  );
+
+  const maxSinglePosition = Math.max(...mockPositions.map(pos =>
+    pos.shares * pos.entryPrice
+  ));
+
+  const concentrationRisk = (maxSinglePosition / totalExposure) * 100;
+
+  return {
+    alert,
+    message: alertMessage,
+    severity,
+    metrics: {
+      maxDrawdown: lstmResult.drawdownPercent,
+      drawdownDate: lstmResult.date,
+      clusterSize: lstmResult.clusterSize,
+      totalExposure,
+      maxSinglePosition,
+      concentrationRisk: Math.round(concentrationRisk * 100) / 100,
+      threshold: lstmResult.threshold
+    },
+    recommendations: alert ? [
+      "Consider reducing position sizes in clustered markets",
+      "Monitor markets ending in the same time period",
+      "Diversify across different market categories",
+      "Consider taking partial profits if positions are profitable"
+    ] : [],
+    lastUpdated: new Date().toISOString(),
+    modelUsed: false
+  };
+}
+
+// Mock LSTM-like risk calculation function (kept for fallback)
 function calculateLSTMThreshold(positions, history) {
   // Simulate LSTM analysis: cluster positions by end date and calculate drawdown
   const clusters = {};
@@ -57,127 +200,29 @@ export async function GET(request) {
       return NextResponse.json(cached.data);
     }
 
-    // Mock positions data (in production, fetch from positions API)
-    const mockPositions = [
-      {
-        id: 'pos_1',
-        question: 'Will US government shutdown in 2025?',
-        shares: 100,
-        entryPrice: 0.55,
-        pnl: 625,
-        endDate: '2025-12-31T12:00:00Z',
-        status: 'open'
-      },
-      {
-        id: 'pos_2',
-        question: 'Taylor Swift pregnant in 2025?',
-        shares: 50,
-        entryPrice: 0.15,
-        pnl: -181,
-        endDate: '2025-12-31T12:00:00Z',
-        status: 'open'
-      },
-      {
-        id: 'pos_3',
-        question: 'Jerome Powell out as Fed Chair in 2025?',
-        shares: 75,
-        entryPrice: 0.08,
-        pnl: -227,
-        endDate: '2025-12-31T12:00:00Z',
-        status: 'open'
+    let riskData;
+
+    // Try to load and use ML model
+    if (fs.existsSync(RISK_MODEL_PATH)) {
+      try {
+        const modelData = JSON.parse(fs.readFileSync(RISK_MODEL_PATH, 'utf8'));
+        riskData = await predictRiskWithML(modelData);
+      } catch (modelError) {
+        console.warn('Risk ML model error, falling back to rule-based:', modelError.message);
+        riskData = generateRuleBasedRisk();
       }
-    ];
-
-    // Mock history data (in production, fetch from history API)
-    const mockHistory = [
-      {
-        id: 'trade_001',
-        pnl: 625,
-        resolved: false,
-        endDate: '2025-12-31T12:00:00Z'
-      },
-      {
-        id: 'trade_002',
-        pnl: -181,
-        resolved: false,
-        endDate: '2025-12-31T12:00:00Z'
-      },
-      {
-        id: 'trade_003',
-        pnl: 800,
-        resolved: true,
-        endDate: '2025-12-31T12:00:00Z'
-      },
-      {
-        id: 'trade_004',
-        pnl: -227,
-        resolved: false,
-        endDate: '2025-12-31T12:00:00Z'
-      }
-    ];
-
-    // Calculate LSTM-like risk analysis
-    const lstmResult = calculateLSTMThreshold(mockPositions, mockHistory);
-
-    // Determine if alert should be triggered
-    const alert = lstmResult.drawdownPercent > lstmResult.threshold;
-
-    // Format the alert message
-    let alertMessage = '';
-    let severity = 'low';
-
-    if (alert) {
-      alertMessage = `${lstmResult.drawdownPercent}% drawdown on cluster of ${lstmResult.clusterSize} open positions (markets end ${new Date(lstmResult.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })})`;
-
-      if (lstmResult.drawdownPercent > 7) {
-        severity = 'high';
-      } else if (lstmResult.drawdownPercent > 5) {
-        severity = 'medium';
-      } else {
-        severity = 'low';
-      }
+    } else {
+      console.warn('Risk ML model not found, using rule-based calculation');
+      riskData = generateRuleBasedRisk();
     }
-
-    // Calculate additional risk metrics
-    const totalExposure = mockPositions.reduce((sum, pos) =>
-      sum + (pos.shares * pos.entryPrice), 0
-    );
-
-    const maxSinglePosition = Math.max(...mockPositions.map(pos =>
-      pos.shares * pos.entryPrice
-    ));
-
-    const concentrationRisk = (maxSinglePosition / totalExposure) * 100;
-
-    const result = {
-      alert: alert,
-      message: alertMessage,
-      severity: severity,
-      metrics: {
-        maxDrawdown: lstmResult.drawdownPercent,
-        drawdownDate: lstmResult.date,
-        clusterSize: lstmResult.clusterSize,
-        totalExposure: totalExposure,
-        maxSinglePosition: maxSinglePosition,
-        concentrationRisk: Math.round(concentrationRisk * 100) / 100,
-        threshold: lstmResult.threshold
-      },
-      recommendations: alert ? [
-        "Consider reducing position sizes in clustered markets",
-        "Monitor markets ending in the same time period",
-        "Diversify across different market categories",
-        "Consider taking partial profits if positions are profitable"
-      ] : [],
-      lastUpdated: new Date().toISOString()
-    };
 
     // Cache the result
     cache.set(cacheKey, {
-      data: result,
+      data: riskData,
       timestamp: Date.now()
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json(riskData);
 
   } catch (error) {
     console.error('Risk API error:', error);

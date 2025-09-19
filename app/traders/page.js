@@ -257,16 +257,10 @@ function TradersPageContent() {
 
             <Tab.Panel>
               <div className="space-y-6">
-                {/* Risk Alert Banner */}
-                {showRiskAlert && riskData?.alert && (
-                  <RiskAlertBanner
-                    alert={riskData.alert}
-                    message={riskData.message}
-                    severity={riskData.severity}
-                    onDismiss={handleDismissRiskAlert}
-                    onViewPositions={handleViewPositions}
-                  />
-                )}
+                    {/* Risk Alert Banner */}
+                    <RiskAlertBanner
+                      onViewPositions={handleViewPositions}
+                    />
 
                 {/* Trade History */}
                 <TradeHistoryList

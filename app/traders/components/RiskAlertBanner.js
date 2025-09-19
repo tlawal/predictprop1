@@ -1,16 +1,26 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import useSWR from 'swr';
 
-export default function RiskAlertBanner({
-  alert,
-  message,
-  severity,
-  onDismiss,
-  onViewPositions
-}) {
-  if (!alert) return null;
+const fetcher = (url) => fetch(url).then((res) => res.json());
+
+export default function RiskAlertBanner({ onViewPositions }) {
+  const [dismissed, setDismissed] = useState(false);
+
+  // Fetch risk data from ML-powered API
+  const { data: riskData, error } = useSWR(
+    '/api/risk',
+    fetcher,
+    { refreshInterval: 300000 } // 5 minutes
+  );
+
+  if (dismissed || !riskData?.alert) return null;
+
+  const alert = riskData.alert;
+  const message = riskData.message;
+  const severity = riskData.severity;
 
   const getSeverityStyles = (severity) => {
     switch (severity) {
@@ -63,7 +73,7 @@ export default function RiskAlertBanner({
             View Positions
           </button>
           <button
-            onClick={onDismiss}
+            onClick={() => setDismissed(true)}
             className={`p-1 rounded hover:bg-black/20 transition-colors ${styles.text}`}
             title="Dismiss alert"
           >

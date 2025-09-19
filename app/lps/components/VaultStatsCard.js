@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 
 export default function VaultStatsCard({
   title,
@@ -13,6 +14,22 @@ export default function VaultStatsCard({
   disabled = false
 }) {
   const [isHovered, setIsHovered] = useState(false);
+
+  // Fetch yield data for APY card
+  const { data: yieldData } = useSWR(
+    title === 'Projected APY' ? '/api/yield?tvl=50000' : null,
+    (url) => fetch(url).then(res => res.json()),
+    { refreshInterval: 300000 } // 5 minutes
+  );
+
+  // Update value if we have yield data
+  const displayValue = title === 'Projected APY' && yieldData?.apy
+    ? `${yieldData.apy}%`
+    : value;
+
+  const displayAiInsight = title === 'Projected APY' && yieldData?.aiInsight
+    ? yieldData.aiInsight
+    : aiInsight;
 
   const formatValue = (val, type) => {
     if (type === 'currency') {
@@ -56,17 +73,17 @@ export default function VaultStatsCard({
         )}
       </div>
 
-      <div className="vault-stats-card-content">
+        <div className="vault-stats-card-content">
         <h3 className="vault-stats-title">{title}</h3>
         <div className="vault-stats-value">
-          {formatValue(value, getValueType())}
+          {formatValue(displayValue, getValueType())}
         </div>
         <p className="vault-stats-subtitle">{subtitle}</p>
 
-        {aiInsight && (
+        {displayAiInsight && (
           <div className="vault-stats-ai-insight">
             <span className="ai-icon">🤖</span>
-            <span className="ai-text">{aiInsight}</span>
+            <span className="ai-text">{displayAiInsight}</span>
           </div>
         )}
       </div>
