@@ -1051,6 +1051,8 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 40px;
     align-items: center;
+    justify-content: center;
+    width: 100%;
   }
   
   .hexagonRow {
@@ -1525,36 +1527,61 @@
     .hexagonGrid {
       grid-template-columns: repeat(2, 1fr);
       gap: 30px;
+      justify-content: center;
     }
   }
-  
+
   @media (max-width: 768px) {
     .hexagonGrid {
       grid-template-columns: 1fr;
       gap: 20px;
+      justify-content: center;
+      align-items: center;
+      padding: 0 20px;
     }
-    
+
     .hexagonCard {
-      width: 280px;
+      width: 100%;
+      max-width: 320px;
       height: 320px;
       padding: 24px;
+      margin: 0 auto;
     }
-    
+
     .hexagonContent h3 {
       font-size: 24px;
     }
-    
+
     .hexagonContent p {
       font-size: 14px;
     }
-    
+
     .statValue {
       font-size: 28px;
     }
-  
+
     .evaluationToggle {
       flex-direction: column;
       gap: 10px;
+    }
+
+    /* Center the hexagon cards on mobile */
+    .features {
+      padding: 60px 0;
+    }
+
+    .hexagonGrid {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .hexagonRow {
+      display: flex;
+      justify-content: center;
+      width: 100%;
     }
   }
   

@@ -32,4 +32,43 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
+  /* Fix mobile scrolling issues */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* Prevent horizontal scroll on mobile */
+  width: 100%;
+  position: relative;
+}
+
+/* Fix mobile viewport issues */
+html {
+  /* Prevent horizontal scroll on iOS Safari */
+  overflow-x: hidden;
+  /* Enable smooth scrolling on mobile */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix mobile scrolling and viewport issues */
+@media (max-width: 768px) {
+  html, body {
+    width: 100%;
+    overflow-x: hidden;
+    /* Ensure proper viewport handling */
+    min-height: 100vh;
+    /* Fix iOS Safari bounce scrolling */
+    position: relative;
+  }
+
+  /* Fix for mobile Safari bottom bar issues */
+  body {
+    /* Ensure content doesn't get cut off */
+    padding-bottom: 80px; /* Account for bottom nav */
+  }
+
+  /* Fix for mobile scrolling bars */
+  * {
+    /* Prevent horizontal scroll issues */
+    max-width: 100%;
+    box-sizing: border-box;
+  }
 }

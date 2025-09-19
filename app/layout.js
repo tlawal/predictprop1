@@ -1,40 +1,17 @@
-'use client';
-import { PrivyProvider } from '@privy-io/react-auth';
-import { ThemeProvider } from './ThemeContext';
-import Header from './components/Header';
-import Footer from './components/Footer';
+import RootLayoutClient from './layout.client';
 import './globals.css';
 
-// export const metadata = {
-//   title: 'PredictProp',
-//   description: 'Decentralized Prop Trading Platform',
-// };
+export const metadata = {
+  title: 'PredictProp',
+  description: 'Decentralized Prop Trading Platform',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
+};
 
 export default function RootLayout({ children }) {
-  return (
-    <html lang="en">
-      <body>
-        <ThemeProvider>
-          <PrivyProvider
-            appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'clpispdty00ycl80fpueukbhl'}
-            config={{
-              loginMethods: ['email', 'google', 'twitter', 'wallet'],
-              appearance: { 
-                theme: 'dark', 
-                accentColor: '#2DD4BF',
-                logo: 'https://polymarket.com/images/logo.svg'
-              },
-              embeddedWallets: {
-                createOnLogin: 'users-without-wallets'
-              }
-            }}
-          >
-            <Header />
-            {children}
-            <Footer />
-          </PrivyProvider>
-        </ThemeProvider>
-      </body>
-    </html>
-  );
+  return <RootLayoutClient>{children}</RootLayoutClient>;
 }
