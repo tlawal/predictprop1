@@ -1,20 +1,14 @@
-/* Main Page Layout */
-.lpPage {
+/* LPs Page Styles */
+.container {
   min-height: 100vh;
   background: var(--background);
-  color: var(--text-color);
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
+  color: var(--foreground);
 }
 
 /* Hero Section */
 .hero {
-  background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
-  padding: 120px 0 80px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #475569 75%, #64748b 100%);
+  padding: 80px 0;
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -27,808 +21,366 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-  opacity: 0.3;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(45, 212, 191, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(30, 58, 138, 0.1) 0%, transparent 50%);
+  animation: heroFloat 20s ease-in-out infinite;
 }
 
 .heroContent {
   position: relative;
   z-index: 2;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
-.hero h1 {
+.heroTitle {
   font-size: 48px;
-  font-weight: 800;
-  margin-bottom: 20px;
-  color: white;
+  font-weight: 900;
+  margin-bottom: 24px;
+  line-height: 1.1;
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 50%, #e2e8f0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.hero p {
+.heroSubtitle {
   font-size: 20px;
-  color: rgba(255, 255, 255, 0.9);
-  max-width: 600px;
-  margin: 0 auto 40px;
-}
-
-.heroStats {
-  display: flex;
-  justify-content: center;
-  gap: 60px;
-  margin-top: 40px;
-}
-
-.stat {
-  text-align: center;
-}
-
-.statValue {
-  display: block;
-  font-size: 32px;
-  font-weight: 700;
-  color: white;
-  margin-bottom: 8px;
-}
-
-.statLabel {
-  font-size: 14px;
   color: rgba(255, 255, 255, 0.8);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
 }
 
-/* Tabs Section */
-.tabsSection {
+/* Stats Section */
+.statsSection {
+  padding: 60px 0;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Graph Section */
+.graphSection {
+  padding: 60px 0;
   background: var(--background);
-  border-bottom: 1px solid var(--accent-color);
-  padding: 0;
 }
 
-.tabs {
-  display: flex;
-  gap: 0;
-}
-
-.tab {
-  background: transparent;
-  border: none;
-  padding: 20px 32px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--foreground);
-  cursor: pointer;
-  border-bottom: 3px solid transparent;
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.tab:hover {
-  background: rgba(30, 58, 138, 0.05);
-  color: var(--accent-color);
-}
-
-.tab.active {
-  color: var(--accent-color);
-  border-bottom-color: var(--accent-color);
-  background: rgba(30, 58, 138, 0.05);
-}
-
-/* Section Headers */
 .sectionHeader {
   text-align: center;
-  margin-bottom: 60px;
+  margin-bottom: 40px;
 }
 
 .sectionHeader h2 {
   font-size: 36px;
   font-weight: 800;
   margin-bottom: 16px;
-  color: var(--text-color);
+  background: linear-gradient(135deg, #2DD4BF, #14B8A6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .sectionHeader p {
   font-size: 18px;
-  color: var(--foreground);
+  color: rgba(255, 255, 255, 0.7);
   max-width: 600px;
   margin: 0 auto;
 }
 
-/* Vaults Section */
-.vaultsSection {
-  padding: 80px 0;
-  background: var(--background);
+/* Actions Section */
+.actionsSection {
+  padding: 60px 0;
+  background: rgba(15, 23, 42, 0.5);
 }
 
-.vaultsGrid {
+.actionsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
-.vaultCard {
+.actionButton {
+  padding: 20px 32px;
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  position: relative;
+  overflow: hidden;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.actionButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s ease;
+}
+
+.actionButton:hover::before {
+  left: 100%;
+}
+
+.actionButton svg {
+  width: 24px;
+  height: 24px;
+  transition: transform 0.3s ease;
+}
+
+.actionButton:hover svg {
+  transform: translateX(4px);
+}
+
+.actionButton.primary {
+  background: linear-gradient(135deg, #2DD4BF 0%, #14B8A6 50%, #0D9488 100%);
+  color: #1A1A1A;
+  box-shadow: 0 8px 32px rgba(45, 212, 191, 0.3);
+}
+
+.actionButton.primary:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(45, 212, 191, 0.4);
+}
+
+.actionButton.secondary {
+  background: rgba(239, 68, 68, 0.1);
+  border: 2px solid rgba(239, 68, 68, 0.3);
+  color: #EF4444;
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.1);
+}
+
+.actionButton.secondary:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 16px 48px rgba(239, 68, 68, 0.2);
+}
+
+/* Loading State */
+.loadingContainer {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   background: var(--background);
-  border: 2px solid var(--accent-color);
-  border-radius: 20px;
-  padding: 32px;
-  transition: all 0.3s ease;
+  color: var(--foreground);
+}
+
+.loadingSpinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(45, 212, 191, 0.2);
+  border-top: 4px solid #2DD4BF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+.loadingContainer p {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Connect Prompt */
+.connectPrompt {
+  margin-top: 24px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.05), rgba(30, 58, 138, 0.05));
+  border: 1px solid rgba(45, 212, 191, 0.2);
+  border-radius: 16px;
+  text-align: center;
   position: relative;
   overflow: hidden;
 }
 
-.vaultCard::before {
+.connectPrompt::before {
   content: '';
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--accent-color), var(--secondary-accent));
-}
-
-.vaultCard:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 60px rgba(30, 58, 138, 0.2);
-  border-color: var(--secondary-accent);
-}
-
-.vaultCard.green::before {
-  background: linear-gradient(90deg, #10b981, #34d399);
-}
-
-.vaultCard.blue::before {
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
-}
-
-.vaultCard.purple::before {
-  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
-}
-
-.vaultHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
-
-.vaultInfo h3 {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  color: var(--text-color);
-}
-
-.manager {
-  color: var(--foreground);
-  font-size: 14px;
-}
-
-.vaultApy {
-  text-align: right;
-}
-
-.apyValue {
-  display: block;
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--secondary-accent);
-  line-height: 1;
-}
-
-.apyLabel {
-  font-size: 12px;
-  color: var(--foreground);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.vaultStats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.vaultStats .stat {
-  text-align: center;
-  padding: 16px;
-  background: rgba(30, 58, 138, 0.05);
-  border-radius: 12px;
-}
-
-.vaultStats .statLabel {
-  display: block;
-  font-size: 12px;
-  color: var(--foreground);
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.vaultStats .statValue {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-.riskBadge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.riskBadge.low {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
-}
-
-.riskBadge.medium {
-  background: rgba(59, 130, 246, 0.2);
-  color: #3b82f6;
-}
-
-.riskBadge.high {
-  background: rgba(139, 92, 246, 0.2);
-  color: #8b5cf6;
-}
-
-.performance {
-  color: #10b981;
-  font-weight: 600;
-}
-
-.vaultDetails {
-  margin-bottom: 24px;
-}
-
-.strategy {
-  font-size: 14px;
-  color: var(--foreground);
-  margin-bottom: 8px;
-}
-
-.depositRange {
-  font-size: 12px;
-  color: var(--foreground);
-  opacity: 0.8;
-}
-
-.stakeButton {
+  left: -100%;
   width: 100%;
-  background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
-  color: white;
-  border: none;
-  padding: 16px;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(45, 212, 191, 0.1), transparent);
+  animation: shimmer 3s ease-in-out infinite;
 }
 
-.stakeButton:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(30, 58, 138, 0.3);
-}
-
-/* Market Makers Section */
-.marketMakersSection {
-  padding: 80px 0;
-  background: var(--background);
-}
-
-.mmGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 30px;
-}
-
-.mmCard {
-  background: var(--background);
-  border: 2px solid var(--accent-color);
-  border-radius: 20px;
-  padding: 32px;
-  transition: all 0.3s ease;
-}
-
-.mmCard:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 15px 40px rgba(30, 58, 138, 0.15);
-}
-
-.mmHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.mmInfo h3 {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  color: var(--text-color);
-}
-
-.verifiedBadge {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.rating {
-  text-align: right;
-}
-
-.ratingValue {
-  display: block;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-color);
-}
-
-.stars {
-  color: #fbbf24;
-  font-size: 14px;
-}
-
-.mmStats {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.mmStats .stat {
-  padding: 12px;
-  background: rgba(30, 58, 138, 0.05);
-  border-radius: 8px;
-}
-
-.mmStats .statLabel {
-  display: block;
-  font-size: 12px;
-  color: var(--foreground);
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.mmStats .statValue {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-.strategies h4 {
-  font-size: 14px;
-  font-weight: 600;
+.connectPromptIcon {
+  font-size: 32px;
   margin-bottom: 12px;
-  color: var(--text-color);
+  display: block;
 }
 
-.strategyTags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 24px;
-}
-
-.strategyTag {
-  background: rgba(30, 58, 138, 0.1);
-  color: var(--accent-color);
-  padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 12px;
+.connectPrompt p {
+  margin: 0 0 8px 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  line-height: 1.5;
   font-weight: 500;
 }
 
-.viewVaultsButton {
-  width: 100%;
-  background: transparent;
-  border: 2px solid var(--accent-color);
-  color: var(--accent-color);
-  padding: 12px;
-  border-radius: 8px;
+.connectPromptSubtext {
+  margin: 8px 0 0 0;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  line-height: 1.4;
+  font-weight: 400;
 }
 
-.viewVaultsButton:hover {
-  background: var(--accent-color);
-  color: white;
+/* Disabled Button State */
+.actionButton.disabled {
+  opacity: 0.7;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
 }
 
-/* Create Vault Section */
-.createVaultSection {
-  padding: 80px 0;
-  background: var(--background);
+.actionButton.disabled:hover {
+  transform: none;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
-.createVaultForm {
-  max-width: 800px;
-  margin: 0 auto;
+.actionButton.disabled.primary {
+  background: rgba(45, 212, 191, 0.1);
+  border-color: rgba(45, 212, 191, 0.3);
+  color: rgba(45, 212, 191, 0.7);
 }
 
-.formSection {
-  background: var(--background);
-  border: 2px solid var(--accent-color);
-  border-radius: 16px;
-  padding: 32px;
-  margin-bottom: 24px;
+.actionButton.disabled.primary:hover {
+  background: rgba(45, 212, 191, 0.15);
+  border-color: rgba(45, 212, 191, 0.4);
 }
 
-.formSection h3 {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 24px;
-  color: var(--text-color);
+.actionButton.disabled.secondary {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: rgba(239, 68, 68, 0.7);
 }
 
-.formGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+.actionButton.disabled.secondary:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
-.formGroup {
-  display: flex;
-  flex-direction: column;
+/* Animations */
+@keyframes heroFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
 }
 
-.formGroup label {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: var(--text-color);
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-.formGroup input,
-.formGroup select {
-  padding: 12px 16px;
-  border: 2px solid var(--accent-color);
-  border-radius: 8px;
-  background: var(--background);
-  color: var(--text-color);
-  font-size: 14px;
-  transition: all 0.3s ease;
+@keyframes shimmer {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
 }
 
-.formGroup input:focus,
-.formGroup select:focus {
-  outline: none;
-  border-color: var(--secondary-accent);
-  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.1);
-}
-
-.capitalInput {
-  text-align: center;
-}
-
-.capitalInput label {
-  display: block;
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: var(--text-color);
-}
-
-.inputGroup {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.inputGroup input {
-  font-size: 24px;
-  font-weight: 700;
-  text-align: center;
-  padding: 16px 24px;
-  border: 2px solid var(--accent-color);
-  border-radius: 12px;
-  background: var(--background);
-  color: var(--text-color);
-  max-width: 200px;
-}
-
-.currency {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--accent-color);
-}
-
-.helpText {
-  font-size: 14px;
-  color: var(--foreground);
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-.terms {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.checkboxLabel {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--text-color);
-}
-
-.checkboxLabel input[type="checkbox"] {
-  margin: 0;
-  width: 18px;
-  height: 18px;
-  accent-color: var(--accent-color);
-}
-
-.createVaultButton {
-  width: 100%;
-  background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
-  color: white;
-  border: none;
-  padding: 20px;
-  border-radius: 12px;
-  font-size: 18px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin-top: 32px;
-}
-
-.createVaultButton:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(30, 58, 138, 0.3);
-}
-
-/* Modal */
-.modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
-.modal {
-  background: var(--background);
-  border-radius: 20px;
-  max-width: 500px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modalHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px 32px;
-  border-bottom: 1px solid var(--accent-color);
-}
-
-.modalHeader h3 {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-color);
-}
-
-.closeButton {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: var(--foreground);
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.3s ease;
-}
-
-.closeButton:hover {
-  background: rgba(30, 58, 138, 0.1);
-  color: var(--accent-color);
-}
-
-.modalContent {
-  padding: 32px;
-}
-
-.vaultSummary {
-  background: rgba(30, 58, 138, 0.05);
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 24px;
-}
-
-.summaryItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.summaryItem:last-child {
-  margin-bottom: 0;
-}
-
-.summaryItem span:first-child {
-  color: var(--foreground);
-  font-size: 14px;
-}
-
-.summaryItem span:last-child {
-  color: var(--text-color);
-  font-weight: 600;
-}
-
-.stakeForm {
-  margin-bottom: 24px;
-}
-
-.stakeForm label {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: var(--text-color);
-}
-
-.stakeForm .inputGroup {
-  margin-bottom: 16px;
-}
-
-.stakeForm .inputGroup input {
-  flex: 1;
-  padding: 16px;
-  border: 2px solid var(--accent-color);
-  border-radius: 8px;
-  background: var(--background);
-  color: var(--text-color);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.amountButtons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.amountButtons button {
-  background: transparent;
-  border: 1px solid var(--accent-color);
-  color: var(--accent-color);
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.amountButtons button:hover {
-  background: var(--accent-color);
-  color: white;
-}
-
-.stakeSummary {
-  background: rgba(30, 58, 138, 0.05);
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 24px;
-}
-
-.stakeSummary h4 {
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 16px;
-  color: var(--text-color);
-}
-
-.summaryRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.summaryRow:last-child {
-  margin-bottom: 0;
-}
-
-.summaryRow span:first-child {
-  color: var(--foreground);
-  font-size: 14px;
-}
-
-.summaryRow span:last-child {
-  color: var(--text-color);
-  font-weight: 600;
-}
-
-.confirmStakeButton {
-  width: 100%;
-  background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
-  color: white;
-  border: none;
-  padding: 16px;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.confirmStakeButton:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(30, 58, 138, 0.3);
-}
-
-/* Responsive Design */
+/* Mobile Responsive */
 @media (max-width: 768px) {
-  .hero h1 {
+  .hero {
+    padding: 60px 0;
+  }
+
+  .heroTitle {
     font-size: 36px;
   }
-  
-  .hero p {
+
+  .heroSubtitle {
     font-size: 18px;
   }
-  
-  .heroStats {
-    flex-direction: column;
-    gap: 30px;
-  }
-  
-  .tabs {
-    flex-direction: column;
-  }
-  
-  .tab {
-    border-bottom: 1px solid var(--accent-color);
-    border-right: none;
-  }
-  
-  .vaultsGrid,
-  .mmGrid {
+
+  .statsGrid {
     grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 0 16px;
   }
-  
-  .formGrid {
+
+  .sectionHeader h2 {
+    font-size: 28px;
+  }
+
+  .sectionHeader p {
+    font-size: 16px;
+  }
+
+  .actionsGrid {
     grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 0 16px;
   }
-  
-  .vaultStats,
-  .mmStats {
-    grid-template-columns: 1fr;
+
+  .actionButton {
+    padding: 16px 24px;
+    font-size: 16px;
+    min-height: 70px;
   }
-  
-  .modal {
-    margin: 20px;
-  }
-  
-  .modalContent {
+
+  .connectPrompt {
     padding: 20px;
+  }
+
+  .connectPromptIcon {
+    font-size: 28px;
+  }
+
+  .connectPrompt p {
+    font-size: 14px;
+  }
+
+  .connectPromptSubtext {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .heroTitle {
+    font-size: 28px;
+  }
+
+  .heroSubtitle {
+    font-size: 16px;
+  }
+
+  .sectionHeader h2 {
+    font-size: 24px;
+  }
+
+  .actionButton {
+    padding: 14px 20px;
+    font-size: 15px;
+    min-height: 65px;
   }
 }
