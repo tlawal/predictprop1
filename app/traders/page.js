@@ -9,6 +9,10 @@ import useSWR from 'swr';
 import ProgressTracker from './components/ProgressTracker';
 import PositionsTable from './components/PositionsTable';
 import CloseModal from './components/CloseModal';
+import RiskAlertBanner from './components/RiskAlertBanner';
+import TradeHistoryList from './components/TradeHistoryList';
+import EquityCurveChart from './components/EquityCurveChart';
+import toast, { Toaster } from 'react-hot-toast';
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
@@ -20,6 +24,7 @@ function TradersPageContent() {
   const [selectedPosition, setSelectedPosition] = useState(null);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showDemoBadge, setShowDemoBadge] = useState(true);
+  const [showRiskAlert, setShowRiskAlert] = useState(true);
 
   // Auth check
   useEffect(() => {
@@ -51,6 +56,20 @@ function TradersPageContent() {
     user ? `/api/challenge?userId=${user.id}` : null,
     fetcher,
     { refreshInterval: 30000 }
+  );
+
+  // Fetch trade history for Performance tab
+  const { data: historyData, error: historyError } = useSWR(
+    user ? `/api/history?userId=${user.id}` : null,
+    fetcher,
+    { refreshInterval: 30000 }
+  );
+
+  // Fetch risk analysis for alerts
+  const { data: riskData, error: riskError } = useSWR(
+    user ? `/api/risk?userId=${user.id}` : null,
+    fetcher,
+    { refreshInterval: 60000 } // Check risk every minute
   );
 
   // Show loading if auth is not ready
@@ -113,6 +132,22 @@ function TradersPageContent() {
       console.error('Error closing position:', error);
       alert('Error closing position. Please try again.');
     }
+  };
+
+  const handleDismissRiskAlert = () => {
+    setShowRiskAlert(false);
+    toast.success('Risk alert dismissed');
+  };
+
+  const handleViewPositions = () => {
+    setActiveTab(1); // Switch to Positions tab
+    router.replace('/traders?tab=positions', { scroll: false });
+    toast.success('Switched to Positions tab');
+  };
+
+  const handleFilterChange = (filter) => {
+    // Re-fetch data with new filter (this would be implemented in a real app)
+    console.log('Filter changed to:', filter);
   };
 
   return (
@@ -221,9 +256,86 @@ function TradersPageContent() {
             </Tab.Panel>
 
             <Tab.Panel>
-              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 text-center">
-                <h3 className="text-xl font-semibold text-white mb-4">Performance Analytics</h3>
-                <p className="text-gray-400">Detailed performance charts and analytics coming soon.</p>
+              <div className="space-y-6">
+                {/* Risk Alert Banner */}
+                {showRiskAlert && riskData?.alert && (
+                  <RiskAlertBanner
+                    alert={riskData.alert}
+                    message={riskData.message}
+                    severity={riskData.severity}
+                    onDismiss={handleDismissRiskAlert}
+                    onViewPositions={handleViewPositions}
+                  />
+                )}
+
+                {/* Trade History */}
+                <TradeHistoryList
+                  trades={historyData?.trades || []}
+                  onFilterChange={handleFilterChange}
+                />
+
+                {/* Equity Curve Chart */}
+                {historyData?.equityHistory && (
+                  <EquityCurveChart
+                    equityHistory={historyData.equityHistory}
+                    positions={[]} // Would be populated with actual positions data
+                  />
+                )}
+
+                {/* Performance Summary */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-400">Total Trades</p>
+                        <p className="text-2xl font-bold text-white">{historyData?.summary?.totalTrades || 0}</p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-blue-500/20 text-blue-400">
+                        📊
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-400">Win Rate</p>
+                        <p className="text-2xl font-bold text-green-400">
+                          {historyData?.summary?.winRate ? `${Math.round(historyData.summary.winRate)}%` : '0%'}
+                        </p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-green-500/20 text-green-400">
+                        🎯
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-400">Total P&L</p>
+                        <p className={`text-2xl font-bold ${(historyData?.summary?.totalPnL || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          ${Math.abs(historyData?.summary?.totalPnL || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className={`p-2 rounded-lg ${(historyData?.summary?.totalPnL || 0) >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                        {(historyData?.summary?.totalPnL || 0) >= 0 ? '📈' : '📉'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-400">Open Positions</p>
+                        <p className="text-2xl font-bold text-yellow-400">{historyData?.summary?.openTrades || 0}</p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-yellow-500/20 text-yellow-400">
+                        ⏳
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </Tab.Panel>
           </Tab.Panels>
@@ -238,6 +350,25 @@ function TradersPageContent() {
           onConfirm={handleClosePosition}
         />
       )}
+
+      {/* Toast Notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#1f2937',
+            color: '#ffffff',
+            border: '1px solid #374151',
+          },
+          success: {
+            icon: '✅',
+          },
+          error: {
+            icon: '❌',
+          },
+        }}
+      />
     </div>
   );
 }
