@@ -310,8 +310,12 @@
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+  .container {
+    padding-top: 80px; /* Account for fixed header */
+  }
+
   .hero {
-    padding: 60px 0;
+    padding: 20px 0 40px 0;
   }
 
   .heroTitle {

@@ -1472,6 +1472,10 @@
   }
   
   @media (max-width: 768px) {
+    .hero {
+      padding-top: 120px;
+    }
+
     .heroContent h1 {
       font-size: 30px;
     }
