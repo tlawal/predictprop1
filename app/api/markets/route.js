@@ -12,13 +12,15 @@ export async function GET(request) {
     const category = searchParams.get('category') || '';
     const active = searchParams.get('active');
     const closed = searchParams.get('closed');
-    const order = searchParams.get('order');
-    const limit = searchParams.get('limit') || '20'; // Default to 20 markets per page
-    const offset = searchParams.get('offset') || '0';
+    const order = searchParams.get('order') || 'volume24hr,desc';
+    const limit = parseInt(searchParams.get('limit')) || 20;
+    const offset = parseInt(searchParams.get('offset')) || 0;
     const isTicker = searchParams.get('ticker') === 'true';
+    const created_after = searchParams.get('created_after');
+    const time_filter = searchParams.get('time_filter');
 
     // Build cache key
-    const cacheKey = `markets:${q}:${category}:${active}:${closed}:${order}:${limit}:${offset}`;
+    const cacheKey = `markets:${q}:${category}:${active}:${closed}:${order}:${limit}:${offset}:${created_after}:${time_filter}`;
 
     // Check cache first
     const cached = cache.get(cacheKey);
@@ -26,10 +28,10 @@ export async function GET(request) {
       return NextResponse.json(cached.data);
     }
 
-    // Build parameters for Polymarket service - only include defined values
+    // Build parameters for Polymarket service
     const params = {
-      limit: parseInt(limit) || 20,
-      offset: parseInt(offset) || 0,
+      limit,
+      offset,
       tickerMode: isTicker || false
     };
 
@@ -39,6 +41,7 @@ export async function GET(request) {
     if (active !== null) params.active = active === 'true';
     if (closed !== null) params.closed = closed === 'true';
     if (order) params.order = order;
+    if (created_after) params.created_after = created_after;
 
     // Override parameters for ticker data
     if (isTicker) {
@@ -92,6 +95,39 @@ export async function GET(request) {
 
     // Fetch from Polymarket service for regular requests
     const data = await polymarketService.fetchMarkets(params);
+
+    // Apply client-side time filtering if needed
+    let markets = data.markets || [];
+    if (time_filter) {
+      const now = new Date();
+      markets = markets.filter(market => {
+        if (!market.endDate) return false;
+        const endDate = new Date(market.endDate);
+        const daysDiff = (endDate - now) / (1000 * 60 * 60 * 24);
+
+        switch (time_filter) {
+          case 'upcoming_1wk':
+            return daysDiff >= 0 && daysDiff <= 7;
+          case '1_4wk':
+            return daysDiff > 7 && daysDiff <= 28;
+          default:
+            return true;
+        }
+      });
+
+      // Update total count after filtering
+      data.total = markets.length;
+      data.markets = markets;
+    }
+
+    // Ensure volume24hr field is present for sorting
+    if (order.includes('volume24hr')) {
+      markets.forEach(market => {
+        if (market.volume24hr === undefined) {
+          market.volume24hr = market.volume || 0;
+        }
+      });
+    }
 
     // Cache the result
     cache.set(cacheKey, {

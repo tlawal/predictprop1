@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import useSWR from 'swr';
+import Fuse from 'fuse.js';
+import Image from 'next/image';
 import MarketsTable from './components/MarketsTable';
 import OrderModal from './components/OrderModal';
 // Removed old oddsStore import - now using usePolymarketWebSocket hook
@@ -12,11 +15,26 @@ function MarketsPageContent() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
   const [selectedStatus, setSelectedStatus] = useState(searchParams.get('status') || 'open'); // Default to open/active markets
+  const [selectedTimeFilter, setSelectedTimeFilter] = useState(searchParams.get('time_filter') || '');
+  const [selectedSort, setSelectedSort] = useState(searchParams.get('sort') || 'volume24hr_desc');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedMarket, setSelectedMarket] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   // Removed old oddsStore usage - now handled by MarketsTable component
+
+  // Fetch trending markets for the trending section
+  const { data: trendingData } = useSWR(
+    '/api/markets?limit=5&order=volume24hr,desc',
+    (url) => fetch(url).then(res => res.json()),
+    {
+      refreshInterval: 300000, // 5 minutes
+      revalidateOnFocus: false,
+      dedupingInterval: 60000,
+      errorRetryCount: 2,
+      errorRetryInterval: 10000,
+    }
+  );
 
   // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
@@ -35,10 +53,12 @@ function MarketsPageContent() {
     if (debouncedSearch) params.set('q', debouncedSearch);
     if (selectedCategory) params.set('category', selectedCategory);
     if (selectedStatus) params.set('status', selectedStatus);
-    
+    if (selectedTimeFilter) params.set('time_filter', selectedTimeFilter);
+    if (selectedSort) params.set('sort', selectedSort);
+
     const newUrl = params.toString() ? `?${params.toString()}` : '/markets';
     router.replace(newUrl, { scroll: false });
-  }, [debouncedSearch, selectedCategory, selectedStatus, router]);
+  }, [debouncedSearch, selectedCategory, selectedStatus, selectedTimeFilter, selectedSort, router]);
 
   // Set predefined categories on mount
   useEffect(() => {
@@ -74,6 +94,109 @@ function MarketsPageContent() {
 
   const toggleStatus = (status) => {
     setSelectedStatus(selectedStatus === status ? '' : status);
+  };
+
+  const toggleTimeFilter = (timeFilter) => {
+    setSelectedTimeFilter(selectedTimeFilter === timeFilter ? '' : timeFilter);
+  };
+
+  const handleSortChange = (sortValue) => {
+    setSelectedSort(sortValue);
+  };
+
+  // Map sort values to API order parameters
+  const getSortOrderParam = (sortValue) => {
+    switch (sortValue) {
+      case 'volume24hr_desc':
+        return 'volume24hr,desc';
+      case 'volume24hr_asc':
+        return 'volume24hr,asc';
+      case 'newest':
+        return 'createdAt,desc';
+      case 'liquidity_desc':
+        return 'liquidity,desc';
+      case 'liquidity_asc':
+        return 'liquidity,asc';
+      default:
+        return 'volume24hr,desc';
+    }
+  };
+
+  // Trending Markets Component
+  const TrendingMarkets = () => {
+    const trendingMarkets = trendingData?.markets || [];
+
+    if (!trendingMarkets.length) return null;
+
+    return (
+      <section className="mb-12">
+        <div className="flex items-center gap-3 mb-6">
+          <h2 className="text-2xl font-bold text-white">Trending Markets</h2>
+          <div className="flex items-center gap-2 px-3 py-1 bg-orange-500/20 rounded-full">
+            <span className="text-orange-400 text-sm font-medium">🔥 Hot</span>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <div className="flex gap-4 pb-4" style={{ width: 'max-content' }}>
+            {trendingMarkets.map((market) => {
+              const volume24hr = market.volume24hr || market.volume || 0;
+              const isHighVolume = volume24hr > 10000;
+
+              return (
+                <div
+                  key={market.id}
+                  className={`flex-shrink-0 w-80 p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-105 ${
+                    isHighVolume
+                      ? 'bg-gradient-to-br from-red-900/30 via-orange-900/30 to-yellow-900/30 border-red-500/30'
+                      : 'bg-slate-800/50 border-slate-700'
+                  }`}
+                  onClick={() => handleMarketClick(market)}
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-700 flex items-center justify-center flex-shrink-0">
+                      {market.icon ? (
+                        <Image
+                          src={market.icon}
+                          alt={market.question}
+                          width={40}
+                          height={40}
+                          className="object-cover"
+                        />
+                      ) : (
+                        <span className="text-gray-400 text-lg">📊</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-white text-sm leading-tight line-clamp-2 mb-2">
+                        {market.question}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          market.yesOdds > 0.5 ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
+                        }`}>
+                          Yes: {(market.yesOdds * 100).toFixed(0)}%
+                        </span>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          market.noOdds > 0.5 ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
+                        }`}>
+                          No: {(market.noOdds * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>Vol: ${Math.round(volume24hr / 1000)}k</span>
+                    <span>{market.category || 'Other'}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    );
   };
 
   return (
@@ -119,6 +242,9 @@ function MarketsPageContent() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 pb-20">
+        {/* Trending Markets Section */}
+        <TrendingMarkets />
+
         <div className="flex gap-8">
           {/* Sidebar */}
           <div className={`fixed inset-y-0 left-0 z-50 w-80 bg-slate-800/95 backdrop-blur-sm border-r border-slate-700 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:border-r-0 lg:bg-transparent ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
@@ -135,6 +261,45 @@ function MarketsPageContent() {
 
               <h2 className="text-2xl font-bold text-white mb-6">Filters</h2>
               
+              {/* Sort Dropdown */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-300 mb-4">Sort By</h3>
+                <select
+                  value={selectedSort}
+                  onChange={(e) => handleSortChange(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                >
+                  <option value="volume24hr_desc">Volume (24h) - High to Low</option>
+                  <option value="volume24hr_asc">Volume (24h) - Low to High</option>
+                  <option value="newest">Newest First</option>
+                  <option value="liquidity_desc">Liquidity - High to Low</option>
+                  <option value="liquidity_asc">Liquidity - Low to High</option>
+                </select>
+              </div>
+
+              {/* Time Filter */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-300 mb-4">Time Frame</h3>
+                <div className="space-y-2">
+                  {[
+                    { key: 'upcoming_1wk', label: 'Upcoming <1wk' },
+                    { key: '1_4wk', label: '1-4 weeks' }
+                  ].map((timeFilter) => (
+                    <button
+                      key={timeFilter.key}
+                      onClick={() => toggleTimeFilter(timeFilter.key)}
+                      className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
+                        selectedTimeFilter === timeFilter.key
+                          ? 'bg-teal-500/20 border-teal-500 text-teal-400'
+                          : 'bg-slate-700/50 border-slate-600 text-gray-300 hover:bg-slate-700 hover:border-slate-500'
+                      }`}
+                    >
+                      <span>{timeFilter.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Category Filter */}
               <div className="mb-8">
                 <h3 className="text-lg font-semibold text-gray-300 mb-4">Category</h3>
@@ -180,6 +345,8 @@ function MarketsPageContent() {
                 onClick={() => {
                   setSelectedCategory('');
                   setSelectedStatus('');
+                  setSelectedTimeFilter('');
+                  setSelectedSort('volume24hr_desc');
                   setSearchQuery('');
                 }}
                 className="w-full px-4 py-3 bg-slate-700 hover:bg-slate-600 text-gray-300 hover:text-white rounded-lg transition-all"
@@ -212,13 +379,15 @@ function MarketsPageContent() {
               </button>
             </div>
 
-            {/* Markets Table */}
-            <MarketsTable
-              searchQuery={debouncedSearch}
-              category={selectedCategory}
-              status={selectedStatus}
-              onMarketClick={handleMarketClick}
-            />
+                {/* Markets Table */}
+                <MarketsTable
+                  searchQuery={debouncedSearch}
+                  category={selectedCategory}
+                  status={selectedStatus}
+                  timeFilter={selectedTimeFilter}
+                  sortOrder={getSortOrderParam(selectedSort)}
+                  onMarketClick={handleMarketClick}
+                />
           </div>
         </div>
       </div>

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import useSWR from 'swr';
 import polymarketWebSocket from '../../../lib/websocket';
 
-export default function MarketsTable({ searchQuery, category, status, onMarketClick }) {
+export default function MarketsTable({ searchQuery, category, status, timeFilter, sortOrder, onMarketClick }) {
   const [offset, setOffset] = useState(0);
   const [allMarkets, setAllMarkets] = useState([]);
   const [hasMore, setHasMore] = useState(true);
@@ -20,6 +20,7 @@ export default function MarketsTable({ searchQuery, category, status, onMarketCl
 
     if (searchQuery) params.set('q', searchQuery);
     if (category) params.set('category', category);
+    if (timeFilter) params.set('time_filter', timeFilter);
 
     // Convert status to active/closed params for Gamma API
     if (status === 'open') {
@@ -34,7 +35,12 @@ export default function MarketsTable({ searchQuery, category, status, onMarketCl
       params.set('closed', 'false');
     }
 
-    params.set('order', 'volume24hr,desc');
+    // Set order parameter based on sortOrder
+    if (sortOrder) {
+      params.set('order', sortOrder);
+    } else {
+      params.set('order', 'volume24hr,desc');
+    }
 
     return `/api/markets?${params.toString()}`;
   };
