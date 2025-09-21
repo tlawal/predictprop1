@@ -14,41 +14,6 @@ import OrderModal from './components/OrderModal';
 import FiltersComponent from './components/FiltersComponent';
 // Removed old oddsStore import - now using usePolymarketWebSocket hook
 
-// Market Stats Row Component
-function MarketStatsRow() {
-  const { data: summaryData } = useSWR(
-    '/api/markets/summary',
-    (url) => fetch(url).then(res => res.json()),
-    {
-      refreshInterval: 300000, // 5 minutes
-      revalidateOnFocus: false,
-      dedupingInterval: 60000,
-    }
-  );
-
-  if (!summaryData) return null;
-
-  const formatVolume = (volume) => {
-    if (volume >= 1000000) return `$${(volume / 1000000).toFixed(1)}M`;
-    if (volume >= 1000) return `$${(volume / 1000).toFixed(1)}K`;
-    return `$${volume.toFixed(0)}`;
-  };
-
-  const formatNumber = (num) => {
-    return num.toLocaleString();
-  };
-
-  return (
-    <div className="flex flex-wrap justify-center gap-3 mb-6">
-      <div className="bg-blue-200 px-3 py-1 rounded-full text-blue-800 text-sm font-medium">
-        {formatNumber(summaryData.totalMarkets || 0)} Active Markets
-      </div>
-      <div className="bg-green-200 px-3 py-1 rounded-full text-green-800 text-sm font-medium">
-        {formatVolume(summaryData.totalVolume24h || 0)} Volume (24h)
-      </div>
-    </div>
-  );
-}
 
 // WS Ticker Marquee Component
 function WSTickerMarquee() {
@@ -718,38 +683,12 @@ function MarketsPageContent() {
       <section className="relative py-6 md:py-10 px-4 bg-gradient-to-r from-gray-800 to-gray-900 animate-fade-in">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-teal-500/10 to-blue-600/10"></div>
         <div className="relative max-w-7xl mx-auto flex flex-col items-center text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 mb-4">
-            <span className="text-2xl">🚀</span>
-            <span className="text-sm font-semibold text-white">Live Markets</span>
-          </div>
 
-          <h1 className="text-xl md:text-3xl font-black text-white mb-4">
+          <h1 className="text-xl md:text-3xl font-black text-white mb-8">
             <span className="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
               Explore Live Prediction Markets
             </span>
           </h1>
-
-          {/* Stats Row */}
-          <MarketStatsRow />
-
-          {/* Search Bar */}
-          <div className="w-full md:w-1/2 mx-auto mb-4">
-            <div className="relative">
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Search events..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-3 text-base bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
 
           {/* WS Ticker Marquee */}
           <div className="w-full overflow-hidden">
@@ -796,23 +735,8 @@ function MarketsPageContent() {
             {panes.find(p => p.id === 'markets' && p.visible) && (
               <div className={`flex-1 ${panes.filter(p => p.visible && p.id !== 'markets').length > 0 ? 'lg:flex-[2]' : ''} min-h-0`}>
                 <div className="p-6">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="mb-6">
                     <h3 className="text-xl font-bold text-white">Markets</h3>
-                      {/* Filters Button */}
-                      <button
-                        onClick={() => setFiltersModalOpen(true)}
-                        className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-gray-300 hover:text-white rounded-lg transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
-                        </svg>
-                        Filters
-                        {(filters.categories.length > 0 || filters.status.length > 0 || filters.time.length > 0) && (
-                          <span className="bg-teal-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1">
-                            {(filters.categories.length + filters.status.length + filters.time.length)}
-                          </span>
-                        )}
-                      </button>
                   </div>
 
                   <MarketsTable
@@ -824,6 +748,10 @@ function MarketsPageContent() {
                     onMarketSelectForOrderbook={handleMarketOrderbook}
                     tableRef={tableRef}
                     isLoading={marketsLoading}
+                    onSearchChange={setSearchQuery}
+                    onFiltersToggle={() => setFiltersModalOpen(true)}
+                    filters={filters}
+                    searchInputRef={searchInputRef}
                   />
                 </div>
               </div>
