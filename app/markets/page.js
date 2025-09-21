@@ -30,8 +30,8 @@ function MarketsPageContent() {
   // New features state
   const [panes, setPanes] = useState([
     { id: 'markets', title: 'Markets', visible: true, order: 0 },
-    { id: 'orderbook', title: 'Orderbook', visible: true, order: 1 },
-    { id: 'insights', title: 'Insights', visible: true, order: 2 }
+    { id: 'orderbook', title: 'Orderbook', visible: false, order: 1 },
+    { id: 'insights', title: 'Insights', visible: false, order: 2 }
   ]);
   const [selectedMarketForOrderbook, setSelectedMarketForOrderbook] = useState(null);
   const [keyboardNavIndex, setKeyboardNavIndex] = useState(0);
@@ -135,7 +135,24 @@ function MarketsPageContent() {
 
   const handleMarketInsights = (market) => {
     setSelectedMarketForInsights(market);
-    setRightPaneOpen(true);
+    // Make insights pane visible (markets remains visible)
+    setPanes(prevPanes =>
+      prevPanes.map(pane => ({
+        ...pane,
+        visible: pane.id === 'insights' ? true : pane.visible
+      }))
+    );
+  };
+
+  const handleMarketOrderbook = (market) => {
+    setSelectedMarketForOrderbook(market);
+    // Make orderbook pane visible (markets remains visible)
+    setPanes(prevPanes =>
+      prevPanes.map(pane => ({
+        ...pane,
+        visible: pane.id === 'orderbook' ? true : pane.visible
+      }))
+    );
   };
 
   const handleCloseModal = () => {
@@ -146,6 +163,13 @@ function MarketsPageContent() {
   const handleCloseRightPane = () => {
     setRightPaneOpen(false);
     setSelectedMarketForInsights(null);
+    // Hide insights pane (markets remains visible)
+    setPanes(prevPanes =>
+      prevPanes.map(pane => ({
+        ...pane,
+        visible: pane.id === 'insights' ? false : pane.visible
+      }))
+    );
   };
 
   // Keyboard navigation
@@ -403,8 +427,26 @@ function MarketsPageContent() {
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-white text-lg">Orderbook</h3>
-          <div className="text-xs text-gray-400">
-            Spread: {spread.percentage.toFixed(2)}%
+          <div className="flex items-center gap-2">
+            <div className="text-xs text-gray-400">
+              Spread: {spread.percentage.toFixed(2)}%
+            </div>
+            <button
+              onClick={() => {
+                setSelectedMarketForOrderbook(null);
+                setPanes(prevPanes =>
+                  prevPanes.map(pane => ({
+                    ...pane,
+                    visible: pane.id === 'orderbook' ? false : pane.visible
+                  }))
+                );
+              }}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -586,161 +628,141 @@ function MarketsPageContent() {
           </div>
 
           {/* Panes Container */}
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-            {panes
-              .filter(pane => pane.visible)
-              .sort((a, b) => a.order - b.order)
-              .map((pane, index) => (
-                <DraggablePane
-                  key={pane.id}
-                  pane={pane}
-                  index={index}
-                  movePane={movePane}
-                >
-                  {pane.id === 'markets' && (
-                    <div className="p-6">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl font-bold text-white">Markets</h3>
-                        {/* Filters Button */}
-                        <button
-                          onClick={() => setSidebarOpen(true)}
-                          className="lg:hidden flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-gray-300 hover:text-white rounded-lg transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
-                          </svg>
-                          Filters
-                        </button>
-                      </div>
+          <div className="flex-1 flex flex-col lg:flex-row gap-4 lg:gap-6">
+            {/* Markets pane - always takes primary space when visible */}
+            {panes.find(p => p.id === 'markets' && p.visible) && (
+              <div className={`flex-1 ${panes.filter(p => p.visible && p.id !== 'markets').length > 0 ? 'lg:flex-[2]' : ''} min-h-0`}>
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-white">Markets</h3>
+                    {/* Filters Button */}
+                    <button
+                      onClick={() => setSidebarOpen(true)}
+                      className="lg:hidden flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-gray-300 hover:text-white rounded-lg transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+                      </svg>
+                      Filters
+                    </button>
+                  </div>
 
-                      <MarketsTable
-                        searchQuery={debouncedSearch}
-                        category={selectedCategory}
-                        status={selectedStatus}
-                        timeFilter={selectedTimeFilter}
-                        sortOrder={getSortOrderParam(selectedSort)}
-                        onMarketClick={handleMarketClick}
-                        onMarketInsights={handleMarketInsights}
-                        onMarketSelectForOrderbook={setSelectedMarketForOrderbook}
-                        tableRef={tableRef}
-                      />
-                    </div>
-                  )}
+                  <MarketsTable
+                    searchQuery={debouncedSearch}
+                    category={selectedCategory}
+                    status={selectedStatus}
+                    timeFilter={selectedTimeFilter}
+                    sortOrder={getSortOrderParam(selectedSort)}
+                    onMarketClick={handleMarketClick}
+                    onMarketInsights={handleMarketInsights}
+                    onMarketSelectForOrderbook={handleMarketOrderbook}
+                    tableRef={tableRef}
+                  />
+                </div>
+              </div>
+            )}
 
-                  {pane.id === 'orderbook' && (
-                    <OrderbookPane market={selectedMarketForOrderbook} />
-                  )}
+            {/* Secondary panes - stacked in right column when visible */}
+            {panes.filter(p => p.visible && p.id !== 'markets').length > 0 && (
+              <div className="lg:flex-[1] lg:min-w-0 space-y-4 lg:space-y-6">
+                {panes
+                  .filter(p => p.visible && p.id !== 'markets')
+                  .sort((a, b) => a.order - b.order)
+                  .map((pane) => (
+                    <div key={pane.id} className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl overflow-hidden">
+                      {pane.id === 'orderbook' && (
+                        <OrderbookPane market={selectedMarketForOrderbook} />
+                      )}
 
-                  {pane.id === 'insights' && (
-                    <div className="p-6 h-full overflow-y-auto">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl font-bold text-white">Market Insights</h3>
-                        {selectedMarketForInsights && (
-                          <button
-                            onClick={handleCloseRightPane}
-                            className="text-gray-400 hover:text-white transition-colors"
-                          >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-
-                      {selectedMarketForInsights ? (
-                        <>
-                          {/* Market Header */}
-                          <div className="mb-6 p-4 bg-slate-700/50 rounded-lg">
-                            <h4 className="font-semibold text-white text-sm mb-2">Selected Market</h4>
-                            <p className="text-gray-300 text-sm leading-relaxed">{selectedMarketForInsights.question}</p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className="text-xs text-gray-400">Current: {(selectedMarketForInsights.yesOdds * 100).toFixed(1)}% Yes</span>
-                            </div>
+                      {pane.id === 'insights' && (
+                        <div className="p-6 h-full overflow-y-auto">
+                          <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-white">Market Insights</h3>
+                            {selectedMarketForInsights && (
+                              <button
+                                onClick={handleCloseRightPane}
+                                className="text-gray-400 hover:text-white transition-colors"
+                              >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            )}
                           </div>
 
-                          {/* Insights Content */}
-                          {insightsLoading ? (
-                            <div className="text-center py-8">
-                              <div className="text-gray-400">Loading insights...</div>
-                            </div>
-                          ) : insightsData ? (
-                            <div className="space-y-6">
-                              {/* Market Stats */}
-                              <div className="p-4 bg-slate-700/30 rounded-lg">
-                                <h4 className="font-semibold text-white text-sm mb-3">Market Statistics</h4>
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-400">Avg Probability Shift:</span>
-                                    <span className="text-white">{insightsData.insights?.averageProbShift || 0}%</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-400">Trend:</span>
-                                    <span className={`font-medium ${
-                                      insightsData.insights?.trend === 'increasing' ? 'text-green-400' :
-                                      insightsData.insights?.trend === 'decreasing' ? 'text-red-400' :
-                                      'text-gray-400'
-                                    }`}>
-                                      {insightsData.insights?.trend || 'stable'}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-400">Volatility:</span>
-                                    <span className="text-white">{insightsData.insights?.volatility || 0}%</span>
-                                  </div>
+                          {selectedMarketForInsights ? (
+                            <div>
+                              {/* Market Header */}
+                              <div className="mb-6 p-4 bg-slate-700/50 rounded-lg">
+                                <h4 className="font-semibold text-white text-sm mb-2">Selected Market</h4>
+                                <p className="text-gray-300 text-sm leading-relaxed">{selectedMarketForInsights.question}</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <span className="text-xs text-gray-400">Current: {(selectedMarketForInsights.yesOdds * 100).toFixed(1)}% Yes</span>
                                 </div>
                               </div>
 
-                              {/* Analysis */}
-                              <div className="p-4 bg-slate-700/30 rounded-lg">
-                                <h4 className="font-semibold text-white text-sm mb-3">Analysis</h4>
-                                <div className="space-y-2 text-sm text-gray-300">
-                                  <p><strong>Market Maturity:</strong> {insightsData.analysis?.marketMaturity}</p>
-                                  <p><strong>Liquidity:</strong> {insightsData.analysis?.liquidityAssessment}</p>
-                                  <p><strong>Recommendation:</strong> {insightsData.analysis?.recommendation}</p>
+                              {/* Insights Content */}
+                              {insightsLoading ? (
+                                <div className="text-center py-8">
+                                  <div className="text-gray-400">Loading insights...</div>
                                 </div>
-                              </div>
-
-                              {/* Related Markets */}
-                              {insightsData.relatedMarkets && insightsData.relatedMarkets.length > 0 && (
-                                <div className="p-4 bg-slate-700/30 rounded-lg">
-                                  <h4 className="font-semibold text-white text-sm mb-3">Related Markets</h4>
-                                  <div className="space-y-3">
-                                    {insightsData.relatedMarkets.slice(0, 3).map((market, index) => (
-                                      <div
-                                        key={market.id}
-                                        className="p-3 bg-slate-800/50 rounded border border-slate-600 cursor-pointer hover:bg-slate-800/70 transition-colors"
-                                        onClick={() => handleMarketClick(market)}
-                                      >
-                                        <p className="text-gray-300 text-xs leading-relaxed mb-2">{market.question}</p>
-                                        <div className="flex items-center justify-between text-xs">
-                                          <span className="text-gray-400">{market.category}</span>
-                                          <span className="text-white">{(market.yesOdds * 100).toFixed(0)}% Yes</span>
-                                        </div>
+                              ) : insightsData ? (
+                                <div className="space-y-6">
+                                  {/* Market Stats */}
+                                  <div className="p-4 bg-slate-700/30 rounded-lg">
+                                    <h4 className="font-semibold text-white text-sm mb-3">Market Statistics</h4>
+                                    <div className="space-y-2 text-sm">
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-400">Avg Probability Shift:</span>
+                                        <span className="text-white">{insightsData.insights?.averageProbShift || 0}%</span>
                                       </div>
-                                    ))}
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-400">Trend:</span>
+                                        <span className={`font-medium ${
+                                          insightsData.insights?.trend === 'increasing' ? 'text-green-400' :
+                                          insightsData.insights?.trend === 'decreasing' ? 'text-red-400' :
+                                          'text-gray-400'
+                                        }`}>
+                                          {insightsData.insights?.trend || 'stable'}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-400">Volatility:</span>
+                                        <span className="text-white">{insightsData.insights?.volatility || 'N/A'}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-400">Liquidity Score:</span>
+                                        <span className="text-white">{insightsData.insights?.liquidityScore || 'N/A'}</span>
+                                      </div>
+                                    </div>
                                   </div>
+
+                                  {/* AI Insights */}
+                                  <div className="p-4 bg-slate-700/30 rounded-lg">
+                                    <h4 className="font-semibold text-white text-sm mb-3">AI Analysis</h4>
+                                    <p className="text-gray-300 text-sm leading-relaxed">{insightsData.summary || 'No AI insights available'}</p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-center py-8">
+                                  <div className="text-gray-400 text-sm">Unable to load insights</div>
                                 </div>
                               )}
                             </div>
                           ) : (
                             <div className="text-center py-8">
-                              <div className="text-gray-400 text-sm">Select a market to view insights</div>
+                              <div className="text-gray-400 text-sm">Click on a market to view insights</div>
                             </div>
                           )}
-                        </>
-                      ) : (
-                        <div className="text-center py-8">
-                          <div className="text-gray-400 text-sm">Click on a market to view insights</div>
                         </div>
                       )}
                     </div>
-                  )}
-                </DraggablePane>
-              ))}
+                  ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Sidebar (Mobile Filters) */}
         <div className={`fixed inset-y-0 left-0 z-50 w-80 bg-slate-800/95 backdrop-blur-sm border-r border-slate-700 transform transition-transform duration-300 ease-in-out lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="p-6">
             {/* Mobile close button */}

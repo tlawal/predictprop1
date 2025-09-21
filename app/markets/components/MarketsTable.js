@@ -166,11 +166,13 @@ const CountdownRenderer = ({ days, hours, minutes, seconds, completed }) => {
   }
 };
 
-export default function MarketsTable({ searchQuery, category, status, timeFilter, sortOrder, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, tableRef }) {
+export default function MarketsTable({ searchQuery, category, status = 'open', timeFilter, sortOrder, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, tableRef }) {
+
   const [offset, setOffset] = useState(0);
   const [allMarkets, setAllMarkets] = useState([]);
   const [hasMore, setHasMore] = useState(true);
   const [wsPriceChanges, setWsPriceChanges] = useState(new Map()); // Track WS price changes
+  const [hasLoadedData, setHasLoadedData] = useState(false);
 
   const limit = 20; // 20 markets per page as requested
 
@@ -178,7 +180,7 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
   const getPriceHistory = useOddsStore(state => state.getPriceHistory);
 
   // Build API URL with parameters
-  const buildUrl = (offset) => {
+  const buildUrl = useCallback((offset) => {
     const params = new URLSearchParams();
     params.set('offset', offset.toString());
     params.set('limit', limit.toString());
@@ -208,7 +210,7 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
     }
 
     return `/api/markets?${params.toString()}`;
-  };
+  }, [searchQuery, category, status, timeFilter, sortOrder]);
 
   // SWR fetcher
   const fetcher = (url) => fetch(url).then((res) => res.json());
@@ -236,13 +238,16 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
   }, [getPriceHistory]);
 
   // Use SWR for data fetching
+  const swrKey = useMemo(() => buildUrl(offset), [buildUrl, offset]);
   const { data, error, isLoading, mutate } = useSWR(
-    buildUrl(offset),
+    swrKey,
     fetcher,
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
-      dedupingInterval: 5000, // 5 seconds
+      dedupingInterval: 30000, // 30 seconds - longer deduping
+      revalidateIfStale: false, // Don't revalidate if we have stale data
+      revalidateOnMount: true, // Allow fetching on mount
     }
   );
 
@@ -290,14 +295,23 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
   // Update markets when data changes
   useEffect(() => {
     if (data?.markets) {
-      if (offset === 0) {
-        // First page, replace all markets
-        setAllMarkets(data.markets);
+      setHasLoadedData(true);
+      if (data.markets.length > 0) {
+        if (offset === 0) {
+          // First page, replace all markets
+          setAllMarkets(data.markets);
+        } else {
+          // Subsequent pages, append to existing markets
+          setAllMarkets(prev => [...prev, ...data.markets]);
+        }
+        setHasMore(data.markets.length === limit);
       } else {
-        // Subsequent pages, append to existing markets
-        setAllMarkets(prev => [...prev, ...data.markets]);
+        // No markets returned
+        if (offset === 0) {
+          setAllMarkets([]);
+        }
+        setHasMore(false);
       }
-      setHasMore(data.markets.length === limit);
     }
   }, [data, offset, limit]);
 
@@ -306,6 +320,7 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
     setOffset(0);
     setAllMarkets([]);
     setHasMore(true);
+    setHasLoadedData(false);
   }, [searchQuery, category, status]);
 
   // Load more function for infinite scroll
@@ -316,7 +331,7 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
   }, [isLoading, hasMore, limit]);
 
   const markets = allMarkets;
-  const loading = isLoading && offset === 0;
+  const loading = isLoading;
 
   // WebSocket and polling state
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
@@ -462,7 +477,7 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
     );
   }
 
-  if (markets.length === 0 && !loading) {
+  if (markets.length === 0 && !loading && hasLoadedData) {
     return (
       <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 text-center">
         <div className="text-gray-400 text-lg">No markets found</div>
@@ -497,8 +512,7 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
 
       {/* Markets Table - Desktop */}
       <div className="hidden lg:block bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table ref={tableRef} className="w-full">
+        <table ref={tableRef} className="w-full">
             <thead className="bg-slate-700/50">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-12"></th>
@@ -527,7 +541,6 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
               ))}
             </tbody>
           </table>
-        </div>
       </div>
 
       {/* Markets Cards - Mobile */}
@@ -703,7 +716,6 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
             onClick={(e) => {
               e.stopPropagation();
               onMarketInsights(market);
-              onMarketSelectForOrderbook && onMarketSelectForOrderbook(market);
             }}
             className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
             title="View Insights"
@@ -773,7 +785,6 @@ function MarketCard({ market, onMarketClick, onMarketInsights, onMarketSelectFor
               onClick={(e) => {
                 e.stopPropagation();
                 onMarketInsights(market);
-                onMarketSelectForOrderbook && onMarketSelectForOrderbook(market);
               }}
               className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
               title="View Insights"
