@@ -12,6 +12,86 @@ import MarketsTable from './components/MarketsTable';
 import OrderModal from './components/OrderModal';
 // Removed old oddsStore import - now using usePolymarketWebSocket hook
 
+// Market Stats Row Component
+function MarketStatsRow() {
+  const { data: summaryData } = useSWR(
+    '/api/markets/summary',
+    (url) => fetch(url).then(res => res.json()),
+    {
+      refreshInterval: 300000, // 5 minutes
+      revalidateOnFocus: false,
+      dedupingInterval: 60000,
+    }
+  );
+
+  if (!summaryData) return null;
+
+  const formatVolume = (volume) => {
+    if (volume >= 1000000) return `$${(volume / 1000000).toFixed(1)}M`;
+    if (volume >= 1000) return `$${(volume / 1000).toFixed(1)}K`;
+    return `$${volume.toFixed(0)}`;
+  };
+
+  const formatNumber = (num) => {
+    return num.toLocaleString();
+  };
+
+  return (
+    <div className="flex flex-wrap justify-center gap-3 mb-6">
+      <div className="bg-blue-200 px-3 py-1 rounded-full text-blue-800 text-sm font-medium">
+        {formatNumber(summaryData.totalMarkets || 0)} Active Markets
+      </div>
+      <div className="bg-green-200 px-3 py-1 rounded-full text-green-800 text-sm font-medium">
+        {formatVolume(summaryData.totalVolume24h || 0)} Volume (24h)
+      </div>
+    </div>
+  );
+}
+
+// WS Ticker Marquee Component
+function WSTickerMarquee() {
+  const [tickerItems, setTickerItems] = useState([
+    "BTC up 2.5% in last hour",
+    "Election odds shifting in Pennsylvania",
+    "New market: Will it rain tomorrow in NYC?",
+    "ETH volatility increasing",
+    "Sports betting volume surging"
+  ]);
+
+  // Simulate real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Simulate price changes
+      setTickerItems(prev => {
+        const newItems = [...prev];
+        const randomIndex = Math.floor(Math.random() * newItems.length);
+        const markets = ["BTC", "ETH", "AAPL", "Election", "Sports", "Weather"];
+        const changes = ["up", "down"];
+        const percents = ["0.5%", "1.2%", "2.1%", "3.7%", "5.2%"];
+
+        newItems[randomIndex] = `${markets[Math.floor(Math.random() * markets.length)]} ${changes[Math.floor(Math.random() * changes.length)]} ${percents[Math.floor(Math.random() * percents.length)]}`;
+        return newItems;
+      });
+    }, 8000); // Update every 8 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="relative w-full h-8 overflow-hidden bg-black/20 rounded-lg mt-2">
+      <div className="absolute inset-0 flex animate-marquee">
+        {tickerItems.concat(tickerItems).map((item, index) => (
+          <div key={index} className="flex items-center gap-2 px-4 whitespace-nowrap text-gray-300 text-sm">
+            <span className="w-2 h-2 bg-teal-400 rounded-full animate-pulse"></span>
+            <span>{item}</span>
+            <span className="mx-4 text-gray-600">•</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MarketsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -557,40 +637,45 @@ function MarketsPageContent() {
     <DndProvider backend={HTML5Backend}>
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 md:pt-0">
       {/* Hero Section */}
-      <section className="relative py-12 md:py-20 px-4">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-teal-500/20 to-blue-600/20"></div>
-        <div className="relative max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 mb-8">
+      <section className="relative py-6 md:py-10 px-4 bg-gradient-to-r from-gray-800 to-gray-900 animate-fade-in">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-teal-500/10 to-blue-600/10"></div>
+        <div className="relative max-w-7xl mx-auto flex flex-col items-center text-center">
+          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 mb-4">
             <span className="text-2xl">🚀</span>
             <span className="text-sm font-semibold text-white">Live Markets</span>
           </div>
-          
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-6">
+
+          <h1 className="text-xl md:text-3xl font-black text-white mb-4">
             <span className="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
               Explore Live Prediction Markets
             </span>
           </h1>
-          
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-12">
-            Trade on real-world events with live odds updates and instant execution
-          </p>
+
+          {/* Stats Row */}
+          <MarketStatsRow />
 
           {/* Search Bar */}
-          <div className="max-w-2xl mx-auto mb-8">
+          <div className="w-full md:w-1/2 mx-auto mb-4">
             <div className="relative">
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Search events..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-6 py-4 text-lg bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full px-4 py-3 text-base bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
             </div>
+          </div>
+
+          {/* WS Ticker Marquee */}
+          <div className="w-full overflow-hidden">
+            <WSTickerMarquee />
           </div>
         </div>
       </section>
