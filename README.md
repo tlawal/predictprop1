@@ -17,11 +17,14 @@ The platform features real-time market data integration, interactive charting, c
 - Hero section with call-to-action
 
 #### **📊 Markets Page**
-- Live Polymarket integration via Gamma API
-- Advanced filtering (category, status, search)
-- Infinite scroll with pagination
-- Mobile-responsive table and card layouts
-- Real-time price updates and WebSocket integration
+- **Live Polymarket Integration**: Real-time data via Gamma API and CLOB WebSocket
+- **Advanced Filtering**: Category, status, search with URL state persistence
+- **Sortable Columns**: Click headers for multi-column sorting with visual indicators
+- **Orderbook Tooltips**: Hover odds to see bid/ask/spread data
+- **AI Edge Detection**: Yellow chips for potential mispricing opportunities
+- **Infinite Scroll**: SWR-powered pagination with loading states
+- **Mobile-Responsive**: Table + card layouts with touch-friendly interactions
+- **WebSocket Authentication**: API key-based CLOB connection with fallback polling
 
 #### **👤 Traders Dashboard** (Protected Route)
 - **Authentication**: Privy integration with redirect handling
@@ -86,6 +89,8 @@ The platform features real-time market data integration, interactive charting, c
 - **Chart.js** - Interactive data visualization (equity curves, performance metrics)
 - **Headless UI** - Accessible component primitives (tabs, disclosures)
 - **Heroicons** - Beautiful hand-crafted SVG icons
+- **React Tooltip** - Rich tooltips for market data and orderbook info
+- **Zustand** - Lightweight state management for sorting and real-time data
 
 #### **Authentication & Security**
 - **Privy** - Web3 authentication and wallet management
@@ -93,11 +98,14 @@ The platform features real-time market data integration, interactive charting, c
 
 #### **Real-time Data**
 - **Polymarket Gamma API** - Live prediction market data
+- **Polymarket CLOB WebSocket** - Authenticated real-time price feeds
 - **SWR** - Data fetching and caching with real-time updates
-- **WebSocket Integration** - Real-time price updates
+- **Orderbook API** - Bid/ask spread and depth analysis
+- **WebSocket Authentication** - API key-based CLOB connections
 
 #### **Backend & APIs**
 - **Next.js API Routes** - Serverless API endpoints
+- **Orderbook API** - CLOB bid/ask data with Redis caching
 - **Supabase Ready** - Database integration prepared
 - **Redis Caching** - Performance optimization for API responses
 
@@ -125,7 +133,7 @@ The platform features real-time market data integration, interactive charting, c
 
 ### ✅ **Completed (Current State)**
 
-#### **Phase 1: Core Platform (Weeks 1-4)**
+#### **Phase 1: Core Platform (Weeks 1-4)** ✅ **COMPLETED**
 - ✅ Next.js 15 App Router setup with Turbopack
 - ✅ Privy authentication integration
 - ✅ Polymarket Gamma API integration
@@ -133,12 +141,16 @@ The platform features real-time market data integration, interactive charting, c
 - ✅ Real-time data fetching with SWR
 - ✅ Protected routes and middleware
 - ✅ Homepage with live ticker
-- ✅ Markets page with filtering and pagination
+- ✅ **Enhanced Markets Page**: Sorting, tooltips, AI hints, orderbook integration
 - ✅ Traders dashboard with full functionality
 - ✅ Performance analytics with Chart.js
 - ✅ Risk monitoring and alerts
 - ✅ Mobile-responsive design
+- ✅ **WebSocket Authentication**: API key-based CLOB connections
 - ✅ API routes for all major features
+- ✅ **Comprehensive Testing Suite**: Jest, Cypress E2E, simulation scripts
+- ✅ **Performance Optimizations**: Redis caching, SWR tuning, WebSocket backoff
+- ✅ **Orderbook API**: Bid/ask data with Redis caching
 
 #### **Phase 2: Advanced Features (Weeks 5-8)**
 
@@ -177,15 +189,15 @@ The platform features real-time market data integration, interactive charting, c
 
 ### 🐛 **Known Issues**
 
-#### **High Priority**
-1. **Chart.js SSR Issues**: `date-fns` import failing during server-side rendering
-2. **ChartComponent Import**: Dynamic import path resolution issues
-3. **WebSocket Connection**: Intermittent connection failures
+#### **High Priority** ✅ **RESOLVED**
+- ✅ **Chart.js SSR Issues**: Fixed with dynamic imports and proper component isolation
+- ✅ **WebSocket Connection**: Implemented authentication and robust reconnection logic
+- ✅ **Symbol Conversion Errors**: Resolved Chart.js and Zustand selector issues
+- ✅ **Component Import Issues**: Fixed with proper dynamic import paths
 
 #### **Medium Priority**
-1. **Real-time Updates**: WebSocket reconnection logic needs improvement
-2. **Mobile Performance**: Large bundle size affecting mobile loading
-3. **Image Optimization**: Polymarket S3 images need better caching
+1. **Bundle Size Optimization**: Consider code splitting for better mobile performance
+2. **Error Boundaries**: Add comprehensive error handling throughout app
 
 #### **Low Priority**
 1. **Accessibility**: Some components need ARIA labels
