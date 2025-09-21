@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
 
-// Simple in-memory cache for orderbook data
-const orderbookCache = new Map();
-const CACHE_TTL = 30 * 1000; // 30 seconds (orderbook data needs to be fresh)
-
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -16,26 +12,28 @@ export async function GET(request) {
       );
     }
 
-    // Check cache first
-    const cacheKey = `orderbook_${tokenId}`;
-    const cached = orderbookCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return NextResponse.json(cached.data);
+    // Check Redis cache first
+    let cachedData = null;
+    if (global.redisClient) {
+      try {
+        cachedData = await global.redisClient.get(`orderbook_${tokenId}`);
+        if (cachedData) {
+          return NextResponse.json(JSON.parse(cachedData));
+        }
+      } catch (redisError) {
+        console.warn('Redis cache read failed:', redisError.message);
+      }
     }
 
-    // Mock orderbook data (in production, proxy from Polymarket CLOB)
+    // Fetch orderbook data from Polymarket CLOB
     const orderbook = await fetchOrderbookFromCLOB(tokenId);
 
-    // Cache the result
-    orderbookCache.set(cacheKey, {
-      data: orderbook,
-      timestamp: Date.now()
-    });
-
-    // Clean up old cache entries
-    for (const [key, value] of orderbookCache.entries()) {
-      if (Date.now() - value.timestamp > CACHE_TTL) {
-        orderbookCache.delete(key);
+    // Cache in Redis for 60 seconds
+    if (global.redisClient) {
+      try {
+        await global.redisClient.setex(`orderbook_${tokenId}`, 60, JSON.stringify(orderbook));
+      } catch (redisError) {
+        console.warn('Redis cache write failed:', redisError.message);
       }
     }
 

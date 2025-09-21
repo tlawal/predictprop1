@@ -4,43 +4,33 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import useSWR from 'swr';
 import { Disclosure } from '@headlessui/react';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
+import { Tooltip } from 'react-tooltip';
+import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import dynamic from 'next/dynamic';
+
+// Dynamic import for Chart.js components to avoid SSR issues
+const ProbabilitySparkline = dynamic(() => import('./ProbabilitySparkline'), {
+  ssr: false,
+  loading: () => <div className="w-20 h-10 bg-slate-700 rounded animate-pulse"></div>
+});
 import Countdown from 'react-countdown';
 import useOddsStore from '../../../lib/stores/oddsStore';
 import polymarketWebSocket from '../../../lib/websocket';
 
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+// Stable empty array reference for Zustand selectors
+const EMPTY_ARRAY = [];
 
 // Custom hook to get price history without selector issues
 const usePriceHistory = (tokenId) => {
-  const [priceHistory, setPriceHistory] = useState([]);
+  const [priceHistory, setPriceHistory] = useState(EMPTY_ARRAY);
 
   useEffect(() => {
     // Get initial value
-    setPriceHistory(useOddsStore.getState().priceHistory.get(tokenId) || []);
+    setPriceHistory(useOddsStore.getState().priceHistory.get(tokenId) || EMPTY_ARRAY);
 
     // Subscribe to changes
     const unsubscribe = useOddsStore.subscribe((state) => {
-      const newHistory = state.priceHistory.get(tokenId) || [];
+      const newHistory = state.priceHistory.get(tokenId) || EMPTY_ARRAY;
       setPriceHistory(newHistory);
     });
 
@@ -50,78 +40,6 @@ const usePriceHistory = (tokenId) => {
   return priceHistory;
 };
 
-// Mini Chart Component for probability history
-const ProbabilitySparkline = ({ tokenId, yesPrice }) => {
-  const priceHistory = usePriceHistory(tokenId);
-
-  // Use current price if no history available
-  const data = priceHistory.length > 0 ? priceHistory : [{ yesPrice: yesPrice || 0.5 }];
-
-  const chartData = {
-    labels: data.map((_, index) => ''), // Empty labels for sparkline
-    datasets: [
-      {
-        data: data.map(point => point.yesPrice * 100), // Convert to percentage
-        borderColor: 'rgb(34, 197, 94)', // Green color
-        borderWidth: 1.5,
-        fill: false,
-        pointRadius: 0, // Hide points
-        tension: 0.1, // Slight curve
-      },
-    ],
-  };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        enabled: false, // Disable tooltips for sparkline
-      },
-    },
-    scales: {
-      x: {
-        display: false, // Hide x-axis
-      },
-      y: {
-        display: false, // Hide y-axis
-        min: 0,
-        max: 100,
-      },
-    },
-    elements: {
-      point: {
-        radius: 0,
-      },
-    },
-  };
-
-  return (
-    <div style={{ height: '40px', width: '80px' }}>
-      <Line data={chartData} options={options} />
-    </div>
-  );
-};
-
-// Implied Probability Badge Component
-const ImpliedProbabilityBadge = ({ yesPrice }) => {
-  const probability = Math.round(yesPrice * 100);
-  const isAbove50 = probability > 50;
-
-  return (
-    <div
-      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-        isAbove50 ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
-      }`}
-      title="Calculated from current odds; compare to your belief for edge"
-    >
-      {probability}% Prob
-    </div>
-  );
-};
 
 // High Edge Detection Component
 const HighEdgeChip = ({ market }) => {
@@ -176,6 +94,74 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
   // Use prop markets or fallback to empty array
   const markets = propMarkets || [];
   const isLoading = propIsLoading;
+
+  // Sorting state from Zustand
+  const sortConfig = useOddsStore(state => state.sortConfig);
+  const toggleSort = useOddsStore(state => state.toggleSort);
+
+
+  // Sort markets based on current sort config
+  const sortedMarkets = useMemo(() => {
+    if (!markets.length || !sortConfig.length) return markets;
+
+    return [...markets].sort((a, b) => {
+      for (const sort of sortConfig) {
+        const { key, direction } = sort;
+        let aValue, bValue;
+
+        switch (key) {
+          case 'endDateIso':
+            aValue = new Date(a.endDateIso || '2025-01-01').getTime();
+            bValue = new Date(b.endDateIso || '2025-01-01').getTime();
+            break;
+          case 'yesOdds':
+            aValue = a.outcomePrices?.[0] || a.yesOdds || 0;
+            bValue = b.outcomePrices?.[0] || b.yesOdds || 0;
+            break;
+          case 'noOdds':
+            aValue = a.outcomePrices?.[1] || a.noOdds || 0;
+            bValue = b.outcomePrices?.[1] || b.noOdds || 0;
+            break;
+          case 'volume24hr':
+            aValue = a.volume24hr || 0;
+            bValue = b.volume24hr || 0;
+            break;
+          case 'volume1wk':
+            aValue = a.volume1wk || 0;
+            bValue = b.volume1wk || 0;
+            break;
+          default:
+            continue;
+        }
+
+        if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [markets, sortConfig]);
+
+  // Handle column header click
+  const handleSortClick = (key, event) => {
+    const multiColumn = event.shiftKey; // Shift+click for multi-column sorting
+    toggleSort(key, multiColumn);
+  };
+
+  // Get sort icon and direction for a column
+  const getSortIndicator = (key) => {
+    const sort = sortConfig.find(s => s.key === key);
+    if (!sort) return null;
+
+    return (
+      <span className="inline-flex items-center ml-2">
+        {sort.direction === 'asc' ? (
+          <ChevronUpIcon className="w-4 h-4 text-teal-400" />
+        ) : (
+          <ChevronDownIcon className="w-4 h-4 text-teal-400" />
+        )}
+      </span>
+    );
+  };
 
   // Listen for WebSocket price updates
   useEffect(() => {
@@ -396,27 +382,88 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
             <thead className="bg-slate-700/50">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-12"></th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Question</th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300">Probability</th>
+                <th
+                  className="px-6 py-4 text-left text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none"
+                  onClick={(e) => handleSortClick('question', e)}
+                  data-tooltip-id="question-tooltip"
+                  data-tooltip-content="Sort by market question (alphabetical)"
+                >
+                  <div className="flex items-center">
+                    Question
+                    {getSortIndicator('question')}
+                  </div>
+                </th>
                 <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300">Chart</th>
-                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-300">Yes Odds</th>
-                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-300">No Odds</th>
-                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-300">Vol 24h</th>
-                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-300">Vol 1w</th>
+                <th
+                  className="px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none"
+                  onClick={(e) => handleSortClick('yesOdds', e)}
+                  data-tooltip-id="yes-odds-tooltip"
+                  data-tooltip-content="Sort by Yes odds (probability)"
+                >
+                  <div className="flex items-center justify-end">
+                    Yes Odds
+                    {getSortIndicator('yesOdds')}
+                  </div>
+                </th>
+                <th
+                  className="px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none"
+                  onClick={(e) => handleSortClick('noOdds', e)}
+                  data-tooltip-id="no-odds-tooltip"
+                  data-tooltip-content="Sort by No odds (probability)"
+                >
+                  <div className="flex items-center justify-end">
+                    No Odds
+                    {getSortIndicator('noOdds')}
+                  </div>
+                </th>
+                <th
+                  className="px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none"
+                  onClick={(e) => handleSortClick('volume24hr', e)}
+                  data-tooltip-id="volume24h-tooltip"
+                  data-tooltip-content="Sort by 24-hour trading volume"
+                >
+                  <div className="flex items-center justify-end">
+                    Vol 24h
+                    {getSortIndicator('volume24hr')}
+                  </div>
+                </th>
+                <th
+                  className="px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none"
+                  onClick={(e) => handleSortClick('volume1wk', e)}
+                  data-tooltip-id="volume1w-tooltip"
+                  data-tooltip-content="Sort by 1-week trading volume"
+                >
+                  <div className="flex items-center justify-end">
+                    Vol 1w
+                    {getSortIndicator('volume1wk')}
+                  </div>
+                </th>
                 <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300">Edge</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Expires</th>
+                <th
+                  className="px-6 py-4 text-left text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none"
+                  onClick={(e) => handleSortClick('endDateIso', e)}
+                  data-tooltip-id="expires-tooltip"
+                  data-tooltip-content="Sort by market expiration date"
+                >
+                  <div className="flex items-center">
+                    Expires
+                    {getSortIndicator('endDateIso')}
+                  </div>
+                </th>
                 <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
-              {markets.map((market, index) => (
+              {sortedMarkets.map((market, index) => (
                 <MarketRow
                   key={market.id || index}
                   market={market}
                   onMarketClick={onMarketClick}
                   onMarketInsights={onMarketInsights}
+                  onMarketSelectForOrderbook={onMarketSelectForOrderbook}
                   formatDate={formatDate}
                   formatVolume={formatVolume}
+                  sortConfig={sortConfig}
                 />
               ))}
             </tbody>
@@ -425,11 +472,13 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
 
       {/* Markets Cards - Mobile */}
       <div className="lg:hidden space-y-4">
-        {markets.map((market, index) => (
+        {sortedMarkets.map((market, index) => (
           <MarketCard
             key={market.id || index}
             market={market}
             onMarketClick={onMarketClick}
+            onMarketInsights={onMarketInsights}
+            onMarketSelectForOrderbook={onMarketSelectForOrderbook}
             formatDate={formatDate}
             formatVolume={formatVolume}
             wsPriceChanges={wsPriceChanges}
@@ -437,16 +486,55 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
         ))}
       </div>
 
+      {/* Tooltips */}
+      <Tooltip id="question-tooltip" place="top" />
+      <Tooltip id="yes-odds-tooltip" place="top" />
+      <Tooltip id="no-odds-tooltip" place="top" />
+      <Tooltip id="volume24h-tooltip" place="top" />
+      <Tooltip id="volume1w-tooltip" place="top" />
+      <Tooltip id="expires-tooltip" place="top" />
+
+      {/* Dynamic tooltips for each market */}
+      {sortedMarkets.map((market) => (
+        <React.Fragment key={market.id}>
+          <Tooltip id={`orderbook-${market.id}-tooltip`} place="top" />
+          <Tooltip id={`ai-hint-${market.id}-tooltip`} place="top" />
+        </React.Fragment>
+      ))}
 
     </div>
   );
 }
 
 // Enhanced market row component for desktop
-function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, formatDate, formatVolume }) {
+function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, formatDate, formatVolume, sortConfig }) {
+  // Get orderbook data for tooltip
+  const { data: orderbookData } = useSWR(
+    `/api/orderbook?tokenId=${market.id}`,
+    (url) => fetch(url).then(res => res.json()),
+    {
+      refreshInterval: 60000, // 1 minute
+      revalidateOnFocus: false,
+    }
+  );
+
+  // Calculate AI hint - potential mispricing detection
+  const priceHistory = usePriceHistory(market.id || market.tokenId);
+  const hasHighEdge = priceHistory.length > 1 &&
+    market.volume1wk < 5000 &&
+    Math.abs(priceHistory[priceHistory.length - 1].yesPrice - priceHistory[priceHistory.length - 2].yesPrice) > 0.05;
+
+  // Create orderbook tooltip content
+  const getOrderbookTooltip = () => {
+    if (!orderbookData) return "Loading orderbook data...";
+
+    const { summary } = orderbookData;
+    return `Bid: $${summary.bestBid?.toFixed(4) || 'N/A'} Ask: $${summary.bestAsk?.toFixed(4) || 'N/A'} Spread: ${orderbookData.spread?.percentage?.toFixed(2) || 'N/A'}%`;
+  };
+
   return (
     <tr
-      className="hover:bg-slate-700/30 transition-colors duration-200 cursor-pointer"
+      className="hover:bg-slate-700/30 transition-all duration-300 cursor-pointer"
       onClick={() => onMarketClick(market)}
     >
       {/* Icon Column */}
@@ -485,11 +573,6 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
         </div>
       </td>
 
-      {/* Probability Column */}
-      <td className="px-6 py-4 text-center">
-        <ImpliedProbabilityBadge yesPrice={market.yesOdds} />
-      </td>
-
       {/* Chart Column */}
       <td className="px-6 py-4 text-center">
         <ProbabilitySparkline tokenId={market.id} yesPrice={market.yesOdds} />
@@ -497,18 +580,26 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
 
       {/* Yes Odds Column */}
       <td className="px-6 py-4 text-right">
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-300 ease-in-out ${
-          market.yesOdds > 0.5 ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-300'
-        } ${market.lastUpdate ? 'animate-pulse' : ''}`}>
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-300 ease-in-out ${
+            market.yesOdds > 0.5 ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-300'
+          } ${market.lastUpdate ? 'animate-pulse' : ''}`}
+          data-tooltip-id={`orderbook-${market.id}-tooltip`}
+          data-tooltip-content={getOrderbookTooltip()}
+        >
           {(market.yesOdds * 100).toFixed(0)}%
         </span>
       </td>
 
       {/* No Odds Column */}
       <td className="px-6 py-4 text-right">
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-300 ease-in-out ${
-          market.noOdds > 0.5 ? 'bg-red-900 text-red-300' : 'bg-gray-700 text-gray-300'
-        } ${market.lastUpdate ? 'animate-pulse' : ''}`}>
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-300 ease-in-out ${
+            market.noOdds > 0.5 ? 'bg-red-900 text-red-300' : 'bg-gray-700 text-gray-300'
+          } ${market.lastUpdate ? 'animate-pulse' : ''}`}
+          data-tooltip-id={`orderbook-${market.id}-tooltip`}
+          data-tooltip-content={getOrderbookTooltip()}
+        >
           {(market.noOdds * 100).toFixed(0)}%
         </span>
       </td>
@@ -527,9 +618,17 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
         </span>
       </td>
 
-      {/* Edge Column */}
+      {/* AI Hint Column */}
       <td className="px-6 py-4 text-center">
-        <HighEdgeChip market={market} />
+        {hasHighEdge && (
+          <span
+            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-900 text-yellow-200 border border-yellow-600"
+            data-tooltip-id={`ai-hint-${market.id}-tooltip`}
+            data-tooltip-content="Potential mispricing detected: High price movement with low volume. Consider checking for edge."
+          >
+            🤖 Edge
+          </span>
+        )}
       </td>
 
       {/* Expires Column */}
@@ -727,7 +826,6 @@ function MarketCard({ market, onMarketClick, onMarketInsights, onMarketSelectFor
 
                 {/* Badges Row */}
                 <div className="flex items-center gap-2 mb-3">
-                  <ImpliedProbabilityBadge yesPrice={market.yesOdds} />
                   <HighEdgeChip market={market} />
                   <span className="text-xs text-gray-400">{market.category}</span>
                 </div>
