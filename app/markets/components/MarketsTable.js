@@ -166,7 +166,7 @@ const CountdownRenderer = ({ days, hours, minutes, seconds, completed }) => {
   }
 };
 
-export default function MarketsTable({ searchQuery, category, status, timeFilter, sortOrder, onMarketClick }) {
+export default function MarketsTable({ searchQuery, category, status, timeFilter, sortOrder, onMarketClick, onMarketInsights }) {
   const [offset, setOffset] = useState(0);
   const [allMarkets, setAllMarkets] = useState([]);
   const [hasMore, setHasMore] = useState(true);
@@ -511,7 +511,7 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
                 <th className="px-6 py-4 text-right text-sm font-semibold text-gray-300">Vol 1w</th>
                 <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300">Edge</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Expires</th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300">Link</th>
+                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
@@ -520,6 +520,7 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
                   key={market.id || index}
                   market={market}
                   onMarketClick={onMarketClick}
+                  onMarketInsights={onMarketInsights}
                   formatDate={formatDate}
                   formatVolume={formatVolume}
                 />
@@ -569,7 +570,7 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
 }
 
 // Enhanced market row component for desktop
-function MarketRow({ market, onMarketClick, formatDate, formatVolume }) {
+function MarketRow({ market, onMarketClick, onMarketInsights, formatDate, formatVolume }) {
   return (
     <tr
       className="hover:bg-slate-700/30 transition-colors duration-200 cursor-pointer"
@@ -665,26 +666,72 @@ function MarketRow({ market, onMarketClick, formatDate, formatVolume }) {
         </span>
       </td>
 
-      {/* Link Column */}
+      {/* Actions Column */}
       <td className="px-6 py-4 text-center">
-        <a
-          href={market.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-        </a>
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              // Watch market functionality
+              fetch('/api/watch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  marketId: market.id,
+                  question: market.question,
+                  currentYesProb: market.yesOdds * 100
+                })
+              }).then(() => {
+                // Simple notification
+                const toast = document.createElement('div');
+                toast.className = 'fixed top-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
+                toast.textContent = 'Added to watchlist!';
+                document.body.appendChild(toast);
+                setTimeout(() => document.body.removeChild(toast), 2000);
+              });
+            }}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+            title="Watch Market"
+          >
+            <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMarketInsights(market);
+            }}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+            title="View Insights"
+          >
+            <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </button>
+
+          <a
+            href={market.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+            title="View on Polymarket"
+          >
+            <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        </div>
       </td>
     </tr>
   );
 }
 
 // Mobile card component
-function MarketCard({ market, onMarketClick, formatDate, formatVolume, wsPriceChanges }) {
+function MarketCard({ market, onMarketClick, onMarketInsights, formatDate, formatVolume, wsPriceChanges }) {
   return (
     <Disclosure>
       {({ open }) => (
@@ -694,12 +741,56 @@ function MarketCard({ market, onMarketClick, formatDate, formatVolume, wsPriceCh
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                // Watch market functionality
+                fetch('/api/watch', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    marketId: market.id,
+                    question: market.question,
+                    currentYesProb: market.yesOdds * 100
+                  })
+                }).then(() => {
+                  // Simple notification
+                  const toast = document.createElement('div');
+                  toast.className = 'fixed top-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
+                  toast.textContent = 'Added to watchlist!';
+                  document.body.appendChild(toast);
+                  setTimeout(() => document.body.removeChild(toast), 2000);
+                });
+              }}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+              title="Watch Market"
+            >
+              <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMarketInsights(market);
+              }}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+              title="View Insights"
+            >
+              <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
                 onMarketClick(market);
               }}
               className="px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium rounded transition-colors"
             >
               Trade
             </button>
+
             <a
               href={market.url}
               target="_blank"

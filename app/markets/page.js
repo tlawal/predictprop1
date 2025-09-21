@@ -21,6 +21,8 @@ function MarketsPageContent() {
   const [selectedMarket, setSelectedMarket] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [rightPaneOpen, setRightPaneOpen] = useState(false);
+  const [selectedMarketForInsights, setSelectedMarketForInsights] = useState(null);
   // Removed old oddsStore usage - now handled by MarketsTable component
 
   // Fetch trending markets for the trending section
@@ -33,6 +35,17 @@ function MarketsPageContent() {
       dedupingInterval: 60000,
       errorRetryCount: 2,
       errorRetryInterval: 10000,
+    }
+  );
+
+  // Fetch market insights for right pane
+  const { data: insightsData, isLoading: insightsLoading } = useSWR(
+    selectedMarketForInsights ? `/api/insights?tokenId=${selectedMarketForInsights.id}` : null,
+    (url) => fetch(url).then(res => res.json()),
+    {
+      refreshInterval: 300000, // 5 minutes
+      revalidateOnFocus: false,
+      dedupingInterval: 60000,
     }
   );
 
@@ -83,9 +96,19 @@ function MarketsPageContent() {
     setModalOpen(true);
   };
 
+  const handleMarketInsights = (market) => {
+    setSelectedMarketForInsights(market);
+    setRightPaneOpen(true);
+  };
+
   const handleCloseModal = () => {
     setModalOpen(false);
     setSelectedMarket(null);
+  };
+
+  const handleCloseRightPane = () => {
+    setRightPaneOpen(false);
+    setSelectedMarketForInsights(null);
   };
 
   const toggleCategory = (category) => {
@@ -387,9 +410,125 @@ function MarketsPageContent() {
                   timeFilter={selectedTimeFilter}
                   sortOrder={getSortOrderParam(selectedSort)}
                   onMarketClick={handleMarketClick}
+                  onMarketInsights={handleMarketInsights}
                 />
           </div>
         </div>
+
+        {/* Right Pane - Market Insights */}
+        <div className={`fixed inset-y-0 right-0 z-40 w-full max-w-md bg-slate-800/95 backdrop-blur-sm border-l border-slate-700 transform transition-transform duration-300 ease-in-out ${
+          rightPaneOpen ? 'translate-x-0' : 'translate-x-full'
+        } lg:relative lg:translate-x-0 lg:${rightPaneOpen ? 'block' : 'hidden'}`}>
+          <div className="p-6 h-full overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white">Market Insights</h2>
+              <button
+                onClick={handleCloseRightPane}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {selectedMarketForInsights && (
+              <>
+                {/* Market Header */}
+                <div className="mb-6 p-4 bg-slate-700/50 rounded-lg">
+                  <h3 className="font-semibold text-white text-sm mb-2">Selected Market</h3>
+                  <p className="text-gray-300 text-sm leading-relaxed">{selectedMarketForInsights.question}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs text-gray-400">Current: {(selectedMarketForInsights.yesOdds * 100).toFixed(1)}% Yes</span>
+                  </div>
+                </div>
+
+                {/* Insights Content */}
+                {insightsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-400">Loading insights...</div>
+                  </div>
+                ) : insightsData ? (
+                  <div className="space-y-6">
+                    {/* Market Stats */}
+                    <div className="p-4 bg-slate-700/30 rounded-lg">
+                      <h4 className="font-semibold text-white text-sm mb-3">Market Statistics</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Avg Probability Shift:</span>
+                          <span className="text-white">{insightsData.insights?.averageProbShift || 0}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Trend:</span>
+                          <span className={`font-medium ${
+                            insightsData.insights?.trend === 'increasing' ? 'text-green-400' :
+                            insightsData.insights?.trend === 'decreasing' ? 'text-red-400' :
+                            'text-gray-400'
+                          }`}>
+                            {insightsData.insights?.trend || 'stable'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Volatility:</span>
+                          <span className="text-white">{insightsData.insights?.volatility || 0}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">7-Day Volume:</span>
+                          <span className="text-white">${(insightsData.insights?.totalVolume7d / 1000 || 0).toFixed(0)}k</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Analysis */}
+                    <div className="p-4 bg-slate-700/30 rounded-lg">
+                      <h4 className="font-semibold text-white text-sm mb-3">Analysis</h4>
+                      <div className="space-y-2 text-sm text-gray-300">
+                        <p><strong>Market Maturity:</strong> {insightsData.analysis?.marketMaturity}</p>
+                        <p><strong>Liquidity:</strong> {insightsData.analysis?.liquidityAssessment}</p>
+                        <p><strong>Recommendation:</strong> {insightsData.analysis?.recommendation}</p>
+                      </div>
+                    </div>
+
+                    {/* Related Markets */}
+                    {insightsData.relatedMarkets && insightsData.relatedMarkets.length > 0 && (
+                      <div className="p-4 bg-slate-700/30 rounded-lg">
+                        <h4 className="font-semibold text-white text-sm mb-3">Related Markets</h4>
+                        <div className="space-y-3">
+                          {insightsData.relatedMarkets.slice(0, 3).map((market, index) => (
+                            <div
+                              key={market.id}
+                              className="p-3 bg-slate-800/50 rounded border border-slate-600 cursor-pointer hover:bg-slate-800/70 transition-colors"
+                              onClick={() => handleMarketClick(market)}
+                            >
+                              <p className="text-gray-300 text-xs leading-relaxed mb-2">{market.question}</p>
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-gray-400">{market.category}</span>
+                                <span className="text-white">{(market.yesOdds * 100).toFixed(0)}% Yes</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-gray-400 text-sm">No insights available</div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Right Pane Overlay for Mobile */}
+        {rightPaneOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+            onClick={handleCloseRightPane}
+          />
+        )}
       </div>
 
       {/* Order Modal */}

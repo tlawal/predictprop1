@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 
 export default function OrderModal({ market, isOpen, onClose }) {
   const [side, setSide] = useState('yes');
@@ -9,6 +10,8 @@ export default function OrderModal({ market, isOpen, onClose }) {
   const [limitPrice, setLimitPrice] = useState('');
   const [balance, setBalance] = useState(10000); // Mock USDC balance
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [believedProb, setBelievedProb] = useState(''); // User's believed probability
+  const [isWatching, setIsWatching] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -28,6 +31,16 @@ export default function OrderModal({ market, isOpen, onClose }) {
   const slippage = 0.5; // 0.5% slippage
   const slippageAmount = (parseFloat(amount) || 0) * (slippage / 100);
   const totalCost = (parseFloat(amount) || 0) + slippageAmount;
+
+  // EV Calculator
+  const marketProb = side === 'yes' ? market.yesOdds : market.noOdds;
+  const payout = 1 / marketProb; // Payout for $1 bet
+  const believedProbDecimal = parseFloat(believedProb) / 100;
+  const ev = believedProb && !isNaN(believedProbDecimal)
+    ? (believedProbDecimal - marketProb) * (payout - 1)
+    : 0;
+  const evPercentage = ev * 100;
+  const potentialProfit = ev * (parseFloat(amount) || 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,31 +67,14 @@ export default function OrderModal({ market, isOpen, onClose }) {
       });
 
       if (response.ok) {
-        // Show success toast
-        const toast = document.createElement('div');
-        toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-        toast.textContent = 'Bet placed! P&L updating...';
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-          document.body.removeChild(toast);
-        }, 3000);
-
+        toast.success('Bet placed! P&L updating...');
         onClose();
       } else {
         throw new Error('Failed to place order');
       }
     } catch (error) {
       console.error('Order failed:', error);
-      // Show error toast
-      const toast = document.createElement('div');
-      toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-      toast.textContent = 'Failed to place bet. Please try again.';
-      document.body.appendChild(toast);
-      
-      setTimeout(() => {
-        document.body.removeChild(toast);
-      }, 3000);
+      toast.error('Failed to place bet. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -86,6 +82,37 @@ export default function OrderModal({ market, isOpen, onClose }) {
 
   const handleMaxAmount = () => {
     setAmount(balance.toString());
+  };
+
+  const handleWatchMarket = async () => {
+    if (isWatching) {
+      toast.success('Already watching this market!');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/watch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          marketId: market.id,
+          question: market.question,
+          currentYesProb: market.yesOdds * 100
+        })
+      });
+
+      if (response.ok) {
+        setIsWatching(true);
+        toast.success('Market added to watchlist! You\'ll be notified of significant price changes.');
+      } else {
+        throw new Error('Failed to watch market');
+      }
+    } catch (error) {
+      console.error('Watch market failed:', error);
+      toast.error('Failed to add market to watchlist. Please try again.');
+    }
   };
 
   return (
@@ -113,11 +140,81 @@ export default function OrderModal({ market, isOpen, onClose }) {
 
         {/* Market Info */}
         <div className="p-6 border-b border-slate-700">
-          <h3 className="font-semibold text-white text-sm mb-2">Market</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-white text-sm">Market</h3>
+            <button
+              onClick={handleWatchMarket}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                isWatching
+                  ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                  : 'bg-slate-700 hover:bg-slate-600 text-gray-300 hover:text-white'
+              }`}
+            >
+              {isWatching ? 'Watching' : 'Watch Market'}
+            </button>
+          </div>
           <p className="text-gray-300 text-sm leading-relaxed">{market.question}</p>
           <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
             <span>Closes {new Date(market.endDate).toLocaleDateString()}</span>
             <span>Vol: ${(market.volume / 1000).toFixed(0)}k</span>
+          </div>
+        </div>
+
+        {/* EV Calculator */}
+        <div className="p-6 border-b border-slate-700">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="font-semibold text-white text-sm">EV Calculator</h3>
+            <div
+              className="text-xs text-gray-400 cursor-help"
+              title="EV (Expected Value) helps assess if the market under/overvalues your belief. Positive EV means the bet has positive expected value!"
+            >
+              ⓘ
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-2">
+                Your Believed {side.toUpperCase()} Probability (%)
+              </label>
+              <input
+                type="number"
+                value={believedProb}
+                onChange={(e) => setBelievedProb(e.target.value)}
+                placeholder="e.g., 65"
+                min="0"
+                max="100"
+                step="0.1"
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+              />
+            </div>
+
+            {believedProb && (
+              <div className={`p-3 rounded-lg border ${
+                ev >= 0
+                  ? 'bg-green-900/20 border-green-500/30'
+                  : 'bg-red-900/20 border-red-500/30'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-300">Expected Value:</span>
+                  <span className={`text-sm font-bold ${
+                    ev >= 0 ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    {ev >= 0 ? '+' : ''}{(evPercentage).toFixed(1)}% Edge
+                  </span>
+                </div>
+                {amount && (
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs text-gray-400">Potential Profit:</span>
+                    <span className={`text-xs font-medium ${
+                      potentialProfit >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {potentialProfit >= 0 ? '+' : ''}${potentialProfit.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
