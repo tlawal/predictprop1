@@ -166,7 +166,7 @@ const CountdownRenderer = ({ days, hours, minutes, seconds, completed }) => {
   }
 };
 
-export default function MarketsTable({ searchQuery, category, status, timeFilter, sortOrder, onMarketClick, onMarketInsights }) {
+export default function MarketsTable({ searchQuery, category, status, timeFilter, sortOrder, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, tableRef }) {
   const [offset, setOffset] = useState(0);
   const [allMarkets, setAllMarkets] = useState([]);
   const [hasMore, setHasMore] = useState(true);
@@ -498,7 +498,7 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
       {/* Markets Table - Desktop */}
       <div className="hidden lg:block bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table ref={tableRef} className="w-full">
             <thead className="bg-slate-700/50">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-12"></th>
@@ -570,7 +570,7 @@ export default function MarketsTable({ searchQuery, category, status, timeFilter
 }
 
 // Enhanced market row component for desktop
-function MarketRow({ market, onMarketClick, onMarketInsights, formatDate, formatVolume }) {
+function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, formatDate, formatVolume }) {
   return (
     <tr
       className="hover:bg-slate-700/30 transition-colors duration-200 cursor-pointer"
@@ -703,6 +703,7 @@ function MarketRow({ market, onMarketClick, onMarketInsights, formatDate, format
             onClick={(e) => {
               e.stopPropagation();
               onMarketInsights(market);
+              onMarketSelectForOrderbook && onMarketSelectForOrderbook(market);
             }}
             className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
             title="View Insights"
@@ -731,7 +732,7 @@ function MarketRow({ market, onMarketClick, onMarketInsights, formatDate, format
 }
 
 // Mobile card component
-function MarketCard({ market, onMarketClick, onMarketInsights, formatDate, formatVolume, wsPriceChanges }) {
+function MarketCard({ market, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, formatDate, formatVolume, wsPriceChanges }) {
   return (
     <Disclosure>
       {({ open }) => (
@@ -772,6 +773,7 @@ function MarketCard({ market, onMarketClick, onMarketInsights, formatDate, forma
               onClick={(e) => {
                 e.stopPropagation();
                 onMarketInsights(market);
+                onMarketSelectForOrderbook && onMarketSelectForOrderbook(market);
               }}
               className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
               title="View Insights"
