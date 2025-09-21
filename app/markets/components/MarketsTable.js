@@ -166,54 +166,16 @@ const CountdownRenderer = ({ days, hours, minutes, seconds, completed }) => {
   }
 };
 
-export default function MarketsTable({ searchQuery, category, status = 'open', timeFilter, sortOrder, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, tableRef }) {
+export default function MarketsTable({ markets: propMarkets, searchQuery, sortOrder, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, tableRef, isLoading: propIsLoading }) {
 
-  const [offset, setOffset] = useState(0);
-  const [allMarkets, setAllMarkets] = useState([]);
-  const [hasMore, setHasMore] = useState(true);
   const [wsPriceChanges, setWsPriceChanges] = useState(new Map()); // Track WS price changes
-  const [hasLoadedData, setHasLoadedData] = useState(false);
-
-  const limit = 20; // 20 markets per page as requested
 
   // Get price history from Zustand store
   const getPriceHistory = useOddsStore(state => state.getPriceHistory);
 
-  // Build API URL with parameters
-  const buildUrl = useCallback((offset) => {
-    const params = new URLSearchParams();
-    params.set('offset', offset.toString());
-    params.set('limit', limit.toString());
-
-    if (searchQuery) params.set('q', searchQuery);
-    if (category) params.set('category', category);
-    if (timeFilter) params.set('time_filter', timeFilter);
-
-    // Convert status to active/closed params for Gamma API
-    if (status === 'open') {
-      params.set('active', 'true');
-      params.set('closed', 'false');
-    } else if (status === 'closed') {
-      params.set('active', 'false');
-      params.set('closed', 'true');
-    } else {
-      // Default to active markets
-      params.set('active', 'true');
-      params.set('closed', 'false');
-    }
-
-    // Set order parameter based on sortOrder
-    if (sortOrder) {
-      params.set('order', sortOrder);
-    } else {
-      params.set('order', 'volume24hr,desc');
-    }
-
-    return `/api/markets?${params.toString()}`;
-  }, [searchQuery, category, status, timeFilter, sortOrder]);
-
-  // SWR fetcher
-  const fetcher = (url) => fetch(url).then((res) => res.json());
+  // Use prop markets or fallback to empty array
+  const markets = propMarkets || [];
+  const isLoading = propIsLoading;
 
   // Listen for WebSocket price updates
   useEffect(() => {
@@ -237,22 +199,8 @@ export default function MarketsTable({ searchQuery, category, status = 'open', t
     };
   }, [getPriceHistory]);
 
-  // Use SWR for data fetching
-  const swrKey = useMemo(() => buildUrl(offset), [buildUrl, offset]);
-  const { data, error, isLoading, mutate } = useSWR(
-    swrKey,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 30000, // 30 seconds - longer deduping
-      revalidateIfStale: false, // Don't revalidate if we have stale data
-      revalidateOnMount: true, // Allow fetching on mount
-    }
-  );
-
   // SWR polling for midpoint data of visible markets (every 5 minutes)
-  const visibleMarkets = data?.markets || [];
+  const visibleMarkets = markets.slice(0, 20); // Only poll first 20 visible markets
   const midpointUrls = visibleMarkets.map(market =>
     `/api/midpoint/${market.id}?timestamp=${Date.now()}`
   );
@@ -292,68 +240,15 @@ export default function MarketsTable({ searchQuery, category, status = 'open', t
     }
   );
 
-  // Update markets when data changes
-  useEffect(() => {
-    if (data?.markets) {
-      setHasLoadedData(true);
-      if (data.markets.length > 0) {
-        if (offset === 0) {
-          // First page, replace all markets
-          setAllMarkets(data.markets);
-        } else {
-          // Subsequent pages, append to existing markets
-          setAllMarkets(prev => [...prev, ...data.markets]);
-        }
-        setHasMore(data.markets.length === limit);
-      } else {
-        // No markets returned
-        if (offset === 0) {
-          setAllMarkets([]);
-        }
-        setHasMore(false);
-      }
-    }
-  }, [data, offset, limit]);
-
-  // Reset when filters change
-  useEffect(() => {
-    setOffset(0);
-    setAllMarkets([]);
-    setHasMore(true);
-    setHasLoadedData(false);
-  }, [searchQuery, category, status]);
-
-  // Load more function for infinite scroll
+  // Load more function for pagination (simple implementation)
   const loadMore = useCallback(() => {
-    if (!isLoading && hasMore) {
-      setOffset(prev => prev + limit);
-    }
-  }, [isLoading, hasMore, limit]);
+    // For now, just show all markets - can implement pagination later if needed
+  }, []);
 
-  const markets = allMarkets;
-  const loading = isLoading;
+  // Use prop markets and loading state
 
   // WebSocket and polling state
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
-
-  // Infinite scroll setup
-  const [loadMoreRef, setLoadMoreRef] = useState(null);
-
-  useEffect(() => {
-    if (!loadMoreRef) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoading) {
-          loadMore();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(loadMoreRef);
-    return () => observer.disconnect();
-  }, [loadMoreRef, hasMore, isLoading, loadMore]);
 
   // Polling fallback
   const startPolling = useCallback(() => {
@@ -454,7 +349,7 @@ export default function MarketsTable({ searchQuery, category, status = 'open', t
     return `$${volume.toFixed(0)}`;
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 text-center">
         <div className="text-gray-400 text-lg">Loading markets...</div>
@@ -462,22 +357,7 @@ export default function MarketsTable({ searchQuery, category, status = 'open', t
     );
   }
 
-  if (error) {
-    return (
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 text-center">
-        <div className="text-red-400 text-lg mb-4">Failed to load markets</div>
-        <div className="text-gray-400 text-sm mb-6">{error}</div>
-        <button
-          onClick={fetchMarkets}
-          className="px-6 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors"
-        >
-          Try Again
-        </button>
-      </div>
-    );
-  }
-
-  if (markets.length === 0 && !loading && hasLoadedData) {
+  if (markets.length === 0) {
     return (
       <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 text-center">
         <div className="text-gray-400 text-lg">No markets found</div>
@@ -557,26 +437,6 @@ export default function MarketsTable({ searchQuery, category, status = 'open', t
         ))}
       </div>
 
-      {/* Infinite Scroll Trigger */}
-      <div
-        ref={setLoadMoreRef}
-        className="flex justify-center py-8"
-      >
-        {isLoading && offset > 0 && (
-          <div className="text-gray-400">Loading more markets...</div>
-        )}
-        {hasMore && !isLoading && (
-          <button
-            onClick={loadMore}
-            className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-gray-300 hover:text-white rounded-lg transition-colors"
-          >
-            Load More Markets
-          </button>
-        )}
-        {!hasMore && markets.length > 0 && (
-          <div className="text-gray-400 text-sm">No more markets to load</div>
-        )}
-      </div>
 
     </div>
   );

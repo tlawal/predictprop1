@@ -6,10 +6,12 @@ import useSWR from 'swr';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { Dialog, Transition } from '@headlessui/react';
 import Fuse from 'fuse.js';
 import Image from 'next/image';
 import MarketsTable from './components/MarketsTable';
 import OrderModal from './components/OrderModal';
+import FiltersComponent from './components/FiltersComponent';
 // Removed old oddsStore import - now using usePolymarketWebSocket hook
 
 // Market Stats Row Component
@@ -96,16 +98,30 @@ function MarketsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
-  const [selectedStatus, setSelectedStatus] = useState(searchParams.get('status') || 'open'); // Default to open/active markets
-  const [selectedTimeFilter, setSelectedTimeFilter] = useState(searchParams.get('time_filter') || '');
   const [selectedSort, setSelectedSort] = useState(searchParams.get('sort') || 'volume24hr_desc');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [filtersModalOpen, setFiltersModalOpen] = useState(false);
   const [selectedMarket, setSelectedMarket] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [categories, setCategories] = useState([]);
   const [rightPaneOpen, setRightPaneOpen] = useState(false);
   const [selectedMarketForInsights, setSelectedMarketForInsights] = useState(null);
+
+  // Advanced filters state
+  const [filters, setFilters] = useState(() => {
+    const filtersParam = searchParams.get('filters');
+    if (filtersParam) {
+      try {
+        return JSON.parse(decodeURIComponent(filtersParam));
+      } catch (e) {
+        console.warn('Invalid filters parameter:', e);
+      }
+    }
+    return {
+      categories: [],
+      status: ['open'], // Default to open markets
+      time: []
+    };
+  });
 
   // New features state
   const [panes, setPanes] = useState([
@@ -118,7 +134,99 @@ function MarketsPageContent() {
   const tableRef = useRef(null);
   const searchInputRef = useRef(null);
 
+  // Filter change handler
+  const handleFiltersChange = (newFilters) => {
+    setFilters(newFilters);
+
+    // Update URL with filters
+    const params = new URLSearchParams(searchParams);
+
+    if (newFilters.categories.length > 0 || newFilters.status.length > 0 || newFilters.time.length > 0) {
+      params.set('filters', encodeURIComponent(JSON.stringify(newFilters)));
+    } else {
+      params.delete('filters');
+    }
+
+    // Preserve other params
+    if (searchQuery) params.set('q', searchQuery);
+    if (selectedSort !== 'volume24hr_desc') params.set('sort', selectedSort);
+
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  // Client-side filtering function
+  const filterMarkets = (markets) => {
+    if (!markets) return [];
+
+    return markets.filter(market => {
+      // Category filter
+      if (filters.categories.length > 0) {
+        const marketCategories = [
+          ...(market.categories || []),
+          ...(market.tags || []),
+          market.category,
+          market.sport
+        ].filter(Boolean).map(cat => cat.toLowerCase());
+
+        const hasMatchingCategory = filters.categories.some(filterCat =>
+          marketCategories.includes(filterCat.toLowerCase())
+        );
+
+        if (!hasMatchingCategory) return false;
+      }
+
+      // Status filter
+      if (filters.status.length > 0) {
+        const marketStatus = market.closed ? 'closed' : 'open';
+        if (!filters.status.includes(marketStatus)) return false;
+      }
+
+      // Time filter
+      if (filters.time.length > 0) {
+        if (!market.endDateIso) return false;
+
+        const endDate = new Date(market.endDateIso);
+        const now = new Date();
+
+        const hasMatchingTime = filters.time.some(timeFilter => {
+          switch (timeFilter) {
+            case '<1wk':
+              return endDate <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            case '1-4wk':
+              const week4 = new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000);
+              return endDate > new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) && endDate <= week4;
+            default:
+              return false;
+          }
+        });
+
+        if (!hasMatchingTime) return false;
+      }
+
+      return true;
+    });
+  };
+
   // Removed old oddsStore usage - now handled by MarketsTable component
+
+  // Fetch all markets for client-side filtering
+  const { data: allMarketsData, isLoading: marketsLoading } = useSWR(
+    '/api/markets?limit=200', // Fetch more markets for client-side filtering
+    (url) => fetch(url).then(res => res.json()),
+    {
+      refreshInterval: 300000, // 5 minutes
+      revalidateOnFocus: false,
+      dedupingInterval: 60000,
+      errorRetryCount: 2,
+      errorRetryInterval: 10000,
+    }
+  );
+
+  // Apply client-side filtering
+  const filteredMarkets = useMemo(() => {
+    if (!allMarketsData?.markets) return [];
+    return filterMarkets(allMarketsData.markets);
+  }, [allMarketsData, filters]);
 
   // Fetch trending markets for the trending section
   const { data: trendingData } = useSWR(
@@ -177,36 +285,6 @@ function MarketsPageContent() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Update URL when filters change
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (debouncedSearch) params.set('q', debouncedSearch);
-    if (selectedCategory) params.set('category', selectedCategory);
-    if (selectedStatus) params.set('status', selectedStatus);
-    if (selectedTimeFilter) params.set('time_filter', selectedTimeFilter);
-    if (selectedSort) params.set('sort', selectedSort);
-
-    const newUrl = params.toString() ? `?${params.toString()}` : '/markets';
-    router.replace(newUrl, { scroll: false });
-  }, [debouncedSearch, selectedCategory, selectedStatus, selectedTimeFilter, selectedSort, router]);
-
-  // Set predefined categories on mount
-  useEffect(() => {
-    // Use predefined categories that are commonly used in Polymarket
-    const predefinedCategories = [
-      'Politics',
-      'Crypto',
-      'Sports',
-      'Economics',
-      'Tech',
-      'Entertainment',
-      'Weather',
-      'Science',
-      'Health',
-      'International'
-    ];
-    setCategories(predefinedCategories);
-  }, []);
 
   const handleMarketClick = (market) => {
     setSelectedMarket(market);
@@ -688,8 +766,8 @@ function MarketsPageContent() {
         {/* Trending Markets Section */}
         <TrendingMarkets />
 
-        {/* Customizable Panes */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        {/* Panes Layout */}
+        <div className="flex-1">
           {/* Pane Controls */}
           <div className="flex flex-wrap gap-2 mb-4 lg:mb-0 lg:flex-col lg:w-48">
             <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
@@ -720,28 +798,32 @@ function MarketsPageContent() {
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-bold text-white">Markets</h3>
-                    {/* Filters Button */}
-                    <button
-                      onClick={() => setSidebarOpen(true)}
-                      className="lg:hidden flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-gray-300 hover:text-white rounded-lg transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
-                      </svg>
-                      Filters
-                    </button>
+                      {/* Filters Button */}
+                      <button
+                        onClick={() => setFiltersModalOpen(true)}
+                        className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-gray-300 hover:text-white rounded-lg transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+                        </svg>
+                        Filters
+                        {(filters.categories.length > 0 || filters.status.length > 0 || filters.time.length > 0) && (
+                          <span className="bg-teal-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1">
+                            {(filters.categories.length + filters.status.length + filters.time.length)}
+                          </span>
+                        )}
+                      </button>
                   </div>
 
                   <MarketsTable
+                    markets={filteredMarkets}
                     searchQuery={debouncedSearch}
-                    category={selectedCategory}
-                    status={selectedStatus}
-                    timeFilter={selectedTimeFilter}
                     sortOrder={getSortOrderParam(selectedSort)}
                     onMarketClick={handleMarketClick}
                     onMarketInsights={handleMarketInsights}
                     onMarketSelectForOrderbook={handleMarketOrderbook}
                     tableRef={tableRef}
+                    isLoading={marketsLoading}
                   />
                 </div>
               </div>
@@ -848,115 +930,6 @@ function MarketsPageContent() {
           </div>
         </div>
 
-        <div className={`fixed inset-y-0 left-0 z-50 w-80 bg-slate-800/95 backdrop-blur-sm border-r border-slate-700 transform transition-transform duration-300 ease-in-out lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="p-6">
-            {/* Mobile close button */}
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            <h2 className="text-2xl font-bold text-white mb-6">Filters</h2>
-
-            {/* Sort Dropdown */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-300 mb-4">Sort By</h3>
-              <select
-                value={selectedSort}
-                onChange={(e) => handleSortChange(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              >
-                <option value="volume24hr_desc">Volume (24h) - High to Low</option>
-                <option value="volume24hr_asc">Volume (24h) - Low to High</option>
-                <option value="newest">Newest First</option>
-                <option value="liquidity_desc">Liquidity - High to Low</option>
-                <option value="liquidity_asc">Liquidity - Low to High</option>
-              </select>
-            </div>
-
-            {/* Time Filter */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-300 mb-4">Time Frame</h3>
-              <div className="space-y-2">
-                {[
-                  { key: 'upcoming_1wk', label: 'Upcoming <1wk' },
-                  { key: '1_4wk', label: '1-4 weeks' }
-                ].map((timeFilter) => (
-                  <button
-                    key={timeFilter.key}
-                    onClick={() => toggleTimeFilter(timeFilter.key)}
-                    className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
-                      selectedTimeFilter === timeFilter.key
-                        ? 'bg-teal-500/20 border-teal-500 text-teal-400'
-                        : 'bg-slate-700/50 border-slate-600 text-gray-300 hover:bg-slate-700 hover:border-slate-500'
-                    }`}
-                  >
-                    <span>{timeFilter.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Category Filter */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-300 mb-4">Category</h3>
-              <div className="space-y-2">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => toggleCategory(category)}
-                    className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
-                      selectedCategory === category
-                        ? 'bg-teal-500/20 border-teal-500 text-teal-400'
-                        : 'bg-slate-700/50 border-slate-600 text-gray-300 hover:bg-slate-700 hover:border-slate-500'
-                    }`}
-                  >
-                    <span className="capitalize">{category}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Status Filter */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-300 mb-4">Status</h3>
-              <div className="space-y-2">
-                {['open', 'closed'].map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => toggleStatus(status)}
-                    className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
-                      selectedStatus === status
-                        ? 'bg-teal-500/20 border-teal-500 text-teal-400'
-                        : 'bg-slate-700/50 border-slate-600 text-gray-300 hover:bg-slate-700 hover:border-slate-500'
-                    }`}
-                  >
-                    <span className="capitalize">{status}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Clear Filters */}
-            <button
-              onClick={() => {
-                setSelectedCategory('');
-                setSelectedStatus('');
-                setSelectedTimeFilter('');
-                setSelectedSort('volume24hr_desc');
-                setSearchQuery('');
-              }}
-              className="w-full px-4 py-3 bg-slate-700 hover:bg-slate-600 text-gray-300 hover:text-white rounded-lg transition-all"
-            >
-              Clear All Filters
-            </button>
-          </div>
-        </div>
-
         {/* Mobile sidebar overlay */}
         {sidebarOpen && (
           <div
@@ -966,6 +939,64 @@ function MarketsPageContent() {
         )}
 
       </div>
+
+      {/* Filters Modal */}
+      <Transition appear show={filtersModalOpen} as={React.Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setFiltersModalOpen(false)}>
+          <Transition.Child
+            as={React.Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-1"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-50" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-start justify-center p-4 pt-20">
+              <Transition.Child
+                as={React.Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95 translate-y-4"
+                enterTo="opacity-100 scale-100 translate-y-0"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100 translate-y-0"
+                leaveTo="opacity-0 scale-95 translate-y-4"
+              >
+                <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-slate-800 border border-slate-700 shadow-xl transition-all">
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-white">
+                        Filters
+                      </Dialog.Title>
+                      <button
+                        onClick={() => setFiltersModalOpen(false)}
+                        className="text-gray-400 hover:text-white transition-colors"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                    <FiltersComponent
+                      filters={filters}
+                      onFiltersChange={(newFilters) => {
+                        handleFiltersChange(newFilters);
+                        // Auto-close modal on desktop after applying filters
+                        setFiltersModalOpen(false);
+                      }}
+                      isModal={true}
+                    />
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
 
       {/* Order Modal */}
       {modalOpen && selectedMarket && (
