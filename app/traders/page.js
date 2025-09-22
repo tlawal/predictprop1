@@ -12,6 +12,9 @@ import CloseModal from './components/CloseModal';
 import RiskAlertBanner from './components/RiskAlertBanner';
 import TradeHistoryList from './components/TradeHistoryList';
 import EquityCurveChart from './components/EquityCurveChart';
+import SidePanel from './components/SidePanel';
+import TradingObjectives from './components/TradingObjectives';
+import ResultsProgress from './components/ResultsProgress';
 import toast, { Toaster } from 'react-hot-toast';
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
@@ -25,6 +28,7 @@ function TradersPageContent() {
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showDemoBadge, setShowDemoBadge] = useState(true);
   const [showRiskAlert, setShowRiskAlert] = useState(true);
+  const [showSidePanel, setShowSidePanel] = useState(false);
 
   // Auth check
   useEffect(() => {
@@ -150,49 +154,123 @@ function TradersPageContent() {
     console.log('Filter changed to:', filter);
   };
 
+  // Check if balance is near equity limit (e.g., within 10% of max challenge size)
+  const equityLimitNear = balance > (challengeSize * 0.9);
+  const maxEquityLimit = challengeSize * 2; // Example: 2x challenge size
+  const equityLimitReached = balance >= maxEquityLimit;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 md:pt-0">
-      {/* Header Card */}
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 mx-4 mt-16 md:mt-20 mb-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            {showDemoBadge && (
-              <div className="flex items-center bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                <span>Demo Mode: Virtual ${challengeSize.toLocaleString()}</span>
-                <button
-                  onClick={() => {
-                    setShowDemoBadge(false);
-                    console.log('Demo active');
-                  }}
-                  className="ml-2 text-yellow-600 hover:text-yellow-800"
-                >
-                  ✕
-                </button>
+      <div className="flex flex-col lg:flex-row min-h-screen">
+        {/* Desktop Side Panel */}
+        <div className="hidden lg:block">
+          <SidePanel />
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col">
+          {/* Mobile Header with Side Panel Toggle */}
+          <div className="lg:hidden bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 p-4">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setShowSidePanel(true)}
+                className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <div className={`text-xl font-bold ${roi > 0 ? 'text-green-400' : 'text-white'}`}>
+                ${balance.toLocaleString()}
               </div>
-            )}
-            <div className="text-sm text-gray-400">Virtual Balance:</div>
-            <div className={`text-2xl font-bold ${roi > 0 ? 'text-green-400' : 'text-white'}`}>
-              ${balance.toLocaleString()}
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              // Refresh all data
-              console.log('Refreshing all data...');
-              // mutate('/api/balance');
-              // mutate('/api/challenge');
-              // mutate('/api/challenge');
-            }}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-          >
-            Refresh All
-          </button>
-        </div>
-      </div>
+          {/* Header Card */}
+          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 mx-4 mt-4 lg:mt-20 mb-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4">
+                {showDemoBadge && (
+                  <div className="flex items-center bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                    <span>Demo Mode: Virtual ${challengeSize.toLocaleString()}</span>
+                    <button
+                      onClick={() => {
+                        setShowDemoBadge(false);
+                        console.log('Demo active');
+                      }}
+                      className="ml-2 text-yellow-600 hover:text-yellow-800"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+                <div className="text-sm text-gray-400 hidden lg:block">Virtual Balance:</div>
+                <div className={`text-2xl font-bold ${roi > 0 ? 'text-green-400' : 'text-white'}`}>
+                  ${balance.toLocaleString()}
+                </div>
+              </div>
 
-      {/* Tabs */}
-      <div className="mx-4 mb-8">
+              <div className="flex items-center gap-2">
+                {/* Desktop Side Panel Toggle */}
+                <button
+                  onClick={() => setShowSidePanel(true)}
+                  className="lg:hidden px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm"
+                >
+                  Menu
+                </button>
+
+                <button
+                  onClick={() => {
+                    // Refresh all data
+                    console.log('Refreshing all data...');
+                    // mutate('/api/balance');
+                    // mutate('/api/challenge');
+                    // mutate('/api/challenge');
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  Refresh All
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Equity Limit Alert Banner */}
+          {equityLimitNear && (
+            <div className="mx-4 mb-6">
+              <div className={`p-4 rounded-lg border ${
+                equityLimitReached
+                  ? 'bg-red-900/50 border-red-600 text-red-200'
+                  : 'bg-yellow-900/50 border-yellow-600 text-yellow-200'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">
+                    {equityLimitReached ? '🚫' : '⚠️'}
+                  </span>
+                  <div>
+                    <h3 className="font-semibold">
+                      {equityLimitReached ? 'Equity Limit Reached' : 'Approaching Equity Limit'}
+                    </h3>
+                    <p className="text-sm mt-1">
+                      {equityLimitReached
+                        ? 'You have reached the maximum equity limit. Further trading is restricted.'
+                        : 'You are approaching the maximum equity limit. Consider taking profits or reducing exposure.'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Trading Objectives */}
+          <TradingObjectives challengeData={challengeData} challengeSize={challengeSize} />
+
+          {/* Results Progress */}
+          <ResultsProgress challengeData={challengeData} />
+
+          {/* Tabs */}
+          <div className="mx-4 mb-8">
         <Tab.Group selectedIndex={activeTab} onChange={handleTabChange}>
           <Tab.List className="flex space-x-1 rounded-xl bg-slate-800/30 p-1 mb-6">
             <Tab
@@ -363,6 +441,11 @@ function TradersPageContent() {
           },
         }}
       />
+
+      {/* Mobile Side Panel */}
+      <SidePanel isOpen={showSidePanel} onClose={() => setShowSidePanel(false)} isMobile={true} />
+        </div>
+      </div>
     </div>
   );
 }

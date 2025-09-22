@@ -99,6 +99,13 @@ The platform features real-time market data integration, interactive charting, c
 - **Trade History**: Accordion-style cards with detailed P&L breakdown
 - **Risk Alerts**: LSTM-style drawdown monitoring with severity levels
 - **Equity Curve Chart**: Interactive Chart.js visualization with zoom/pan
+
+#### **Enhanced Dashboard Features**
+- **Side Panel**: Profile management, language selector, notifications, account links
+- **Trading Objectives**: Visual progress cards for profit targets, drawdown limits, exposure caps
+- **Results Progress**: Win rate pie charts and P&L breakdown analytics
+- **Equity Alerts**: Automatic warnings when approaching account limits
+- **Responsive Design**: Mobile drawer panel, desktop fixed sidebar
 - **Performance Metrics**: Win rate, total P&L, trade counts
 - Filter chips for Open/Resolved/All trades
 

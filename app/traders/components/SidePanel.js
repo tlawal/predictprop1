@@ -1,0 +1,474 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePrivy } from '@privy-io/react-auth';
+import { Dialog, Transition } from '@headlessui/react';
+import { Fragment } from 'react';
+import Select from 'react-select';
+import useSWR from 'swr';
+import { supabase } from '../../../lib/supabase';
+import { useSupabaseAuth } from '../../../lib/hooks/useSupabaseAuth';
+
+const fetcher = (url) => fetch(url).then((res) => res.json());
+
+const languageOptions = [
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Español' },
+  { value: 'fr', label: 'Français' }
+];
+
+export default function SidePanel({ isOpen, onClose, isMobile = false }) {
+  const { user, logout } = usePrivy();
+  const { isAuthenticated } = useSupabaseAuth();
+  const [selectedLanguage, setSelectedLanguage] = useState({ value: 'en', label: 'English' });
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
+
+  // Fetch notifications
+  const { data: notificationsData, error: notificationsError } = useSWR(
+    user ? `/api/notifications?userId=${user.id}` : null,
+    fetcher,
+    { refreshInterval: 30000 } // Refresh every 30 seconds
+  );
+
+  // Load user language preference
+  useEffect(() => {
+    if (user && isAuthenticated) {
+      const loadUserLanguage = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('language')
+            .eq('id', user.id)
+            .single();
+
+          if (data && !error) {
+            const langOption = languageOptions.find(opt => opt.value === data.language);
+            if (langOption) {
+              setSelectedLanguage(langOption);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading user language:', error);
+        }
+      };
+      loadUserLanguage();
+    }
+  }, [user, isAuthenticated]);
+
+  // Handle language change
+  const handleLanguageChange = async (selectedOption) => {
+    setSelectedLanguage(selectedOption);
+
+    if (user && isAuthenticated) {
+      try {
+        const { error } = await supabase
+          .from('users')
+          .update({ language: selectedOption.value })
+          .eq('id', user.id);
+
+        if (error) {
+          console.error('Error updating language:', error);
+        } else {
+          console.log('Language updated successfully');
+        }
+      } catch (error) {
+        console.error('Failed to update language:', error);
+      }
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    onClose?.();
+  };
+
+  const panelContent = (
+    <div className="flex flex-col h-full bg-slate-800/95 backdrop-blur-sm">
+      {/* Profile Section */}
+      <div className="p-6 border-b border-slate-700">
+        <h3 className="text-lg font-semibold text-white mb-4">Profile</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Email
+            </label>
+            <div className="text-white bg-slate-700/50 px-3 py-2 rounded-lg">
+              {user?.email?.address || 'Not provided'}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Language
+            </label>
+            <Select
+              value={selectedLanguage}
+              onChange={handleLanguageChange}
+              options={languageOptions}
+              className="react-select-container"
+              classNamePrefix="react-select"
+              styles={{
+                control: (provided, state) => ({
+                  ...provided,
+                  backgroundColor: 'rgb(51 65 85 / 0.5)',
+                  borderColor: state.isFocused ? 'rgb(56 189 248)' : 'rgb(71 85 105)',
+                  borderRadius: '0.5rem',
+                  color: 'white',
+                  '&:hover': {
+                    borderColor: 'rgb(56 189 248)'
+                  }
+                }),
+                menu: (provided) => ({
+                  ...provided,
+                  backgroundColor: 'rgb(51 65 85)',
+                  borderRadius: '0.5rem'
+                }),
+                option: (provided, state) => ({
+                  ...provided,
+                  backgroundColor: state.isSelected ? 'rgb(56 189 248)' : 'transparent',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: 'rgb(71 85 105)'
+                  }
+                }),
+                singleValue: (provided) => ({
+                  ...provided,
+                  color: 'white'
+                }),
+                input: (provided) => ({
+                  ...provided,
+                  color: 'white'
+                }),
+                placeholder: (provided) => ({
+                  ...provided,
+                  color: 'rgb(156 163 175)'
+                })
+              }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Wallet
+            </label>
+            <div className="text-white bg-slate-700/50 px-3 py-2 rounded-lg font-mono text-sm">
+              {user?.wallet?.address ?
+                `${user.wallet.address.slice(0, 6)}...${user.wallet.address.slice(-4)}` :
+                'Not connected'
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Links */}
+      <div className="flex-1 p-6 space-y-4">
+        <h3 className="text-lg font-semibold text-white mb-4">Account</h3>
+
+        <div className="space-y-2">
+          <button
+            onClick={() => setShowTermsModal(true)}
+            className="w-full text-left px-4 py-3 text-gray-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+          >
+            📋 Contracts & Terms
+          </button>
+
+          <button
+            onClick={() => setShowRulesModal(true)}
+            className="w-full text-left px-4 py-3 text-gray-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+          >
+            📖 Trading Rules
+          </button>
+
+          <button
+            onClick={() => setShowWithdrawalModal(true)}
+            className="w-full text-left px-4 py-3 text-gray-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+          >
+            💰 Withdrawals
+          </button>
+
+          <Link
+            href="/leaderboard"
+            onClick={() => onClose?.()}
+            className="block px-4 py-3 text-gray-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+          >
+            🏆 Leaderboards
+          </Link>
+        </div>
+
+        {/* Notifications */}
+        <div className="mt-8">
+          <h4 className="text-md font-semibold text-white mb-3 flex items-center justify-between">
+            <span>🔔 Notifications</span>
+            {notificationsData?.unreadCount > 0 && (
+              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                {notificationsData.unreadCount}
+              </span>
+            )}
+          </h4>
+
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {notificationsData?.notifications?.slice(0, 5).map((notification) => (
+              <div
+                key={notification.id}
+                className={`p-3 rounded-lg text-sm ${
+                  notification.type === 'warning' ? 'bg-yellow-900/50 border border-yellow-600' :
+                  notification.type === 'success' ? 'bg-green-900/50 border border-green-600' :
+                  'bg-slate-700/50'
+                }`}
+              >
+                <p className="text-gray-200">{notification.msg}</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {new Date(notification.date).toLocaleDateString()}
+                </p>
+              </div>
+            )) || (
+              <div className="text-gray-400 text-sm p-3">
+                Loading notifications...
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Coming Soon Sections */}
+        <div className="mt-8 space-y-4">
+          <div className="p-4 bg-slate-700/30 rounded-lg border border-slate-600">
+            <h4 className="text-md font-semibold text-white mb-2">🏆 Competitions</h4>
+            <p className="text-sm text-gray-400">Coming Soon</p>
+          </div>
+
+          <div className="p-4 bg-slate-700/30 rounded-lg border border-slate-600">
+            <h4 className="text-md font-semibold text-white mb-2">🤝 Affiliates Portal</h4>
+            <p className="text-sm text-gray-400">Refer & Earn - Coming Soon</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Logout Button */}
+      <div className="p-6 border-t border-slate-700">
+        <button
+          onClick={handleLogout}
+          className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+        >
+          Logout
+        </button>
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <Transition appear show={isOpen} as={Fragment}>
+          <Dialog as="div" className="relative z-50" onClose={onClose}>
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0"
+              enterTo="opacity-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100"
+              leaveTo="opacity-0"
+            >
+              <div className="fixed inset-0 bg-black bg-opacity-50" />
+            </Transition.Child>
+
+            <div className="fixed inset-0 overflow-hidden">
+              <div className="absolute inset-0 overflow-hidden">
+                <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                  <Transition.Child
+                    as={Fragment}
+                    enter="transform transition ease-in-out duration-300"
+                    enterFrom="translate-x-full"
+                    enterTo="translate-x-0"
+                    leave="transform transition ease-in-out duration-200"
+                    leaveFrom="translate-x-0"
+                    leaveTo="translate-x-full"
+                  >
+                    <Dialog.Panel className="pointer-events-auto w-screen max-w-md">
+                      {panelContent}
+                    </Dialog.Panel>
+                  </Transition.Child>
+                </div>
+              </div>
+            </div>
+          </Dialog>
+        </Transition>
+
+        {/* Terms Modal */}
+        <Transition appear show={showTermsModal} as={Fragment}>
+          <Dialog as="div" className="relative z-50" onClose={() => setShowTermsModal(false)}>
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+              <Dialog.Panel className="w-full max-w-md bg-slate-800 rounded-lg p-6">
+                <Dialog.Title className="text-lg font-semibold text-white mb-4">
+                  Terms & Conditions
+                </Dialog.Title>
+                <div className="text-gray-300 text-sm space-y-3 max-h-96 overflow-y-auto">
+                  <p>These are the terms and conditions for using PolyProp...</p>
+                  <p>• Virtual trading platform for educational purposes</p>
+                  <p>• No real money transactions</p>
+                  <p>• Users must be 18+ years old</p>
+                  <p>• Platform available 24/7 with scheduled maintenance</p>
+                </div>
+                <button
+                  onClick={() => setShowTermsModal(false)}
+                  className="mt-4 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                >
+                  Close
+                </button>
+              </Dialog.Panel>
+            </div>
+          </Dialog>
+        </Transition>
+
+        {/* Rules Modal */}
+        <Transition appear show={showRulesModal} as={Fragment}>
+          <Dialog as="div" className="relative z-50" onClose={() => setShowRulesModal(false)}>
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+              <Dialog.Panel className="w-full max-w-md bg-slate-800 rounded-lg p-6">
+                <Dialog.Title className="text-lg font-semibold text-white mb-4">
+                  Trading Rules
+                </Dialog.Title>
+                <div className="text-gray-300 text-sm space-y-3 max-h-96 overflow-y-auto">
+                  <p>Follow these trading rules to succeed in your challenge...</p>
+                  <p>• Maximum drawdown: 5% of challenge balance</p>
+                  <p>• Maximum position exposure: 15% of challenge balance</p>
+                  <p>• Minimum win rate: 70% for phase progression</p>
+                  <p>• No martingale or high-risk strategies</p>
+                </div>
+                <button
+                  onClick={() => setShowRulesModal(false)}
+                  className="mt-4 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                >
+                  Close
+                </button>
+              </Dialog.Panel>
+            </div>
+          </Dialog>
+        </Transition>
+
+        {/* Withdrawal Modal */}
+        <Transition appear show={showWithdrawalModal} as={Fragment}>
+          <Dialog as="div" className="relative z-50" onClose={() => setShowWithdrawalModal(false)}>
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+              <Dialog.Panel className="w-full max-w-md bg-slate-800 rounded-lg p-6">
+                <Dialog.Title className="text-lg font-semibold text-white mb-4">
+                  Withdrawals
+                </Dialog.Title>
+                <div className="text-gray-300 text-sm space-y-3">
+                  <p>Withdrawal requests are processed within 24-48 hours...</p>
+                  <p>• Minimum withdrawal: $100</p>
+                  <p>• Processing time: 1-2 business days</p>
+                  <p>• Available payout methods: Bank transfer, PayPal</p>
+                </div>
+                <div className="mt-4 p-4 bg-yellow-900/50 border border-yellow-600 rounded-lg">
+                  <p className="text-yellow-200 text-sm">
+                    🚧 This is a demo platform. Real withdrawals are not available.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowWithdrawalModal(false)}
+                  className="mt-4 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                >
+                  Close
+                </button>
+              </Dialog.Panel>
+            </div>
+          </Dialog>
+        </Transition>
+      </>
+    );
+  }
+
+  // Desktop version - fixed sidebar
+  return (
+    <div className="w-80 h-full border-r border-slate-700">
+      {panelContent}
+
+      {/* Terms Modal */}
+      <Transition appear show={showTermsModal} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setShowTermsModal(false)}>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-md bg-slate-800 rounded-lg p-6">
+              <Dialog.Title className="text-lg font-semibold text-white mb-4">
+                Terms & Conditions
+              </Dialog.Title>
+              <div className="text-gray-300 text-sm space-y-3 max-h-96 overflow-y-auto">
+                <p>These are the terms and conditions for using PolyProp...</p>
+                <p>• Virtual trading platform for educational purposes</p>
+                <p>• No real money transactions</p>
+                <p>• Users must be 18+ years old</p>
+                <p>• Platform available 24/7 with scheduled maintenance</p>
+              </div>
+              <button
+                onClick={() => setShowTermsModal(false)}
+                className="mt-4 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              >
+                Close
+              </button>
+            </Dialog.Panel>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* Rules Modal */}
+      <Transition appear show={showRulesModal} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setShowRulesModal(false)}>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-md bg-slate-800 rounded-lg p-6">
+              <Dialog.Title className="text-lg font-semibold text-white mb-4">
+                Trading Rules
+              </Dialog.Title>
+              <div className="text-gray-300 text-sm space-y-3 max-h-96 overflow-y-auto">
+                <p>Follow these trading rules to succeed in your challenge...</p>
+                <p>• Maximum drawdown: 5% of challenge balance</p>
+                <p>• Maximum position exposure: 15% of challenge balance</p>
+                <p>• Minimum win rate: 70% for phase progression</p>
+                <p>• No martingale or high-risk strategies</p>
+              </div>
+              <button
+                onClick={() => setShowRulesModal(false)}
+                className="mt-4 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              >
+                Close
+              </button>
+            </Dialog.Panel>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* Withdrawal Modal */}
+      <Transition appear show={showWithdrawalModal} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setShowWithdrawalModal(false)}>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <Dialog.Panel className="w-full max-w-md bg-slate-800 rounded-lg p-6">
+            <Dialog.Title className="text-lg font-semibold text-white mb-4">
+              Withdrawals
+            </Dialog.Title>
+            <div className="text-gray-300 text-sm space-y-3">
+              <p>Withdrawal requests are processed within 24-48 hours...</p>
+              <p>• Minimum withdrawal: $100</p>
+              <p>• Processing time: 1-2 business days</p>
+              <p>• Available payout methods: Bank transfer, PayPal</p>
+            </div>
+            <div className="mt-4 p-4 bg-yellow-900/50 border border-yellow-600 rounded-lg">
+              <p className="text-yellow-200 text-sm">
+                🚧 This is a demo platform. Real withdrawals are not available.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowWithdrawalModal(false)}
+              className="mt-4 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+            >
+              Close
+            </button>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+    </Transition>
+    </div>
+  );
+}
