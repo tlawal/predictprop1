@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   wallet TEXT NOT NULL UNIQUE,
   language TEXT NOT NULL DEFAULT 'en',
   verified BOOLEAN NOT NULL DEFAULT FALSE,
+  role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'affiliate')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -70,6 +71,54 @@ CREATE TABLE IF NOT EXISTS plans (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create orders table for admin management
+CREATE TABLE IF NOT EXISTS orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id TEXT NOT NULL UNIQUE,
+  plan_id UUID NOT NULL REFERENCES plans(id),
+  user_id UUID NOT NULL REFERENCES users(id),
+  addons JSONB DEFAULT '{}',
+  amount NUMERIC(10, 2) NOT NULL,
+  affiliate_id UUID REFERENCES users(id),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'cancelled', 'refunded')),
+  payment_method TEXT CHECK (payment_method IN ('stripe', 'crypto', 'bank_transfer')),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create contracts table
+CREATE TABLE IF NOT EXISTS contracts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  type TEXT NOT NULL CHECK (type IN ('terms_of_service', 'privacy_policy', 'trading_agreement')),
+  version TEXT NOT NULL,
+  content TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'signed', 'rejected')),
+  signed_at TIMESTAMP WITH TIME ZONE,
+  signed_ip INET,
+  signed_user_agent TEXT,
+  verification_code TEXT,
+  code_expires_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create admin_logs table
+CREATE TABLE IF NOT EXISTS admin_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id UUID NOT NULL REFERENCES users(id),
+  action TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id UUID NOT NULL,
+  old_values JSONB,
+  new_values JSONB,
+  ip_address INET,
+  user_agent TEXT,
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_challenges_user_id ON challenges(user_id);
 CREATE INDEX IF NOT EXISTS idx_challenges_status ON challenges(status);
@@ -79,6 +128,15 @@ CREATE INDEX IF NOT EXISTS idx_trades_resolved ON trades(resolved);
 CREATE INDEX IF NOT EXISTS idx_yields_lp_id ON yields(lp_id);
 CREATE INDEX IF NOT EXISTS idx_plans_active ON plans(active);
 CREATE INDEX IF NOT EXISTS idx_plans_type ON plans(type);
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_plan_id ON orders(plan_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_affiliate_id ON orders(affiliate_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_user_id ON contracts(user_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_status ON contracts(status);
+CREATE INDEX IF NOT EXISTS idx_contracts_type ON contracts(type);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_admin_id ON admin_logs(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_entity ON admin_logs(entity_type, entity_id);
 
 -- Enable Row Level Security
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -86,6 +144,9 @@ ALTER TABLE challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trades ENABLE ROW LEVEL SECURITY;
 ALTER TABLE yields ENABLE ROW LEVEL SECURITY;
 ALTER TABLE plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_logs ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users table
 CREATE POLICY "Users can view their own profile" ON users
@@ -140,6 +201,39 @@ CREATE POLICY "Anyone can view active plans" ON plans
 CREATE POLICY "Admin can manage plans" ON plans
   FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
 
+-- RLS Policies for orders table
+CREATE POLICY "Users can view their own orders" ON orders
+  FOR SELECT USING (user_id::text = auth.uid()::text);
+
+CREATE POLICY "Affiliates can view orders they referred" ON orders
+  FOR SELECT USING (affiliate_id::text = auth.uid()::text);
+
+CREATE POLICY "Admins can view all orders" ON orders
+  FOR SELECT USING (auth.jwt() ->> 'role' = 'admin');
+
+CREATE POLICY "Admins can update orders" ON orders
+  FOR UPDATE USING (auth.jwt() ->> 'role' = 'admin');
+
+-- RLS Policies for contracts table
+CREATE POLICY "Users can view their own contracts" ON contracts
+  FOR SELECT USING (user_id::text = auth.uid()::text);
+
+CREATE POLICY "Users can update their own contracts" ON contracts
+  FOR UPDATE USING (user_id::text = auth.uid()::text);
+
+CREATE POLICY "Admins can view all contracts" ON contracts
+  FOR SELECT USING (auth.jwt() ->> 'role' = 'admin');
+
+CREATE POLICY "Admins can update contracts" ON contracts
+  FOR UPDATE USING (auth.jwt() ->> 'role' = 'admin');
+
+-- RLS Policies for admin_logs table (admin only)
+CREATE POLICY "Admins can view admin logs" ON admin_logs
+  FOR SELECT USING (auth.jwt() ->> 'role' = 'admin');
+
+CREATE POLICY "Admins can create admin logs" ON admin_logs
+  FOR INSERT WITH CHECK (auth.jwt() ->> 'role' = 'admin');
+
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -163,6 +257,12 @@ CREATE TRIGGER update_yields_updated_at BEFORE UPDATE ON yields
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_plans_updated_at BEFORE UPDATE ON plans
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_contracts_updated_at BEFORE UPDATE ON contracts
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert default plans

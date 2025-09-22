@@ -29,6 +29,7 @@
     "chartjs-plugin-annotation": "^3.0.1",
     "chartjs-plugin-zoom": "^2.0.1",
     "date-fns": "^2.30.0",
+    "dayjs": "^1.11.18",
     "ethers": "^6.13.2",
     "fuse.js": "^7.0.0",
     "graphql": "^16.11.0",

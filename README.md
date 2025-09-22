@@ -44,10 +44,14 @@ npm run dev
 
 ### Database Schema
 The app uses the following tables:
-- **users**: User profiles synced from Privy auth
+- **users**: User profiles synced from Privy auth with role management
 - **challenges**: Trading challenges with balance and parameters
 - **trades**: Individual trades linked to challenges
 - **yields**: LP yield tracking
+- **orders**: Payment processing and order management
+- **contracts**: Digital contract signing with verification
+- **admin_logs**: Audit trail for administrative actions
+- **plans**: Configurable challenge plans
 
 All tables include Row Level Security (RLS) policies for secure access.
 
@@ -98,6 +102,16 @@ The platform features real-time market data integration, interactive charting, c
 
 #### **👤 Traders Dashboard** (Protected Route)
 - **Authentication**: Privy integration with redirect handling
+
+#### **🔧 Admin Dashboard** (Protected Route)
+- **Role-Based Access**: Automatic redirect for non-admin users
+- **Tabbed Interface**: Headless UI tabs for different management sections
+- **Orders Management**: SWR-powered table with approve/reject actions
+- **Contracts System**: Digital signing with email 2FA verification
+- **Customer Management**: Editable forms with breach tracking
+- **Risk Monitoring**: Real-time position monitoring with WS sync
+- **Reports & Analytics**: Revenue, conversion, and plan performance metrics
+- **Audit Logging**: All admin actions logged to Supabase
 - **Virtual Balance**: Real-time balance tracking with ROI indicators
 - **Demo Mode**: Dismissible badge with challenge size display
 
