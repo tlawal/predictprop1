@@ -10,97 +10,97 @@ const ChallengePlansTable = () => {
   // Challenge plan data with prediction-specific parameters
   const challengePlans = {
     'one-phase': [
-      { 
-        size: '$5,000', 
+      {
+        size: '$5,000',
         fee: '$65',
-        profitTarget: '10% Realized ROI on 10 Resolved Markets', 
-        dailyLoss: '70% Win Rate Required', 
-        drawdown: '<5% Max Drawdown', 
+        profitTarget: '10% Realized ROI on 10 Resolved Markets',
+        dailyLoss: '70% Win Rate Required',
+        drawdown: '<5% Max Drawdown',
         exposureCap: '$500 Exposure Cap',
         description: 'Perfect for beginners starting their prediction market journey'
       },
-      { 
-        size: '$10,000', 
+      {
+        size: '$10,000',
         fee: '$200',
-        profitTarget: '10% Realized ROI on 10 Resolved Markets', 
-        dailyLoss: '70% Win Rate Required', 
-        drawdown: '<5% Max Drawdown', 
+        profitTarget: '10% Realized ROI on 10 Resolved Markets',
+        dailyLoss: '70% Win Rate Required',
+        drawdown: '<5% Max Drawdown',
         exposureCap: '$1,000 Exposure Cap',
         description: 'Most popular choice for serious traders',
         featured: true
       },
-      { 
-        size: '$25,000', 
+      {
+        size: '$25,000',
         fee: '$450',
-        profitTarget: '10% Realized ROI on 10 Resolved Markets', 
-        dailyLoss: '70% Win Rate Required', 
-        drawdown: '<5% Max Drawdown', 
+        profitTarget: '10% Realized ROI on 10 Resolved Markets',
+        dailyLoss: '70% Win Rate Required',
+        drawdown: '<5% Max Drawdown',
         exposureCap: '$2,500 Exposure Cap',
         description: 'For experienced prediction market traders'
       },
-      { 
-        size: '$50,000', 
+      {
+        size: '$50,000',
         fee: '$750',
-        profitTarget: '10% Realized ROI on 10 Resolved Markets', 
-        dailyLoss: '70% Win Rate Required', 
-        drawdown: '<5% Max Drawdown', 
+        profitTarget: '10% Realized ROI on 10 Resolved Markets',
+        dailyLoss: '70% Win Rate Required',
+        drawdown: '<5% Max Drawdown',
         exposureCap: '$5,000 Exposure Cap',
         description: 'Advanced traders ready for larger capital'
       },
-      { 
-        size: '$100,000', 
+      {
+        size: '$100,000',
         fee: '$1,000',
-        profitTarget: '10% Realized ROI on 10 Resolved Markets', 
-        dailyLoss: '70% Win Rate Required', 
-        drawdown: '<5% Max Drawdown', 
+        profitTarget: '10% Realized ROI on 10 Resolved Markets',
+        dailyLoss: '70% Win Rate Required',
+        drawdown: '<5% Max Drawdown',
         exposureCap: '$10,000 Exposure Cap',
         description: 'Elite traders with proven track records'
       }
     ],
     'two-phase': [
-      { 
-        size: '$5,000', 
+      {
+        size: '$5,000',
         fee: '$65',
-        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions', 
-        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved', 
-        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown', 
+        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions',
+        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved',
+        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown',
         exposureCap: 'Phase 1: $300 Cap | Phase 2: $400 Cap',
         description: 'Two-phase evaluation for careful progression'
       },
-      { 
-        size: '$10,000', 
+      {
+        size: '$10,000',
         fee: '$200',
-        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions', 
-        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved', 
-        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown', 
+        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions',
+        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved',
+        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown',
         exposureCap: 'Phase 1: $600 Cap | Phase 2: $800 Cap',
         description: 'Most popular two-phase option',
         featured: true
       },
-      { 
-        size: '$25,000', 
+      {
+        size: '$25,000',
         fee: '$450',
-        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions', 
-        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved', 
-        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown', 
+        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions',
+        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved',
+        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown',
         exposureCap: 'Phase 1: $1,500 Cap | Phase 2: $2,000 Cap',
         description: 'For experienced traders who prefer gradual progression'
       },
-      { 
-        size: '$50,000', 
+      {
+        size: '$50,000',
         fee: '$750',
-        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions', 
-        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved', 
-        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown', 
+        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions',
+        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved',
+        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown',
         exposureCap: 'Phase 1: $3,000 Cap | Phase 2: $4,000 Cap',
         description: 'Advanced two-phase evaluation'
       },
-      { 
-        size: '$100,000', 
+      {
+        size: '$100,000',
         fee: '$1,000',
-        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions', 
-        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved', 
-        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown', 
+        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions',
+        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved',
+        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown',
         exposureCap: 'Phase 1: $6,000 Cap | Phase 2: $8,000 Cap',
         description: 'Elite two-phase evaluation for top traders'
       }
@@ -141,11 +141,11 @@ const ChallengePlansTable = () => {
               <h3>{plan.size}</h3>
               <div className={styles.planPrice}>{plan.fee}</div>
             </div>
-            
+
             <div className={styles.planDescription}>
               <p>{plan.description}</p>
             </div>
-            
+
             <div className={styles.planFeatures}>
               <div className={styles.featureItem}>
                 <span className={styles.featureLabel}>Profit Target</span>
@@ -164,7 +164,7 @@ const ChallengePlansTable = () => {
                 <span className={styles.featureValue}>{plan.exposureCap}</span>
               </div>
             </div>
-            
+
             <div className={styles.planFooter}>
               <Link href={`/traders?size=${formatAccountSize(plan.size)}&step=${getStepNumber(evaluationType)}`}>
                 <button className={styles.planButton}>

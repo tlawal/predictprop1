@@ -57,6 +57,25 @@ PredictProp is a comprehensive prediction markets trading platform that combines
 
 The platform features real-time market data integration, interactive charting, comprehensive risk analysis, and a modern responsive UI built with Next.js, Tailwind CSS, and Chart.js. Built on Polygon with Privy authentication, it provides a seamless trading experience for prediction market enthusiasts.
 
+## Plan Selection & Payment System
+
+### 🔧 **Supabase Plan Management**
+- **Dynamic Plans**: Configurable challenge types (1-step/2-step) with custom parameters
+- **Admin Management**: Full CRUD API for plan administration
+- **Real-time Updates**: Live plan data with caching
+
+### 💳 **Dual Payment Integration**
+- **Stripe Integration**: Credit card payments with secure Elements
+- **Crypto Payments**: Direct USDC transfers on Polygon network
+- **Challenge Creation**: Automatic challenge setup upon successful payment
+- **Email Notifications**: Welcome emails for new challenge starts
+
+### 📋 **Plan Features**
+- **1-Step Challenges**: Single evaluation phase with profit targets
+- **2-Step Challenges**: Two-phase evaluation with progression requirements
+- **Dynamic Parameters**: ROI targets, win rates, drawdown limits, exposure caps
+- **Account Sizes**: Multiple balance options per plan type
+
 ## Core Features
 
 ### ✅ **Implemented Features**

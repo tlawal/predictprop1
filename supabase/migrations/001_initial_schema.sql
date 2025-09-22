@@ -52,6 +52,24 @@ CREATE TABLE IF NOT EXISTS yields (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create plans table
+CREATE TABLE IF NOT EXISTS plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type TEXT NOT NULL CHECK (type IN ('1-step', '2-step')),
+  description TEXT NOT NULL,
+  params JSONB NOT NULL DEFAULT '{
+    "roi": 10,
+    "win_rate": 70,
+    "drawdown": 5,
+    "exposure": 15,
+    "min_days": 10
+  }',
+  fee NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_challenges_user_id ON challenges(user_id);
 CREATE INDEX IF NOT EXISTS idx_challenges_status ON challenges(status);
@@ -59,12 +77,15 @@ CREATE INDEX IF NOT EXISTS idx_trades_challenge_id ON trades(challenge_id);
 CREATE INDEX IF NOT EXISTS idx_trades_market_id ON trades(market_id);
 CREATE INDEX IF NOT EXISTS idx_trades_resolved ON trades(resolved);
 CREATE INDEX IF NOT EXISTS idx_yields_lp_id ON yields(lp_id);
+CREATE INDEX IF NOT EXISTS idx_plans_active ON plans(active);
+CREATE INDEX IF NOT EXISTS idx_plans_type ON plans(type);
 
 -- Enable Row Level Security
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trades ENABLE ROW LEVEL SECURITY;
 ALTER TABLE yields ENABLE ROW LEVEL SECURITY;
+ALTER TABLE plans ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users table
 CREATE POLICY "Users can view their own profile" ON users
@@ -112,6 +133,13 @@ CREATE POLICY "Anyone can view yields" ON yields
 CREATE POLICY "Authenticated users can create yields" ON yields
   FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
+-- RLS Policies for plans table (public read, admin write)
+CREATE POLICY "Anyone can view active plans" ON plans
+  FOR SELECT USING (active = true);
+
+CREATE POLICY "Admin can manage plans" ON plans
+  FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
+
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -133,3 +161,12 @@ CREATE TRIGGER update_trades_updated_at BEFORE UPDATE ON trades
 
 CREATE TRIGGER update_yields_updated_at BEFORE UPDATE ON yields
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_plans_updated_at BEFORE UPDATE ON plans
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Insert default plans
+INSERT INTO plans (type, description, params, fee) VALUES
+  ('1-step', 'Single phase challenge with profit target', '{"roi": 6, "win_rate": 70, "drawdown": 5, "exposure": 15, "min_days": 10}', 99.00),
+  ('2-step', 'Two phase challenge with evaluation and profit phases', '{"roi": 10, "win_rate": 70, "drawdown": 5, "exposure": 15, "min_days": 20}', 149.00)
+ON CONFLICT DO NOTHING;

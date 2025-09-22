@@ -20,6 +20,8 @@
     "@headlessui/react": "^2.1.0",
     "@heroicons/react": "^2.1.0",
     "@privy-io/react-auth": "^1.82.0",
+    "@stripe/react-stripe-js": "^4.0.2",
+    "@stripe/stripe-js": "^7.9.0",
     "@supabase/supabase-js": "^2.57.4",
     "axios": "^1.7.2",
     "chart.js": "^4.4.0",
