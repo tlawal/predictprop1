@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { supabase } from '../../../lib/supabase';
 
 // Simple in-memory cache
 const cache = new Map();
@@ -7,7 +8,14 @@ const CACHE_TTL = 30 * 1000; // 30 seconds
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || 'demo_user';
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'userId parameter is required' },
+        { status: 400 }
+      );
+    }
 
     // Check cache
     const cacheKey = `challenge:${userId}`;
@@ -16,59 +24,77 @@ export async function GET(request) {
       return NextResponse.json(cached.data);
     }
 
-    // Mock challenge data - in production this would come from Supabase
-    // This represents a user with a $5,000 challenge
-    const challengeSize = 5000;
+    // Get user's active challenge from Supabase
+    const { data: challenge, error: challengeError } = await supabase
+      .from('challenges')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
 
-    // Mock positions data for calculations
-    const mockPositions = [
-      {
-        id: 'pos_1',
-        side: 'Yes',
-        shares: 100,
-        entryPrice: 0.55,
-        currentPrice: 0.62,
-        pnl: 700,
-        status: 'open',
-        endDate: '2025-12-31T12:00:00Z'
-      },
-      {
-        id: 'pos_2',
-        side: 'No',
-        shares: 50,
-        entryPrice: 0.15,
-        currentPrice: 0.12,
-        pnl: 150,
-        status: 'open',
-        endDate: '2025-12-31T12:00:00Z'
-      },
-      {
-        id: 'pos_3',
-        side: 'Yes',
-        shares: 200,
-        entryPrice: 0.48,
-        currentPrice: 0.52,
-        pnl: 800,
-        status: 'resolved',
-        endDate: '2025-12-31T12:00:00Z',
-        resolution: 'Yes',
-        resolvedOutcome: 'Yes'
-      },
-      {
-        id: 'pos_4',
-        side: 'No',
-        shares: 75,
-        entryPrice: 0.08,
-        currentPrice: 0.05,
-        pnl: 225,
-        status: 'open',
-        endDate: '2025-12-31T12:00:00Z'
-      }
-    ];
+    if (challengeError || !challenge) {
+      return NextResponse.json({
+        error: 'No active challenge found',
+        message: challengeError?.message || 'User has no active challenge',
+        projectedROI: 0,
+        winRate: 0,
+        maxDrawdown: 0,
+        maxDrawdownPercent: 0,
+        maxExposure: 0,
+        maxExposurePercent: 0,
+        resolvedMarkets: 0,
+        totalMarkets: 0,
+        phase1Complete: false,
+        challengeStatus: 'not_found'
+      });
+    }
+
+    const challengeSize = challenge.balance;
+
+    // Get trades for this challenge from Supabase
+    const { data: trades, error: tradesError } = await supabase
+      .from('trades')
+      .select('*')
+      .eq('challenge_id', challenge.id)
+      .order('created_at', { ascending: false });
+
+    if (tradesError) {
+      console.error('Error fetching trades:', tradesError);
+      return NextResponse.json({
+        error: 'Failed to fetch trades',
+        message: tradesError.message,
+        projectedROI: 0,
+        winRate: 0,
+        maxDrawdown: 0,
+        maxDrawdownPercent: 0,
+        maxExposure: 0,
+        maxExposurePercent: 0,
+        resolvedMarkets: 0,
+        totalMarkets: 0,
+        phase1Complete: false,
+        challengeStatus: 'error'
+      }, { status: 500 });
+    }
+
+    // For now, we'll use the trades data as positions
+    // In a real implementation, you'd need to fetch current market prices
+    // and calculate unrealized P&L for open positions
+    const positions = trades.map(trade => ({
+      id: trade.id,
+      side: trade.side,
+      shares: trade.amount, // Assuming amount = shares for simplicity
+      entryPrice: trade.entry_price,
+      pnl: trade.pnl,
+      status: trade.resolved ? 'resolved' : 'open',
+      endDate: '2025-12-31T12:00:00Z', // This would come from market data
+      resolvedOutcome: trade.resolved ? (trade.pnl > 0 ? 'Yes' : 'No') : null
+    }));
 
     // Calculate challenge metrics
-    const openPositions = mockPositions.filter(p => p.status === 'open');
-    const resolvedPositions = mockPositions.filter(p => p.status === 'resolved');
+    const openPositions = positions.filter(p => p.status === 'open');
+    const resolvedPositions = positions.filter(p => p.status === 'resolved');
 
     // Phase 1 progress (6% ROI target)
     const phase1Target = challengeSize * 0.06; // $300 for $5k
@@ -91,7 +117,7 @@ export async function GET(request) {
 
     // Drawdown calculation - cluster by end date and find max loss
     const positionsByEndDate = {};
-    mockPositions.forEach(pos => {
+    positions.forEach(pos => {
       if (!positionsByEndDate[pos.endDate]) {
         positionsByEndDate[pos.endDate] = [];
       }
@@ -109,9 +135,9 @@ export async function GET(request) {
     const maxDrawdownPercent = (maxDrawdown / challengeSize) * 100;
 
     // Exposure calculation - max position allocation
-    const maxPositionValue = Math.max(...mockPositions.map(pos =>
+    const maxPositionValue = positions.length > 0 ? Math.max(...positions.map(pos =>
       Math.abs(pos.shares * pos.entryPrice)
-    ));
+    )) : 0;
     const maxExposurePercent = (maxPositionValue / challengeSize) * 100;
 
     // Challenge status
@@ -137,7 +163,7 @@ export async function GET(request) {
 
       // Position counts
       resolvedMarkets: totalResolved,
-      totalMarkets: mockPositions.length,
+      totalMarkets: positions.length,
       openPositions: openPositions.length,
 
       // Challenge status
@@ -179,6 +205,74 @@ export async function GET(request) {
         phase1Complete: false,
         challengeStatus: 'error'
       },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request) {
+  try {
+    const body = await request.json();
+    const { userId, planType, balance } = body;
+
+    if (!userId || !planType || !balance) {
+      return NextResponse.json(
+        { error: 'userId, planType, and balance are required' },
+        { status: 400 }
+      );
+    }
+
+    // Check if user has an active challenge already
+    const { data: existingChallenge } = await supabase
+      .from('challenges')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .single();
+
+    if (existingChallenge) {
+      return NextResponse.json(
+        { error: 'User already has an active challenge' },
+        { status: 409 }
+      );
+    }
+
+    // Create new challenge
+    const challengeParams = {
+      profit_target: planType === '1-step' ? 10 : planType === '2-step' ? 5 : 1,
+      drawdown_max: 5,
+      exposure_cap: 15
+    };
+
+    const { data: challenge, error } = await supabase
+      .from('challenges')
+      .insert({
+        user_id: userId,
+        plan_type: planType,
+        balance: balance,
+        params: challengeParams,
+        status: 'active'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating challenge:', error);
+      return NextResponse.json(
+        { error: 'Failed to create challenge', message: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      challenge: challenge
+    });
+
+  } catch (error) {
+    console.error('Challenge POST API error:', error);
+    return NextResponse.json(
+      { error: 'Failed to create challenge', message: error.message },
       { status: 500 }
     );
   }

@@ -1,5 +1,56 @@
 # PredictProp
 
+## Supabase Setup
+
+### 1. Create Supabase Project
+1. Go to [supabase.com](https://supabase.com) and create a new project
+2. Wait for the database to be set up (usually takes 2-3 minutes)
+
+### 2. Get Environment Variables
+1. In your Supabase dashboard, go to Settings → API
+2. Copy the following values:
+   - **Project URL**: `https://your-project-id.supabase.co`
+   - **anon/public key**: The `anon` `public` key (starts with `eyJ...`)
+
+### 3. Configure Environment
+Add these to your `.env.local` file:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+### 4. Run Database Migrations
+```bash
+# Install Supabase CLI if you haven't already
+npm install supabase --save-dev
+
+# Login to Supabase
+npx supabase login
+
+# Link your project
+npx supabase link --project-ref your-project-id
+
+# Push the schema to your database
+npx supabase db push
+```
+
+### 5. Test the Integration
+```bash
+npm run dev
+```
+- Open the app and try logging in with Privy
+- Check browser console for successful Supabase user sync
+- Try creating a challenge and placing trades
+
+### Database Schema
+The app uses the following tables:
+- **users**: User profiles synced from Privy auth
+- **challenges**: Trading challenges with balance and parameters
+- **trades**: Individual trades linked to challenges
+- **yields**: LP yield tracking
+
+All tables include Row Level Security (RLS) policies for secure access.
+
 ## Overview
 
 PredictProp is a comprehensive prediction markets trading platform that combines traditional prop trading evaluation with cutting-edge prediction market technology. Users can participate in virtual trading challenges using Polymarket data, with a full-featured dashboard for tracking performance, managing positions, and analyzing risk.

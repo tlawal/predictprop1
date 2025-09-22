@@ -4,6 +4,7 @@ import { PrivyProvider } from '@privy-io/react-auth';
 import { ThemeProvider } from './ThemeContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import { SupabaseAuthProvider } from './components/SupabaseAuthProvider';
 
 export default function RootLayoutClient({ children }) {
   return (
@@ -27,9 +28,11 @@ export default function RootLayoutClient({ children }) {
               }
             }}
           >
-            <Header />
-            {children}
-            <Footer />
+            <SupabaseAuthProvider>
+              <Header />
+              {children}
+              <Footer />
+            </SupabaseAuthProvider>
           </PrivyProvider>
         </ThemeProvider>
       </body>

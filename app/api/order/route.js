@@ -1,25 +1,23 @@
 import { NextResponse } from 'next/server';
-
-// Mock database - in production, use Supabase or similar
-const mockTrades = [];
+import { supabase } from '../../../lib/supabase';
 
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { tokenId, side, amount, price, orderType } = body;
+    const { userId, challengeId, marketId, side, amount, price, orderType } = body;
 
     // Validate required fields
-    if (!tokenId || !side || !amount || !price) {
+    if (!userId || !challengeId || !marketId || !side || !amount || !price) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: userId, challengeId, marketId, side, amount, price' },
         { status: 400 }
       );
     }
 
     // Validate side
-    if (!['yes', 'no'].includes(side)) {
+    if (!['Yes', 'No'].includes(side)) {
       return NextResponse.json(
-        { error: 'Invalid side. Must be "yes" or "no"' },
+        { error: 'Invalid side. Must be "Yes" or "No"' },
         { status: 400 }
       );
     }
@@ -42,42 +40,69 @@ export async function POST(request) {
       );
     }
 
-    // Create mock trade record
-    const trade = {
-      id: `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      tokenId,
-      side,
-      amount: amountNum,
-      price: priceNum,
-      orderType: orderType || 'market',
-      timestamp: new Date().toISOString(),
-      status: 'pending', // pending, filled, cancelled
-      pnl: null, // Profit/Loss - would be calculated when trade is closed
-      marketId: tokenId, // For linking to market
-    };
+    // Verify challenge exists and is active
+    const { data: challenge, error: challengeError } = await supabase
+      .from('challenges')
+      .select('id, balance, status')
+      .eq('id', challengeId)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .single();
 
-    // Store in mock database
-    mockTrades.push(trade);
+    if (challengeError || !challenge) {
+      return NextResponse.json(
+        { error: 'Invalid or inactive challenge' },
+        { status: 400 }
+      );
+    }
 
-    console.log('Mock trade created:', trade);
+    // Check if position value exceeds exposure cap (simplified check)
+    const positionValue = amountNum * priceNum;
+    const maxExposure = challenge.balance * (challenge.params?.exposure_cap || 15) / 100;
+    if (positionValue > maxExposure) {
+      return NextResponse.json(
+        { error: 'Position exceeds maximum exposure limit' },
+        { status: 400 }
+      );
+    }
 
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Create trade record in Supabase
+    const { data: trade, error: tradeError } = await supabase
+      .from('trades')
+      .insert({
+        challenge_id: challengeId,
+        market_id: marketId,
+        side: side,
+        amount: amountNum,
+        entry_price: priceNum,
+        pnl: 0, // Initialize P&L as 0
+        resolved: false
+      })
+      .select()
+      .single();
 
-    // Update status to filled
-    trade.status = 'filled';
+    if (tradeError) {
+      console.error('Error creating trade:', tradeError);
+      return NextResponse.json(
+        { error: 'Failed to create trade', message: tradeError.message },
+        { status: 500 }
+      );
+    }
+
+    console.log('Trade created in Supabase:', trade);
 
     return NextResponse.json({
       success: true,
       trade: {
         id: trade.id,
-        tokenId: trade.tokenId,
+        challengeId: trade.challenge_id,
+        marketId: trade.market_id,
         side: trade.side,
         amount: trade.amount,
-        price: trade.price,
-        orderType: trade.orderType,
-        timestamp: trade.timestamp,
-        status: trade.status
+        entryPrice: trade.entry_price,
+        pnl: trade.pnl,
+        resolved: trade.resolved,
+        createdAt: trade.created_at
       },
       message: 'Order placed successfully'
     });
@@ -94,16 +119,42 @@ export async function POST(request) {
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const tokenId = searchParams.get('tokenId');
+    const userId = searchParams.get('userId');
+    const challengeId = searchParams.get('challengeId');
 
-    // Filter trades by tokenId if provided
-    const filteredTrades = tokenId
-      ? mockTrades.filter(trade => trade.tokenId === tokenId)
-      : mockTrades;
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'userId parameter is required' },
+        { status: 400 }
+      );
+    }
+
+    let query = supabase
+      .from('trades')
+      .select(`
+        *,
+        challenges!inner(user_id, status)
+      `)
+      .eq('challenges.user_id', userId);
+
+    // Filter by challenge if provided
+    if (challengeId) {
+      query = query.eq('challenge_id', challengeId);
+    }
+
+    const { data: trades, error } = await query.order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching trades:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch trades', message: error.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
-      trades: filteredTrades,
-      total: filteredTrades.length
+      trades: trades || [],
+      total: trades?.length || 0
     });
 
   } catch (error) {

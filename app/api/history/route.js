@@ -1,110 +1,22 @@
 import { NextResponse } from 'next/server';
+import { supabase } from '../../../lib/supabase';
 
 // Simple in-memory cache
 const cache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-// Mock trade history data
-const mockTrades = [
-  {
-    id: 'trade_001',
-    marketId: '16548',
-    clobTokenId: '72694124641274932882200626543149578267721455356147469534844974829144359265969',
-    question: 'Will US government shutdown in 2025?',
-    side: 'Yes',
-    shares: 100,
-    entryPrice: 0.55,
-    entryTimestamp: '2025-01-15T10:30:00Z',
-    endDate: '2025-12-31T12:00:00Z',
-    icon: 'https://polymarket-upload.s3.us-east-2.amazonaws.com/us-government-shutdown-in-2025-MSsPGy_9Bzvg.jpg',
-    status: 'open',
-    pnl: 625, // (0.615 - 0.55) * 100
-    currentPrice: 0.615,
-    umaResolutionStatus: null,
-    outcome: null,
-    resolved: false
-  },
-  {
-    id: 'trade_002',
-    marketId: '22448',
-    clobTokenId: '72122482770569588499506755542531317316214547923366033552728295449545343415738',
-    question: 'Taylor Swift pregnant in 2025?',
-    side: 'No',
-    shares: 50,
-    entryPrice: 0.15,
-    entryTimestamp: '2025-02-20T14:15:00Z',
-    endDate: '2025-12-31T12:00:00Z',
-    icon: 'https://polymarket-upload.s3.us-east-2.amazonaws.com/taylor-swift-pregnant-in-2025-5cpC3Ir4u5Pd.jpg',
-    status: 'open',
-    pnl: -181, // (0.114 - 0.15) * 50
-    currentPrice: 0.114,
-    umaResolutionStatus: null,
-    outcome: null,
-    resolved: false
-  },
-  {
-    id: 'trade_003',
-    marketId: '16108',
-    clobTokenId: '15974786252393396629980467963784550802583781222733347534844974829144359265969',
-    question: 'Russia x Ukraine ceasefire in 2025?',
-    side: 'Yes',
-    shares: 200,
-    entryPrice: 0.48,
-    entryTimestamp: '2025-03-10T09:45:00Z',
-    endDate: '2025-12-31T12:00:00Z',
-    icon: 'https://polymarket-upload.s3.us-east-2.amazonaws.com/russia-x-ukraine-ceasefire-in-2025-w2voYOygx80B.jpg',
-    status: 'resolved',
-    pnl: 800, // (1.0 - 0.48) * 200 (won)
-    currentPrice: 1.0,
-    umaResolutionStatus: 'Yes',
-    outcome: 'Yes',
-    resolved: true,
-    resolvedTimestamp: '2025-06-15T16:30:00Z'
-  },
-  {
-    id: 'trade_004',
-    marketId: '17505',
-    clobTokenId: '107871556080406103665029740738143572273133644015273359659942266346671062091117',
-    question: 'Jerome Powell out as Fed Chair in 2025?',
-    side: 'No',
-    shares: 75,
-    entryPrice: 0.08,
-    entryTimestamp: '2025-04-05T11:20:00Z',
-    endDate: '2025-12-31T12:00:00Z',
-    icon: 'https://polymarket-upload.s3.us-east-2.amazonaws.com/will-trump-remove-jerome-powell-njJA1TCPwhmt.jpg',
-    status: 'open',
-    pnl: -227, // (0.05 - 0.08) * 75
-    currentPrice: 0.05,
-    umaResolutionStatus: null,
-    outcome: null,
-    resolved: false
-  },
-  {
-    id: 'trade_005',
-    marketId: '19876',
-    clobTokenId: '81234567890123456789012345678901234567890123456789012345678901234567890123456',
-    question: 'Will Tesla stock exceed $500 in 2025?',
-    side: 'Yes',
-    shares: 150,
-    entryPrice: 0.45,
-    entryTimestamp: '2025-05-12T13:10:00Z',
-    endDate: '2025-10-31T12:00:00Z',
-    icon: 'https://polymarket-upload.s3.us-east-2.amazonaws.com/tesla-stock-500-in-2025-abc123.jpg',
-    status: 'resolved',
-    pnl: -675, // (0.0 - 0.45) * 150 (lost)
-    currentPrice: 0.0,
-    umaResolutionStatus: 'No',
-    outcome: 'No',
-    resolved: true,
-    resolvedTimestamp: '2025-08-20T14:45:00Z'
-  }
-];
-
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || 'demo_user';
+    const userId = searchParams.get('userId');
     const status = searchParams.get('status'); // 'open', 'resolved', or null for all
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'userId parameter is required' },
+        { status: 400 }
+      );
+    }
 
     // Check cache
     const cacheKey = `history:${userId}:${status}`;
@@ -113,24 +25,106 @@ export async function GET(request) {
       return NextResponse.json(cached.data);
     }
 
-    // Filter trades by status if specified
-    let filteredTrades = mockTrades;
+    // Fetch trades from Supabase
+    let query = supabase
+      .from('trades')
+      .select(`
+        *,
+        challenges!inner(user_id, status)
+      `)
+      .eq('challenges.user_id', userId);
+
+    // Filter by resolved status if specified
     if (status === 'open') {
-      filteredTrades = mockTrades.filter(trade => trade.status === 'open');
+      query = query.eq('resolved', false);
     } else if (status === 'resolved') {
-      filteredTrades = mockTrades.filter(trade => trade.status === 'resolved');
+      query = query.eq('resolved', true);
     }
 
-    // Get resolved market IDs for fetching outcomes
-    const resolvedMarketIds = filteredTrades
-      .filter(trade => trade.resolved)
-      .map(trade => trade.marketId);
+    const { data: trades, error: tradesError } = await query
+      .order('created_at', { ascending: false });
 
-    // In production, fetch resolved outcomes from Gamma API
-    // For demo, we'll use the mock data
+    if (tradesError) {
+      console.error('Error fetching trades:', tradesError);
+      return NextResponse.json({
+        error: 'Failed to fetch trade history',
+        message: tradesError.message,
+        trades: [],
+        equityHistory: [],
+        summary: {
+          totalTrades: 0,
+          openTrades: 0,
+          resolvedTrades: 0,
+          winningTrades: 0,
+          losingTrades: 0,
+          totalPnL: 0,
+          winRate: 0
+        }
+      }, { status: 500 });
+    }
+
+    // Get resolved market IDs for fetching outcomes from Gamma API
+    const resolvedMarketIds = trades
+      .filter(trade => trade.resolved)
+      .map(trade => trade.market_id);
+
+    // Fetch resolved outcomes from Gamma API
+    let resolvedOutcomes = {};
+    if (resolvedMarketIds.length > 0) {
+      try {
+        const marketsResponse = await fetch(
+          `https://gamma-api.polymarket.com/markets?closed=true&condition_ids=${resolvedMarketIds.join(',')}`
+        );
+        if (marketsResponse.ok) {
+          const marketsData = await marketsResponse.json();
+          resolvedOutcomes = marketsData.markets?.reduce((acc, market) => {
+            acc[market.conditionId] = {
+              outcome: market.umaResolutionStatus === '1' ? 'Yes' : 'No',
+              resolved: true
+            };
+            return acc;
+          }, {}) || {};
+        }
+      } catch (error) {
+        console.warn('Failed to fetch resolved outcomes from Gamma API:', error);
+      }
+    }
+
+    // Transform trades data to include market information and calculate P&L
+    const transformedTrades = trades.map(trade => {
+      const marketOutcome = resolvedOutcomes[trade.market_id];
+      let calculatedPnL = trade.pnl;
+
+      // For resolved trades, recalculate P&L based on outcome if needed
+      if (trade.resolved && marketOutcome) {
+        const outcomeBinary = marketOutcome.outcome === 'Yes' ? 1 : 0;
+        const sideBinary = trade.side === 'Yes' ? 1 : 0;
+        const isWin = sideBinary === outcomeBinary;
+        calculatedPnL = isWin ?
+          trade.amount * (1 - trade.entry_price) :
+          -trade.amount * trade.entry_price;
+      }
+
+      return {
+        id: trade.id,
+        marketId: trade.market_id,
+        question: `Market ${trade.market_id}`, // Would need to fetch from Gamma API
+        side: trade.side,
+        shares: trade.amount,
+        entryPrice: trade.entry_price,
+        entryTimestamp: trade.created_at,
+        endDate: '2025-12-31T12:00:00Z', // Would need to fetch from market data
+        status: trade.resolved ? 'resolved' : 'open',
+        pnl: calculatedPnL,
+        umaResolutionStatus: marketOutcome?.outcome || null,
+        outcome: marketOutcome?.outcome || null,
+        resolved: trade.resolved,
+        resolvedTimestamp: trade.resolved ? trade.updated_at : null
+      };
+    });
 
     // Sort by entry timestamp (newest first)
-    const sortedTrades = filteredTrades.sort((a, b) =>
+    const sortedTrades = transformedTrades.sort((a, b) =>
       new Date(b.entryTimestamp) - new Date(a.entryTimestamp)
     );
 
