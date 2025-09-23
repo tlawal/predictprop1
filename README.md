@@ -364,6 +364,14 @@ The platform features real-time market data integration, interactive charting, c
 - **Insurance Integration**: Nexus Mutual API stub for automated loss protection coverage
 - **Smart Contract Integration**: ERC4626 vault auto-close functionality for production deployment
 
+#### **🌍 Internationalization (i18n)**
+- **Multi-language Support**: English, Spanish, and French translations
+- **User Language Preferences**: Saved to Supabase and localStorage
+- **Language Switcher**: Integrated into user profile sidebar
+- **Dynamic Language Switching**: Real-time language changes without page reload
+- **Fallback System**: Graceful degradation to English if translations missing
+- **React Integration**: Full useTranslation hook support across all components
+
 #### **👤 Traders Dashboard** (Protected Route)
 - **Authentication**: Privy integration with redirect handling
 

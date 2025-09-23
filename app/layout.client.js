@@ -5,6 +5,7 @@ import { ThemeProvider } from './ThemeContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import { SupabaseAuthProvider } from './components/SupabaseAuthProvider';
+import '../lib/i18n';
 
 export default function RootLayoutClient({ children }) {
   return (

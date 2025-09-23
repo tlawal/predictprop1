@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, Suspense, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
@@ -60,6 +61,7 @@ function WSTickerMarquee() {
 }
 
 function MarketsPageContent() {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
@@ -686,7 +688,7 @@ function MarketsPageContent() {
 
           <h1 className="text-xl md:text-3xl font-black text-white mb-8">
             <span className="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
-              Explore Live Prediction Markets
+              {t('markets.exploreLiveMarkets')}
             </span>
           </h1>
 

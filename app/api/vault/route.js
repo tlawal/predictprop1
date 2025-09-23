@@ -1,6 +1,8 @@
 // Mock vault API - in production this would use ethers v6 to query the actual vault contract
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 // Simple in-memory cache
 const cache = new Map();
 const CACHE_TTL = 30 * 1000; // 30 seconds

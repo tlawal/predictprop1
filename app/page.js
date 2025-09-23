@@ -3,11 +3,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 import ChallengePlansTable from './components/ChallengePlansTable';
 import styles from './styles/Home.module.css';
 
 export default function Home() {
+  const { t } = useTranslation();
   const canvasRef = useRef(null);
   const marqueeRef = useRef(null);
   const [evaluationType, setEvaluationType] = useState('one-phase');
@@ -154,17 +156,17 @@ export default function Home() {
             <span>Live Beta launch</span>
           </div>
           <h1 className={styles.heroTitle}>
-            <span className={styles.titleGradient}>Trade Prediction Markets</span>
-            <span className={styles.titleAccent}>with Funded Capital</span>
+            <span className={styles.titleGradient}>{t('hero.title')}</span>
+            <span className={styles.titleAccent}>{t('hero.subtitle')}</span>
           </h1>
           <p className={styles.heroSubtitle}>
-            Trade politics, sports, economics & more — get funded up to 
+            {t('hero.tagline')} — get funded up to
             <span className={styles.amountHighlight}> $100,000</span>.
           </p>
           <div className={styles.cta}>
             <Link href="/traders">
               <button className={`${styles.ctaButton} ${styles.primary}`}>
-                <span>Start Challenge</span>
+                <span>{t('hero.startTrading')}</span>
                 <svg className={styles.buttonIcon} viewBox="0 0 24 24">
                   <path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/>
                 </svg>
@@ -172,7 +174,7 @@ export default function Home() {
             </Link>
             <Link href="#how-it-works">
               <button className={`${styles.ctaButton} ${styles.secondary}`}>
-                <span>Learn How It Works</span>
+                <span>{t('hero.learnMore')}</span>
                 <svg className={styles.buttonIcon} viewBox="0 0 24 24">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
                 </svg>

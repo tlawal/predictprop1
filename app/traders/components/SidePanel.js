@@ -5,24 +5,19 @@ import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
-import Select from 'react-select';
+import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 import { supabase } from '../../../lib/supabase';
 import { useSupabaseAuth } from '../../../lib/hooks/useSupabaseAuth';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
 import CertGenerator from './CertGenerator';
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
-const languageOptions = [
-  { value: 'en', label: 'English' },
-  { value: 'es', label: 'Español' },
-  { value: 'fr', label: 'Français' }
-];
-
 export default function SidePanel({ isOpen, onClose, isMobile = false }) {
+  const { t } = useTranslation();
   const { user, logout } = usePrivy();
   const { isAuthenticated } = useSupabaseAuth();
-  const [selectedLanguage, setSelectedLanguage] = useState({ value: 'en', label: 'English' });
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
@@ -42,52 +37,6 @@ export default function SidePanel({ isOpen, onClose, isMobile = false }) {
     { refreshInterval: 30000 }
   );
 
-  // Load user language preference
-  useEffect(() => {
-    if (user && isAuthenticated) {
-      const loadUserLanguage = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('users')
-            .select('language')
-            .eq('id', user.id)
-            .single();
-
-          if (data && !error) {
-            const langOption = languageOptions.find(opt => opt.value === data.language);
-            if (langOption) {
-              setSelectedLanguage(langOption);
-            }
-          }
-        } catch (error) {
-          console.error('Error loading user language:', error);
-        }
-      };
-      loadUserLanguage();
-    }
-  }, [user, isAuthenticated]);
-
-  // Handle language change
-  const handleLanguageChange = async (selectedOption) => {
-    setSelectedLanguage(selectedOption);
-
-    if (user && isAuthenticated) {
-      try {
-        const { error } = await supabase
-          .from('users')
-          .update({ language: selectedOption.value })
-          .eq('id', user.id);
-
-        if (error) {
-          console.error('Error updating language:', error);
-        } else {
-          console.log('Language updated successfully');
-        }
-      } catch (error) {
-        console.error('Failed to update language:', error);
-      }
-    }
-  };
 
   const handleLogout = () => {
     logout();
@@ -109,55 +58,7 @@ export default function SidePanel({ isOpen, onClose, isMobile = false }) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Language
-            </label>
-            <Select
-              value={selectedLanguage}
-              onChange={handleLanguageChange}
-              options={languageOptions}
-              className="react-select-container"
-              classNamePrefix="react-select"
-              styles={{
-                control: (provided, state) => ({
-                  ...provided,
-                  backgroundColor: 'rgb(51 65 85 / 0.5)',
-                  borderColor: state.isFocused ? 'rgb(56 189 248)' : 'rgb(71 85 105)',
-                  borderRadius: '0.5rem',
-                  color: 'white',
-                  '&:hover': {
-                    borderColor: 'rgb(56 189 248)'
-                  }
-                }),
-                menu: (provided) => ({
-                  ...provided,
-                  backgroundColor: 'rgb(51 65 85)',
-                  borderRadius: '0.5rem'
-                }),
-                option: (provided, state) => ({
-                  ...provided,
-                  backgroundColor: state.isSelected ? 'rgb(56 189 248)' : 'transparent',
-                  color: 'white',
-                  '&:hover': {
-                    backgroundColor: 'rgb(71 85 105)'
-                  }
-                }),
-                singleValue: (provided) => ({
-                  ...provided,
-                  color: 'white'
-                }),
-                input: (provided) => ({
-                  ...provided,
-                  color: 'white'
-                }),
-                placeholder: (provided) => ({
-                  ...provided,
-                  color: 'rgb(156 163 175)'
-                })
-              }}
-            />
-          </div>
+          <LanguageSwitcher />
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
