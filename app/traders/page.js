@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { Tab } from '@headlessui/react';
 import useSWR from 'swr';
+import { supabase } from '../../lib/supabase';
 import ProgressTracker from './components/ProgressTracker';
 import PositionsTable from './components/PositionsTable';
 import CloseModal from './components/CloseModal';
@@ -46,6 +47,16 @@ function TradersPageContent() {
       if (!response.ok) {
         throw new Error('Failed to update challenge status');
       }
+
+      // Send challenge completion email
+      await fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'challenge_completed',
+          userId: user.id
+        }),
+      });
 
       // Trigger payout distribution (mock for now)
       // In production, this would call the vault contract
@@ -106,8 +117,96 @@ function TradersPageContent() {
   const { data: riskData, error: riskError } = useSWR(
     user ? `/api/risk?userId=${user.id}` : null,
     fetcher,
-    { refreshInterval: 60000 } // Check risk every minute
+    {
+      refreshInterval: 60000, // Check risk every minute
+      onSuccess: async (data) => {
+        // Check for breach alerts and send emails
+        if (data?.breachAlert && !data?.emailSent) {
+          try {
+            await fetch('/api/email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'breach_alert',
+                userId: user.id,
+                breachType: data.breachType,
+                breachValue: data.breachValue,
+                challengeId: data.challengeId
+              }),
+            });
+            console.log('Breach alert email sent');
+          } catch (error) {
+            console.error('Error sending breach alert email:', error);
+          }
+        }
+      }
+    }
   );
+
+  // Real-time notifications subscription
+  useEffect(() => {
+    if (!user) return;
+
+    // Subscribe to notifications for this user
+    const notificationChannel = supabase
+      .channel(`notifications:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          const notification = payload.new;
+
+          // Show toast notification based on type
+          switch (notification.type) {
+            case 'success':
+              toast.success(notification.msg, {
+                duration: 5000,
+                icon: '🎉'
+              });
+              break;
+            case 'warning':
+              toast(notification.msg, {
+                duration: 6000,
+                icon: '⚠️',
+                style: {
+                  background: '#fef3c7',
+                  color: '#92400e',
+                  border: '1px solid #f59e0b'
+                }
+              });
+              break;
+            case 'error':
+              toast.error(notification.msg, {
+                duration: 7000
+              });
+              break;
+            case 'info':
+            default:
+              toast(notification.msg, {
+                duration: 5000,
+                icon: 'ℹ️'
+              });
+              break;
+          }
+
+          // Refresh notifications data
+          if (window.location.pathname.includes('/traders')) {
+            // Could trigger a refetch of notifications if needed
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(notificationChannel);
+    };
+  }, [user]);
 
   // Show loading if auth is not ready
   if (!ready) {
