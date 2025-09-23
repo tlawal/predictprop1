@@ -9,6 +9,7 @@ import Select from 'react-select';
 import useSWR from 'swr';
 import { supabase } from '../../../lib/supabase';
 import { useSupabaseAuth } from '../../../lib/hooks/useSupabaseAuth';
+import CertGenerator from './CertGenerator';
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
@@ -25,12 +26,20 @@ export default function SidePanel({ isOpen, onClose, isMobile = false }) {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
 
   // Fetch notifications
   const { data: notificationsData, error: notificationsError } = useSWR(
     user ? `/api/notifications?userId=${user.id}` : null,
     fetcher,
     { refreshInterval: 30000 } // Refresh every 30 seconds
+  );
+
+  // Fetch challenge data to check for completed challenges
+  const { data: challengeData, error: challengeError } = useSWR(
+    user ? `/api/challenge?userId=${user.id}` : null,
+    fetcher,
+    { refreshInterval: 30000 }
   );
 
   // Load user language preference
@@ -162,6 +171,60 @@ export default function SidePanel({ isOpen, onClose, isMobile = false }) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Certificate Section - Always visible */}
+      <div className="p-6 border-b border-slate-700">
+        {challengeData?.challengeStatus === 'passed' ? (
+          // Completed challenge - celebration version
+          <div className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 border border-yellow-600/50 rounded-xl p-4">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-yellow-600 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl">
+                🏆
+              </div>
+              <h4 className="text-lg font-bold text-white mb-2">Challenge Completed!</h4>
+              <p className="text-yellow-200 text-sm mb-4">
+                Congratulations on completing your trading challenge!
+              </p>
+              <button
+                onClick={() => setShowCertificateModal(true)}
+                className="w-full px-4 py-2 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                🎉 View Certificate
+              </button>
+            </div>
+          </div>
+        ) : (
+          // Active/Incomplete challenge - preview version
+          <div className="bg-slate-700/30 border border-slate-600 rounded-xl p-4">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-slate-600 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl">
+                📜
+              </div>
+              <h4 className="text-lg font-bold text-white mb-2">PredictProp Trader</h4>
+              <div className="space-y-2 text-sm text-gray-400 mb-4">
+                <div className="flex justify-between">
+                  <span>Lifetime Payouts:</span>
+                  <span className="text-green-400">$0.00</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total Volume Traded:</span>
+                  <span className="text-gray-500">-</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Completion Date:</span>
+                  <span className="text-gray-500">-</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCertificateModal(true)}
+                className="w-full px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                👀 Preview Certificate
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Navigation Links */}
@@ -379,6 +442,38 @@ export default function SidePanel({ isOpen, onClose, isMobile = false }) {
             </div>
           </Dialog>
         </Transition>
+
+        {/* Certificate Modal */}
+        <CertGenerator
+          isOpen={showCertificateModal}
+          onClose={() => setShowCertificateModal(false)}
+          traderName="Demo Trader" // This would come from user data
+          planName="1-Step Challenge"
+          challengeSize={`$${challengeData?.balance || '5,000'}`}
+          completionDate={challengeData?.challengeStatus === 'passed' ? new Date().toLocaleDateString() : 'Not completed yet'}
+          onDownload={async (blob) => {
+            // Send congratulatory email with certificate attachment (only if completed)
+            if (challengeData?.challengeStatus === 'passed') {
+              try {
+                const formData = new FormData();
+                formData.append('certificate', blob, 'certificate.png');
+                formData.append('type', 'challenge_completion');
+                formData.append('userId', user?.id || 'demo-user');
+                formData.append('planName', '1-Step Challenge');
+                formData.append('challengeSize', `$${challengeData?.balance || '5,000'}`);
+
+                await fetch('/api/email', {
+                  method: 'POST',
+                  body: formData,
+                });
+
+                console.log('Certificate email sent successfully');
+              } catch (error) {
+                console.error('Error sending certificate email:', error);
+              }
+            }
+          }}
+        />
       </>
     );
   }
@@ -468,7 +563,39 @@ export default function SidePanel({ isOpen, onClose, isMobile = false }) {
           </Dialog.Panel>
         </div>
       </Dialog>
-    </Transition>
+        </Transition>
+
+        {/* Certificate Modal */}
+        <CertGenerator
+          isOpen={showCertificateModal}
+          onClose={() => setShowCertificateModal(false)}
+          traderName="Demo Trader" // This would come from user data
+          planName="1-Step Challenge"
+          challengeSize={`$${challengeData?.balance || '5,000'}`}
+          completionDate={challengeData?.challengeStatus === 'passed' ? new Date().toLocaleDateString() : 'Not completed yet'}
+          onDownload={async (blob) => {
+            // Send congratulatory email with certificate attachment (only if completed)
+            if (challengeData?.challengeStatus === 'passed') {
+              try {
+                const formData = new FormData();
+                formData.append('certificate', blob, 'certificate.png');
+                formData.append('type', 'challenge_completion');
+                formData.append('userId', user?.id || 'demo-user');
+                formData.append('planName', '1-Step Challenge');
+                formData.append('challengeSize', `$${challengeData?.balance || '5,000'}`);
+
+                await fetch('/api/email', {
+                  method: 'POST',
+                  body: formData,
+                });
+
+                console.log('Certificate email sent successfully');
+              } catch (error) {
+                console.error('Error sending certificate email:', error);
+              }
+            }
+          }}
+        />
     </div>
   );
 }

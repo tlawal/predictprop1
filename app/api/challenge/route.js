@@ -277,3 +277,59 @@ export async function POST(request) {
     );
   }
 }
+
+export async function PUT(request) {
+  try {
+    const body = await request.json();
+    const { userId, status } = body;
+
+    if (!userId || !status) {
+      return NextResponse.json(
+        { error: 'Missing required fields: userId, status' },
+        { status: 400 }
+      );
+    }
+
+    // Update challenge status
+    const { data: updatedChallenge, error: updateError } = await supabase
+      .from('challenges')
+      .update({
+        status: status,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .eq('status', 'active') // Only update active challenges
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating challenge:', updateError);
+      return NextResponse.json(
+        { error: 'Failed to update challenge', message: updateError.message },
+        { status: 500 }
+      );
+    }
+
+    if (!updatedChallenge) {
+      return NextResponse.json(
+        { error: 'No active challenge found to update' },
+        { status: 404 }
+      );
+    }
+
+    // Clear cache
+    cache.clear();
+
+    return NextResponse.json({
+      success: true,
+      challenge: updatedChallenge
+    });
+
+  } catch (error) {
+    console.error('Challenge PUT API error:', error);
+    return NextResponse.json(
+      { error: 'Failed to update challenge', message: error.message },
+      { status: 500 }
+    );
+  }
+}

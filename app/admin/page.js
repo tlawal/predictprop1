@@ -157,6 +157,17 @@ function AdminPageContent() {
             >
               Reports
             </Tab>
+            <Tab
+              className={({ selected }) =>
+                `w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors ${
+                  selected
+                    ? 'bg-white text-slate-900 shadow'
+                    : 'text-slate-300 hover:bg-white/[0.12] hover:text-white'
+                }`
+              }
+            >
+              Withdrawals
+            </Tab>
           </Tab.List>
 
           <Tab.Panels>
@@ -177,6 +188,9 @@ function AdminPageContent() {
             </Tab.Panel>
             <Tab.Panel>
               <ReportsPanel adminId={user.id} />
+            </Tab.Panel>
+            <Tab.Panel>
+              <WithdrawalsPanel adminId={user.id} />
             </Tab.Panel>
           </Tab.Panels>
         </Tab.Group>
@@ -413,6 +427,140 @@ function RiskPanel({ adminId }) {
 }
 
 // Reports Panel Component
+function WithdrawalsPanel({ adminId }) {
+  const { data: withdrawalsData, mutate } = useSWR('/api/withdrawals?limit=100', fetcher);
+
+  const processWithdrawal = async (withdrawalId, newStatus) => {
+    try {
+      const response = await fetch('/api/withdrawals', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: withdrawalId,
+          status: newStatus,
+          adminId
+        }),
+      });
+
+      if (response.ok) {
+        mutate(); // Refresh data
+      }
+    } catch (error) {
+      console.error('Error processing withdrawal:', error);
+    }
+  };
+
+  const totalWithdrawn = withdrawalsData?.withdrawals
+    ?.filter(w => w.status === 'completed')
+    ?.reduce((sum, w) => sum + w.amount, 0) || 0;
+
+  const pendingWithdrawals = withdrawalsData?.withdrawals
+    ?.filter(w => w.status === 'pending').length || 0;
+
+  return (
+    <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
+      <h2 className="text-xl font-semibold text-white mb-6">Withdrawal Reports</h2>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-slate-700/30 rounded-lg p-4">
+          <h3 className="font-semibold text-white mb-3">Total Withdrawn</h3>
+          <div className="text-2xl font-bold text-green-400">${totalWithdrawn.toFixed(2)}</div>
+          <p className="text-sm text-slate-400">Completed withdrawals</p>
+        </div>
+
+        <div className="bg-slate-700/30 rounded-lg p-4">
+          <h3 className="font-semibold text-white mb-3">Pending Withdrawals</h3>
+          <div className="text-2xl font-bold text-yellow-400">{pendingWithdrawals}</div>
+          <p className="text-sm text-slate-400">Awaiting processing</p>
+        </div>
+
+        <div className="bg-slate-700/30 rounded-lg p-4">
+          <h3 className="font-semibold text-white mb-3">Platform Fees</h3>
+          <div className="text-2xl font-bold text-blue-400">${(totalWithdrawn * 0.1).toFixed(2)}</div>
+          <p className="text-sm text-slate-400">10% platform cut</p>
+        </div>
+      </div>
+
+      {/* Withdrawals Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-slate-400 border-b border-slate-600">
+            <tr>
+              <th className="text-left py-3 px-2">Trader</th>
+              <th className="text-left py-3 px-2">Wallet</th>
+              <th className="text-left py-3 px-2">Challenge</th>
+              <th className="text-right py-3 px-2">Amount</th>
+              <th className="text-right py-3 px-2">Platform Fee</th>
+              <th className="text-right py-3 px-2">Trader Share</th>
+              <th className="text-left py-3 px-2">Status</th>
+              <th className="text-left py-3 px-2">Date</th>
+              <th className="text-left py-3 px-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {withdrawalsData?.withdrawals?.map((withdrawal) => (
+              <tr key={withdrawal.id} className="border-b border-slate-700 hover:bg-slate-700/30">
+                <td className="py-3 px-2 text-white">{withdrawal.traderName || 'Demo Trader'}</td>
+                <td className="py-3 px-2 text-slate-300 font-mono text-xs">
+                  {withdrawal.wallet ? `${withdrawal.wallet.slice(0, 6)}...${withdrawal.wallet.slice(-4)}` : '-'}
+                </td>
+                <td className="py-3 px-2 text-slate-300">{withdrawal.challengeType || '1-Step'}</td>
+                <td className="py-3 px-2 text-right text-white font-semibold">
+                  ${withdrawal.amount.toFixed(2)}
+                </td>
+                <td className="py-3 px-2 text-right text-red-400">
+                  ${(withdrawal.amount * 0.1).toFixed(2)}
+                </td>
+                <td className="py-3 px-2 text-right text-green-400">
+                  ${(withdrawal.amount * 0.8).toFixed(2)}
+                </td>
+                <td className="py-3 px-2">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    withdrawal.status === 'completed' ? 'bg-green-900 text-green-300' :
+                    withdrawal.status === 'pending' ? 'bg-yellow-900 text-yellow-300' :
+                    withdrawal.status === 'processing' ? 'bg-blue-900 text-blue-300' :
+                    'bg-red-900 text-red-300'
+                  }`}>
+                    {withdrawal.status}
+                  </span>
+                </td>
+                <td className="py-3 px-2 text-slate-300">
+                  {dayjs(withdrawal.createdAt).tz('America/New_York').format('MM/DD/YYYY HH:mm')}
+                </td>
+                <td className="py-3 px-2">
+                  {withdrawal.status === 'pending' && (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => processWithdrawal(withdrawal.id, 'completed')}
+                        className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded"
+                      >
+                        Process
+                      </button>
+                      <button
+                        onClick={() => processWithdrawal(withdrawal.id, 'cancelled')}
+                        className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            )) || (
+              <tr>
+                <td colSpan="9" className="py-8 text-center text-slate-400">
+                  No withdrawal records found
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function ReportsPanel({ adminId }) {
   const { data: ordersData } = useSWR('/api/orders?limit=1000', fetcher);
 

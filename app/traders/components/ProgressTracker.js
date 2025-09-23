@@ -1,8 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import CertGenerator from './CertGenerator';
 
-export default function ProgressTracker({ challengeData, challengeSize }) {
+export default function ProgressTracker({ challengeData, challengeSize, onChallengeComplete }) {
+  const [showCertificate, setShowCertificate] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
   // Mock data - in real implementation this would come from props
   const phase1Target = (challengeSize * 0.06); // 6% ROI target
   const phase1Progress = challengeData?.phase1Progress || 0;
@@ -16,6 +20,34 @@ export default function ProgressTracker({ challengeData, challengeSize }) {
 
   const drawdown = challengeData?.maxDrawdown || 0;
   const exposure = challengeData?.maxExposure || 0;
+
+  // Check if challenge is completed
+  const isChallengeCompleted = () => {
+    return (
+      phase1Percentage >= 100 &&
+      winRatePercentage >= 70 &&
+      resolvedMarkets >= totalMarkets &&
+      drawdown <= 5 &&
+      exposure <= 15
+    );
+  };
+
+  const handleEndChallenge = async () => {
+    if (!isChallengeCompleted() || isProcessing) return;
+
+    setIsProcessing(true);
+    try {
+      if (onChallengeComplete) {
+        await onChallengeComplete();
+      }
+      setShowCertificate(true);
+    } catch (error) {
+      console.error('Error ending challenge:', error);
+      alert('Error ending challenge. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -150,6 +182,37 @@ export default function ProgressTracker({ challengeData, challengeSize }) {
         </div>
       </div>
 
+      {/* End Challenge Button */}
+      {isChallengeCompleted() && (
+        <div className="bg-gradient-to-r from-green-900/50 to-blue-900/50 backdrop-blur-sm border border-green-500/50 rounded-2xl p-6">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-green-600 rounded-full mx-auto mb-4 flex items-center justify-center text-2xl">
+              🏆
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Congratulations!</h3>
+            <p className="text-green-400 mb-6">
+              You have successfully completed all challenge requirements!
+            </p>
+            <button
+              onClick={handleEndChallenge}
+              disabled={isProcessing}
+              className="px-8 py-4 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-lg font-bold text-lg transition-all duration-300 flex items-center gap-2 mx-auto disabled:cursor-not-allowed"
+            >
+              {isProcessing ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  🎉 End Challenge
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Challenge Rules */}
       <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
         <h4 className="text-lg font-semibold text-white mb-4">Challenge Rules</h4>
@@ -174,6 +237,36 @@ export default function ProgressTracker({ challengeData, challengeSize }) {
           </div>
         </div>
       </div>
+
+      {/* Certificate Generator Modal */}
+      <CertGenerator
+        isOpen={showCertificate}
+        onClose={() => setShowCertificate(false)}
+        traderName="Demo Trader" // This would come from user data
+        planName="1-Step Challenge"
+        challengeSize={`$${challengeSize?.toLocaleString() || '5,000'}`}
+        completionDate={new Date().toLocaleDateString()}
+        onDownload={async (blob) => {
+          // Send congratulatory email with certificate attachment
+          try {
+            const formData = new FormData();
+            formData.append('certificate', blob, 'certificate.png');
+            formData.append('type', 'challenge_completion');
+            formData.append('userId', 'demo-user'); // In real app, get from user context
+            formData.append('planName', '1-Step Challenge');
+            formData.append('challengeSize', `$${challengeSize?.toLocaleString() || '5,000'}`);
+
+            await fetch('/api/email', {
+              method: 'POST',
+              body: formData,
+            });
+
+            console.log('Certificate email sent successfully');
+          } catch (error) {
+            console.error('Error sending certificate email:', error);
+          }
+        }}
+      />
     </div>
   );
 }

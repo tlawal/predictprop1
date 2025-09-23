@@ -4,8 +4,23 @@ import crypto from 'crypto';
 
 export async function POST(request) {
   try {
-    const body = await request.json();
-    const { type, userId, contractId, email, code } = body;
+    let body, type, userId, contractId, email, code, planName, challengeSize;
+
+    // Check if request has FormData (for certificate attachments)
+    const contentType = request.headers.get('content-type') || '';
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      const certificate = formData.get('certificate');
+      type = formData.get('type');
+      userId = formData.get('userId');
+      planName = formData.get('planName');
+      challengeSize = formData.get('challengeSize');
+
+      body = { certificate, type, userId, planName, challengeSize };
+    } else {
+      body = await request.json();
+      ({ type, userId, contractId, email, code } = body);
+    }
 
     if (!type || (!userId && !contractId)) {
       return NextResponse.json(
@@ -75,6 +90,12 @@ export async function POST(request) {
 
       case 'contract_signed':
         console.log(`📧 Sending contract signed confirmation to user ${userId}`);
+        break;
+
+      case 'challenge_completion':
+        const { planName: plan, challengeSize: size, certificate } = body;
+        console.log(`📧 Sending challenge completion certificate for ${plan} (${size}) with attachment`);
+        // In production, attach certificate blob to email
         break;
 
       case 'admin_notification':

@@ -30,6 +30,39 @@ function TradersPageContent() {
   const [showRiskAlert, setShowRiskAlert] = useState(true);
   const [showSidePanel, setShowSidePanel] = useState(false);
 
+  // Challenge completion handler
+  const handleChallengeComplete = async () => {
+    try {
+      // Update challenge status to 'passed' in Supabase
+      const response = await fetch('/api/challenge', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          status: 'passed'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update challenge status');
+      }
+
+      // Trigger payout distribution (mock for now)
+      // In production, this would call the vault contract
+      console.log('Challenge completed! Triggering payout distribution...');
+
+      // Show success message
+      toast.success('🎉 Challenge completed! Certificate generated.', {
+        duration: 5000,
+      });
+
+    } catch (error) {
+      console.error('Error completing challenge:', error);
+      toast.error('Error completing challenge. Please try again.');
+      throw error;
+    }
+  };
+
   // Auth check
   useEffect(() => {
     if (ready && !user) {
@@ -314,6 +347,7 @@ function TradersPageContent() {
                 <ProgressTracker
                   challengeData={challengeData}
                   challengeSize={challengeSize}
+                  onChallengeComplete={handleChallengeComplete}
                 />
               ) : (
                 <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 text-center">
