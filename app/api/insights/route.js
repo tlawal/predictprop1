@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 // Simple in-memory cache for insights
 const insightsCache = new Map();
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes

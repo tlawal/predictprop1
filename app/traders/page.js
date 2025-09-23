@@ -94,12 +94,6 @@ function TradersPageContent() {
   }, [ready, user, router]);
 
 
-  // Check if challenge is already passed (switch to live mode)
-  useEffect(() => {
-    if (challengeData?.challengeStatus === 'passed') {
-      setIsDemoMode(false);
-    }
-  }, [challengeData]);
 
   // Handle tab persistence from URL
   useEffect(() => {
@@ -136,6 +130,13 @@ function TradersPageContent() {
       }
     }
   }, [ready, user, challengeData]);
+
+  // Check if challenge is already passed (switch to live mode)
+  useEffect(() => {
+    if (challengeData?.challengeStatus === 'passed') {
+      setIsDemoMode(false);
+    }
+  }, [challengeData]);
 
   // Fetch trade history for Performance tab
   const { data: historyData, error: historyError } = useSWR(
