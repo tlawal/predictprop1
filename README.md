@@ -55,6 +55,251 @@ The app uses the following tables:
 
 All tables include Row Level Security (RLS) policies for secure access.
 
+## Smart Contract Vault System
+
+### 🔐 **ERC4626 Vault Overview**
+PolyPropVault is a production-grade ERC4626-compatible smart contract for liquidity provider deposits on Polygon. The vault accepts USDC deposits, mints tokenized shares, and distributes yields from resolved prediction market trades and evaluation fees.
+
+#### **Key Features**
+- **ERC4626 Standard**: Full compatibility with tokenized yield vaults
+- **USDC Deposits**: Polygon-native USDC with 6-decimal precision
+- **Dual Yield Sources**: Evaluation fees (90% platform, 10% LPs) + trader profits (80% traders, 10% platform, 10% LPs)
+- **APY Targeting**: Variable 10-20%+ APY calculated off-chain from platform profits
+- **Oracle Integration**: Platform backend/Chainlink for profit allocation calls
+- **AI Optimization**: Oracle-fed weights for high-performing trader/MM allocations
+- **Governance**: Owner-controlled fee splits for dynamic yield adjustment
+- **Security**: ReentrancyGuard, Pausable, virtual shares, checks-effects-interactions
+
+#### **Fee Structure**
+```
+Evaluation Fees: 90% → Platform Multisig, 10% → LP Yield (compounded)
+Trader Profits: 80% → Trader Claims, 10% → Platform, 10% → LP Yield (compounded)
+```
+
+#### **APY Calculation**
+```javascript
+APY = (totalYieldAccrued / TVL) * 365 * 100; // In basis points
+```
+
+### 🛠️ **Contract Compilation**
+
+#### **Prerequisites**
+```bash
+# Install dependencies
+npm install
+
+# Set environment variables in .env.local
+ALCHEMY_POLYGON_URL=https://polygon-mainnet.g.alchemy.com/v2/YOUR_API_KEY
+PRIVATE_KEY=your_private_key_without_0x_prefix
+PLATFORM_MULTISIG=0x... # Platform multisig address
+USDC_ADDRESS=0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 # Polygon USDC
+PROFIT_ORACLE=0x... # Oracle contract address
+```
+
+#### **Compile Contracts**
+```bash
+# Compile all contracts
+npx hardhat compile
+
+# Output: artifacts/ directory with ABI and bytecode
+```
+
+### 🚀 **Contract Deployment**
+
+#### **Local Development**
+```bash
+# Start local Hardhat network
+npx hardhat node
+
+# Deploy to local network
+npx hardhat run scripts/deploy.js --network hardhat
+```
+
+#### **Polygon Testnet (Mumbai)**
+```bash
+# Deploy to Mumbai testnet
+npx hardhat run scripts/deploy.js --network polygonMumbai
+
+# Verify contract on PolygonScan
+npx hardhat verify --network polygonMumbai DEPLOYED_CONTRACT_ADDRESS
+```
+
+#### **Polygon Mainnet**
+```bash
+# Deploy to mainnet (ensure sufficient MATIC for gas)
+npx hardhat run scripts/deploy.js --network polygon
+
+# Verify contract on PolygonScan
+npx hardhat verify --network polygon DEPLOYED_CONTRACT_ADDRESS \
+  "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174" \
+  "0xPLATFORM_MULTISIG_ADDRESS" \
+  "0xORACLE_ADDRESS"
+```
+
+### 🔌 **Contract Interaction**
+
+#### **Ethers.js Integration**
+```javascript
+import { ethers } from 'ethers';
+
+// Connect to vault contract
+const vaultAddress = '0x...'; // Deployed vault address
+const vault = new ethers.Contract(vaultAddress, abi, signer);
+
+// Deposit USDC (LP deposits)
+const depositAmount = ethers.utils.parseUnits('100', 6); // 100 USDC
+await usdc.approve(vault.address, depositAmount);
+await vault.deposit(depositAmount, userAddress);
+
+// Check balance
+const shares = await vault.balanceOf(userAddress);
+const assets = await vault.previewRedeem(shares);
+
+// Withdraw (redeem shares for USDC)
+await vault.redeem(shares, userAddress, userAddress);
+
+// Allocate profits (oracle only)
+const totalProfits = ethers.utils.parseUnits('1000', 6);
+await vault.allocateProfits(totalProfits);
+
+// Collect evaluation fees (oracle only)
+const totalFees = ethers.utils.parseUnits('500', 6);
+await vault.collectEvaluationFees(totalFees);
+
+// Claim trader profits
+const claimable = await vault.getTraderClaimable(traderAddress);
+await vault.claimTraderProfits(claimable);
+
+// Check APY
+const apy = await vault.getEstimatedAPY(); // In basis points
+console.log(`Current APY: ${apy / 100}%`);
+
+// Emergency controls (owner only)
+await vault.pause();
+await vault.unpause();
+```
+
+#### **Frontend Integration**
+```javascript
+// React hook for vault interaction
+const useVault = (vaultAddress) => {
+  const [vault, setVault] = useState(null);
+
+  useEffect(() => {
+    if (window.ethereum) {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const vaultContract = new ethers.Contract(vaultAddress, abi, signer);
+      setVault(vaultContract);
+    }
+  }, [vaultAddress]);
+
+  return vault;
+};
+```
+
+### 🧪 **Testing**
+
+#### **Run Test Suite**
+```bash
+# Run all tests
+npx hardhat test
+
+# Run specific test
+npx hardhat test test/PolyPropVault.test.js
+
+# Test coverage
+npx hardhat coverage
+```
+
+#### **Test Scenarios**
+- ✅ Deposit/withdrawal functionality
+- ✅ Share calculation accuracy
+- ✅ Profit allocation and fee collection
+- ✅ Emergency pause/unpause
+- ✅ Access control (owner/oracle restrictions)
+- ✅ APY calculation validation
+
+### 🔒 **Security Features**
+
+#### **Built-in Protections**
+- **ReentrancyGuard**: Prevents reentrancy attacks on deposits/withdrawals
+- **Pausable**: Emergency pause functionality for critical issues
+- **Virtual Shares**: Prevents inflation attacks by maintaining minimum share supply
+- **Access Control**: Owner-only functions for critical operations
+- **Input Validation**: Comprehensive checks on all user inputs
+
+#### **Audit Considerations**
+- **Checks-Effects-Interactions**: Pattern followed in state-changing functions
+- **Gas Optimization**: Immutable constants, batch calculations, minimized storage reads
+- **Clear Documentation**: Extensive inline comments for all functions and variables
+- **Extensible Design**: Virtual functions for future AI-weighted allocations
+
+### 📊 **Yield Optimization**
+
+#### **APY Targeting Strategy**
+The vault aims for 10-20%+ variable APY through:
+1. **Platform Profits**: 10% of resolved trader profits
+2. **Evaluation Fees**: 10% of collected evaluation fees
+3. **AI Optimization**: Oracle-fed weights prioritize high-performing traders/MMs
+4. **Compounding**: All LP yields automatically compounded
+
+#### **Oracle Integration**
+```solidity
+interface IProfitOracle {
+    function getProfitAllocation(uint256 totalProfits)
+        external view returns (bytes[] memory traderAllocations, uint256 platformFee, uint256 lpYield);
+
+    function getEvaluationFeeSplit(uint256 totalFees)
+        external view returns (uint256 platformFee, uint256 lpYield);
+}
+```
+
+#### **Governance Controls**
+```solidity
+// Owner can adjust fee splits dynamically
+function updateFeeSplits(
+    uint256 evaluationPlatformSplit,
+    uint256 traderPlatformSplit,
+    uint256 traderLPSplit
+) external onlyOwner;
+```
+
+### 📋 **Contract Architecture**
+
+```
+contracts/
+├── PolyPropVault.sol      # Main ERC4626 vault contract
+├── SimpleProfitOracle.sol # Basic oracle implementation for testing
+└── MockUSDC.sol          # Mock USDC for local testing
+
+scripts/
+└── deploy.js             # Deployment script with configuration
+
+test/
+└── PolyPropVault.test.js # Comprehensive test suite
+```
+
+### 🔧 **Environment Setup**
+
+#### **Required Environment Variables**
+```env
+# Polygon RPC
+ALCHEMY_POLYGON_URL=https://polygon-mainnet.g.alchemy.com/v2/YOUR_API_KEY
+ALCHEMY_MUMBAI_URL=https://polygon-mumbai.g.alchemy.com/v2/YOUR_API_KEY
+
+# Deployment Account
+PRIVATE_KEY=your_private_key_without_0x_prefix
+
+# Contract Addresses
+PLATFORM_MULTISIG=0x... # Multisig wallet for platform fees
+USDC_ADDRESS=0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 # Polygon USDC
+PROFIT_ORACLE=0x... # Deployed oracle contract
+
+# Verification
+POLYGONSCAN_API_KEY=your_polygonscan_api_key
+```
+
 ## Overview
 
 PredictProp is a comprehensive prediction markets trading platform that combines traditional prop trading evaluation with cutting-edge prediction market technology. Users can participate in virtual trading challenges using Polymarket data, with a full-featured dashboard for tracking performance, managing positions, and analyzing risk.
