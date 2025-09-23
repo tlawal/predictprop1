@@ -56,12 +56,84 @@ export async function POST(request) {
       );
     }
 
-    // Check if position value exceeds exposure cap (simplified check)
-    const positionValue = amountNum * priceNum;
-    const maxExposure = challenge.balance * (challenge.params?.exposure_cap || 15) / 100;
-    if (positionValue > maxExposure) {
+    // SAFEGUARD 1: Real-time exposure validation
+    // Query all open positions for this challenge to calculate total exposure
+    const { data: existingTrades, error: exposureError } = await supabase
+      .from('trades')
+      .select('amount, entry_price')
+      .eq('challenge_id', challengeId)
+      .eq('resolved', false);
+
+    if (exposureError) {
+      console.error('Error fetching existing trades:', exposureError);
       return NextResponse.json(
-        { error: 'Position exceeds maximum exposure limit' },
+        { error: 'Failed to validate exposure limits' },
+        { status: 500 }
+      );
+    }
+
+    // Calculate current total exposure (sum of all position values)
+    const currentExposure = existingTrades?.reduce((sum, trade) =>
+      sum + (trade.amount * trade.entry_price), 0
+    ) || 0;
+
+    // Calculate new position value
+    const newPositionValue = amountNum * priceNum;
+
+    // Check if total exposure (current + new) exceeds 15% of balance
+    const totalExposure = currentExposure + newPositionValue;
+    const maxAllowedExposure = challenge.balance * 0.15; // 15% of challenge balance
+
+    if (totalExposure > maxAllowedExposure) {
+      return NextResponse.json(
+        {
+          error: 'Total exposure exceeds 15% limit',
+          details: {
+            currentExposure: currentExposure.toFixed(2),
+            newPositionValue: newPositionValue.toFixed(2),
+            totalExposure: totalExposure.toFixed(2),
+            maxAllowed: maxAllowedExposure.toFixed(2),
+            limit: '15%'
+          }
+        },
+        { status: 400 }
+      );
+    }
+
+    // SAFEGUARD 2: Daily trading limits
+    // Check trades made today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const { data: todaysTrades, error: dailyLimitError } = await supabase
+      .from('trades')
+      .select('amount')
+      .eq('challenge_id', challengeId)
+      .gte('created_at', today.toISOString())
+      .lt('created_at', tomorrow.toISOString());
+
+    if (dailyLimitError) {
+      console.error('Error checking daily limits:', dailyLimitError);
+      // Continue with order but log the error
+    }
+
+    // Calculate today's trading volume
+    const todaysVolume = todaysTrades?.reduce((sum, trade) => sum + trade.amount, 0) || 0;
+    const dailyLimit = challenge.balance * 0.5; // 50% of balance per day
+
+    if (todaysVolume + amountNum > dailyLimit) {
+      return NextResponse.json(
+        {
+          error: 'Daily trading limit exceeded',
+          details: {
+            todaysVolume: todaysVolume.toFixed(2),
+            attemptedTrade: amountNum.toFixed(2),
+            dailyLimit: dailyLimit.toFixed(2),
+            remaining: (dailyLimit - todaysVolume).toFixed(2)
+          }
+        },
         { status: 400 }
       );
     }

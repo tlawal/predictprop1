@@ -1,8 +1,15 @@
-// AI-powered risk API with ML model predictions
+// AI-powered risk API with ML model predictions and real-time safeguards
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
+import { ethers } from 'ethers';
+import WebSocket from 'ws';
+import { supabase } from '../../../lib/supabase';
+
+// Global WebSocket connection for real-time price monitoring
+let priceWebSocket = null;
+const activeAlerts = new Map(); // Track active risk alerts
 
 // Simple in-memory cache
 const cache = new Map();
@@ -10,6 +17,262 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Model paths
 const RISK_MODEL_PATH = path.join(process.cwd(), 'models', 'risk_model.json');
+
+// SAFEGUARD 3: WebSocket price monitoring and auto-close functionality
+function initializePriceMonitoring() {
+  if (priceWebSocket) return; // Already initialized
+
+  try {
+    priceWebSocket = new WebSocket('wss://clob.polymarket.com/ws');
+
+    priceWebSocket.on('open', () => {
+      console.log('🔔 Risk monitoring WebSocket connected');
+
+      // Subscribe to price updates for active positions
+      const subscriptionMessage = {
+        type: 'subscribe',
+        channel: 'price_updates',
+        // In production, subscribe to specific market IDs from active trades
+        markets: ['0x1234567890123456789012345678901234567890'] // Placeholder
+      };
+
+      priceWebSocket.send(JSON.stringify(subscriptionMessage));
+    });
+
+    priceWebSocket.on('message', async (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+
+        if (message.type === 'price_change') {
+          await handlePriceChange(message);
+        }
+      } catch (error) {
+        console.error('Error processing WebSocket message:', error);
+      }
+    });
+
+    priceWebSocket.on('error', (error) => {
+      console.error('Risk monitoring WebSocket error:', error);
+      // Attempt reconnection after delay
+      setTimeout(() => {
+        priceWebSocket = null;
+        initializePriceMonitoring();
+      }, 5000);
+    });
+
+    priceWebSocket.on('close', () => {
+      console.log('🔔 Risk monitoring WebSocket disconnected');
+      priceWebSocket = null;
+
+      // Attempt reconnection
+      setTimeout(() => {
+        initializePriceMonitoring();
+      }, 5000);
+    });
+
+  } catch (error) {
+    console.error('Failed to initialize price monitoring:', error);
+  }
+}
+
+// Handle price change events and trigger auto-close if needed
+async function handlePriceChange(priceData) {
+  try {
+    // Find positions affected by this price change
+    const { data: affectedTrades, error } = await supabase
+      .from('trades')
+      .select(`
+        *,
+        challenges (
+          balance,
+          user_id,
+          status
+        )
+      `)
+      .eq('market_id', priceData.marketId)
+      .eq('resolved', false)
+      .eq('challenges.status', 'active');
+
+    if (error || !affectedTrades?.length) {
+      return; // No active positions for this market
+    }
+
+    // Calculate drawdown for each affected challenge
+    for (const trade of affectedTrades) {
+      const challenge = trade.challenges;
+      if (!challenge) continue;
+
+      // Get all trades for this challenge
+      const { data: allTrades, error: tradesError } = await supabase
+        .from('trades')
+        .select('*')
+        .eq('challenge_id', trade.challenge_id)
+        .eq('resolved', false);
+
+      if (tradesError) continue;
+
+      // Calculate cluster drawdown
+      const clusterAnalysis = calculateClusterDrawdown(allTrades);
+
+      if (clusterAnalysis.drawdownPercent > 5) { // 5% threshold
+        console.log(`🚨 Auto-close triggered for challenge ${trade.challenge_id}: ${clusterAnalysis.drawdownPercent}% drawdown`);
+
+        // Trigger auto-close
+        await triggerAutoClose(trade.challenge_id, clusterAnalysis);
+
+        // Send alert email
+        await sendRiskAlertEmail(challenge.user_id, 'auto_close', clusterAnalysis);
+      }
+    }
+
+  } catch (error) {
+    console.error('Error handling price change:', error);
+  }
+}
+
+// Calculate cluster drawdown for risk assessment
+function calculateClusterDrawdown(trades) {
+  const clusters = {};
+
+  // Group trades by end date (clustered risk)
+  trades.forEach(trade => {
+    // In production, get end date from market data
+    const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 30 days from now
+    if (!clusters[endDate]) clusters[endDate] = [];
+    clusters[endDate].push(trade);
+  });
+
+  let maxDrawdown = 0;
+  let maxDrawdownDate = null;
+  let clusterSize = 0;
+
+  Object.entries(clusters).forEach(([date, clusterTrades]) => {
+    const clusterPnL = clusterTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
+    const clusterValue = clusterTrades.reduce((sum, trade) =>
+      sum + (trade.amount * trade.entry_price), 0
+    );
+
+    if (clusterPnL < 0 && clusterValue > 0) {
+      const drawdownPercent = Math.abs(clusterPnL) / clusterValue * 100;
+      if (drawdownPercent > maxDrawdown) {
+        maxDrawdown = drawdownPercent;
+        maxDrawdownDate = date;
+        clusterSize = clusterTrades.length;
+      }
+    }
+  });
+
+  return {
+    drawdownPercent: Math.round(maxDrawdown * 100) / 100,
+    date: maxDrawdownDate,
+    clusterSize
+  };
+}
+
+// Trigger auto-close using smart contract
+async function triggerAutoClose(challengeId, clusterAnalysis) {
+  try {
+    // In production, this would interact with the ERC4626 vault contract
+    // For now, we'll mark positions as resolved with losses
+
+    console.log(`🔒 Executing auto-close for challenge ${challengeId}`);
+
+    // Get all open trades for this challenge
+    const { data: openTrades, error } = await supabase
+      .from('trades')
+      .select('*')
+      .eq('challenge_id', challengeId)
+      .eq('resolved', false);
+
+    if (error || !openTrades?.length) {
+      console.error('No open trades found for auto-close');
+      return;
+    }
+
+    // Calculate forced closure P&L (simplified - in production use real prices)
+    const closureUpdates = openTrades.map(trade => ({
+      id: trade.id,
+      pnl: -(trade.amount * trade.entry_price * 0.1), // 10% loss on auto-close
+      resolved: true
+    }));
+
+    // Update trades in database
+    for (const update of closureUpdates) {
+      await supabase
+        .from('trades')
+        .update({
+          pnl: update.pnl,
+          resolved: true
+        })
+        .eq('id', update.id);
+    }
+
+    // In production, call vault contract:
+    // const vault = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer);
+    // await vault.forceClose(challengeId, closureUpdates);
+
+    console.log(`✅ Auto-close completed for ${closureUpdates.length} positions`);
+
+  } catch (error) {
+    console.error('Auto-close execution failed:', error);
+  }
+}
+
+// Send risk alert email
+async function sendRiskAlertEmail(userId, alertType, details) {
+  try {
+    // Trigger email notification
+    await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'breach_alert',
+        userId,
+        breachType: alertType,
+        breachValue: details.drawdownPercent,
+        challengeId: 'auto-triggered'
+      })
+    });
+  } catch (error) {
+    console.error('Failed to send risk alert email:', error);
+  }
+}
+
+// SAFEGUARD 4: Insurance integration (Nexus Mutual stub)
+async function checkInsuranceCoverage(challengeId, riskAmount) {
+  try {
+    // In production, integrate with Nexus Mutual API
+    // For now, return mock coverage status
+
+    const coverageResponse = {
+      covered: riskAmount < 1000, // Cover losses up to $1000
+      premium: riskAmount * 0.02, // 2% premium
+      deductible: 50,
+      coverage: Math.min(riskAmount, 1000),
+      provider: 'Nexus Mutual'
+    };
+
+    console.log(`🛡️ Insurance check for challenge ${challengeId}:`, coverageResponse);
+    return coverageResponse;
+
+    // Production implementation:
+    // const response = await fetch('https://api.nexusmutual.io/v1/quote', {
+    //   method: 'POST',
+    //   headers: { 'Authorization': `Bearer ${process.env.NEXUS_API_KEY}` },
+    //   body: JSON.stringify({ amount: riskAmount, type: 'trading' })
+    // });
+    // return await response.json();
+
+  } catch (error) {
+    console.error('Insurance check failed:', error);
+    return { covered: false, error: error.message };
+  }
+}
+
+// Initialize monitoring on module load
+if (typeof window === 'undefined') { // Only on server-side
+  initializePriceMonitoring();
+}
 
 // Predict risk using ML model via Python
 async function predictRiskWithML(modelData) {

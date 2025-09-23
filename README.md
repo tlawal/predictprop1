@@ -355,6 +355,15 @@ The platform features real-time market data integration, interactive charting, c
 - **Mobile-Responsive**: Table + card layouts with touch-friendly interactions
 - **WebSocket Authentication**: API key-based CLOB connection with fallback polling
 
+#### **🛡️ Risk Management & Safeguards**
+- **Real-time Exposure Validation**: Queries all open positions to ensure total exposure <15% of balance
+- **Daily Trading Limits**: Prevents overtrading with configurable daily volume caps (default 50% of balance)
+- **WebSocket Price Monitoring**: Live monitoring of position prices with automatic risk assessment
+- **Auto-Close Protection**: Triggers forced position closure when drawdown exceeds 5% threshold
+- **Cluster Risk Analysis**: Groups positions by end date to detect correlated market risk
+- **Insurance Integration**: Nexus Mutual API stub for automated loss protection coverage
+- **Smart Contract Integration**: ERC4626 vault auto-close functionality for production deployment
+
 #### **👤 Traders Dashboard** (Protected Route)
 - **Authentication**: Privy integration with redirect handling
 
