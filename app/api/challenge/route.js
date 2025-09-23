@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 
 // Simple in-memory cache
 const cache = new Map();
@@ -7,6 +7,22 @@ const CACHE_TTL = 30 * 1000; // 30 seconds
 
 export async function GET(request) {
   try {
+    // Return mock data if Supabase is not configured
+    if (!isSupabaseConfigured) {
+      return NextResponse.json({
+        challenge: {
+          id: 'demo-challenge',
+          status: 'active',
+          balance: 5000,
+          phase1Progress: 0,
+          maxDrawdown: 0,
+          maxExposure: 0,
+          resolvedMarkets: 0,
+          winRate: 0
+        }
+      });
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
@@ -212,6 +228,18 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    // Return mock response if Supabase is not configured
+    if (!isSupabaseConfigured) {
+      return NextResponse.json({
+        success: true,
+        challenge: {
+          id: 'demo-challenge',
+          status: 'active',
+          balance: 5000
+        }
+      });
+    }
+
     const body = await request.json();
     const { userId, planType, balance } = body;
 
@@ -280,6 +308,17 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
+    // Return mock response if Supabase is not configured
+    if (!isSupabaseConfigured) {
+      return NextResponse.json({
+        success: true,
+        challenge: {
+          id: 'demo-challenge',
+          status: 'passed'
+        }
+      });
+    }
+
     const body = await request.json();
     const { userId, status } = body;
 

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import CertGenerator from './CertGenerator';
 
-export default function ProgressTracker({ challengeData, challengeSize, onChallengeComplete }) {
+export default function ProgressTracker({ challengeData, challengeSize, onChallengeComplete, isDemoMode = true }) {
   const [showCertificate, setShowCertificate] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -65,7 +65,11 @@ export default function ProgressTracker({ challengeData, challengeSize, onChalle
   return (
     <div className="space-y-6">
       {/* Phase Progress Bars */}
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
+      <div className={`backdrop-blur-sm rounded-2xl p-6 ${
+        isDemoMode
+          ? 'bg-slate-800/50 border-2 border-yellow-500/50'
+          : 'bg-slate-800/50 border border-green-500/50'
+      }`}>
         <h3 className="text-lg font-semibold text-white mb-6">Challenge Progress</h3>
 
         <div className="space-y-6">
@@ -124,7 +128,11 @@ export default function ProgressTracker({ challengeData, challengeSize, onChalle
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Resolved Markets */}
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
+        <div className={`backdrop-blur-sm rounded-2xl p-6 ${
+          isDemoMode
+            ? 'bg-slate-800/50 border border-yellow-500/30'
+            : 'bg-slate-800/50 border border-green-500/30'
+        }`}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Resolved Markets</p>
@@ -137,7 +145,11 @@ export default function ProgressTracker({ challengeData, challengeSize, onChalle
         </div>
 
         {/* Win Rate */}
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
+        <div className={`backdrop-blur-sm rounded-2xl p-6 ${
+          isDemoMode
+            ? 'bg-slate-800/50 border border-yellow-500/30'
+            : 'bg-slate-800/50 border border-green-500/30'
+        }`}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Win Rate</p>
@@ -152,7 +164,11 @@ export default function ProgressTracker({ challengeData, challengeSize, onChalle
         </div>
 
         {/* Max Drawdown */}
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
+        <div className={`backdrop-blur-sm rounded-2xl p-6 ${
+          isDemoMode
+            ? 'bg-slate-800/50 border border-yellow-500/30'
+            : 'bg-slate-800/50 border border-green-500/30'
+        }`}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Max Drawdown</p>
@@ -167,7 +183,11 @@ export default function ProgressTracker({ challengeData, challengeSize, onChalle
         </div>
 
         {/* Max Exposure */}
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
+        <div className={`backdrop-blur-sm rounded-2xl p-6 ${
+          isDemoMode
+            ? 'bg-slate-800/50 border border-yellow-500/30'
+            : 'bg-slate-800/50 border border-green-500/30'
+        }`}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Max Exposure</p>
@@ -214,7 +234,11 @@ export default function ProgressTracker({ challengeData, challengeSize, onChalle
       )}
 
       {/* Challenge Rules */}
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
+      <div className={`backdrop-blur-sm rounded-2xl p-6 ${
+        isDemoMode
+          ? 'bg-slate-800/50 border border-yellow-500/50'
+          : 'bg-slate-800/50 border border-green-500/50'
+      }`}>
         <h4 className="text-lg font-semibold text-white mb-4">Challenge Rules</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 
 // Simple in-memory cache
 const cache = new Map();
@@ -7,6 +7,16 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export async function GET(request) {
   try {
+    // Return mock data if Supabase is not configured
+    if (!isSupabaseConfigured) {
+      return NextResponse.json({
+        trades: [],
+        equityHistory: [],
+        totalPnL: 0,
+        winRate: 0
+      });
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const status = searchParams.get('status'); // 'open', 'resolved', or null for all

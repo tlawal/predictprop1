@@ -2,7 +2,17 @@
 
 ## Supabase Setup
 
-### 1. Create Supabase Project
+**⚠️ The app works without Supabase!** If you haven't set up Supabase yet, the app will use mock data and won't crash. Follow this guide when you're ready to enable real data persistence.
+
+### Quick Start (Without Supabase)
+- The app runs with mock data by default
+- No Supabase setup required to test features
+- All functionality works with virtual trades and data
+- See [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md) for detailed instructions
+
+### Full Setup (With Supabase)
+
+#### 1. Create Supabase Project
 1. Go to [supabase.com](https://supabase.com) and create a new project
 2. Wait for the database to be set up (usually takes 2-3 minutes)
 

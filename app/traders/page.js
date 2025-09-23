@@ -7,6 +7,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { Tab } from '@headlessui/react';
 import useSWR from 'swr';
 import { supabase } from '../../lib/supabase';
+import Confetti from 'react-confetti';
 import ProgressTracker from './components/ProgressTracker';
 import PositionsTable from './components/PositionsTable';
 import CloseModal from './components/CloseModal';
@@ -16,6 +17,7 @@ import EquityCurveChart from './components/EquityCurveChart';
 import SidePanel from './components/SidePanel';
 import TradingObjectives from './components/TradingObjectives';
 import ResultsProgress from './components/ResultsProgress';
+import OnboardingModal from './components/OnboardingModal';
 import toast, { Toaster } from 'react-hot-toast';
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
@@ -30,6 +32,9 @@ function TradersPageContent() {
   const [showDemoBadge, setShowDemoBadge] = useState(true);
   const [showRiskAlert, setShowRiskAlert] = useState(true);
   const [showSidePanel, setShowSidePanel] = useState(false);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(true);
 
   // Challenge completion handler
   const handleChallengeComplete = async () => {
@@ -62,10 +67,17 @@ function TradersPageContent() {
       // In production, this would call the vault contract
       console.log('Challenge completed! Triggering payout distribution...');
 
-      // Show success message
+      // Show success message and confetti
       toast.success('🎉 Challenge completed! Certificate generated.', {
         duration: 5000,
       });
+
+      // Trigger confetti celebration
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 5000);
+
+      // Switch to live trading mode
+      setIsDemoMode(false);
 
     } catch (error) {
       console.error('Error completing challenge:', error);
@@ -80,6 +92,14 @@ function TradersPageContent() {
       router.push('/?error=unauth');
     }
   }, [ready, user, router]);
+
+
+  // Check if challenge is already passed (switch to live mode)
+  useEffect(() => {
+    if (challengeData?.challengeStatus === 'passed') {
+      setIsDemoMode(false);
+    }
+  }, [challengeData]);
 
   // Handle tab persistence from URL
   useEffect(() => {
@@ -105,6 +125,17 @@ function TradersPageContent() {
     fetcher,
     { refreshInterval: 30000 }
   );
+
+  // First load onboarding modal
+  useEffect(() => {
+    if (ready && user && challengeData) {
+      // Check if user has seen onboarding (stored in localStorage)
+      const hasSeenOnboarding = localStorage.getItem(`onboarding_seen_${user.id}`);
+      if (!hasSeenOnboarding) {
+        setShowOnboardingModal(true);
+      }
+    }
+  }, [ready, user, challengeData]);
 
   // Fetch trade history for Performance tab
   const { data: historyData, error: historyError } = useSWR(
@@ -286,6 +317,82 @@ function TradersPageContent() {
     console.log('Filter changed to:', filter);
   };
 
+  // Shadow trading - mirror real Polymarket trades
+  const handleShadowTrading = async () => {
+    try {
+      toast.loading('Starting shadow trading...', { id: 'shadow' });
+
+      // Query recent Polymarket trades via TheGraph
+      const response = await fetch('/api/polymarket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            query GetRecentTrades {
+              trades(
+                first: 10
+                orderBy: blockTimestamp
+                orderDirection: desc
+                where: { blockTimestamp_gte: ${Math.floor(Date.now() / 1000) - 3600} }
+              ) {
+                id
+                market {
+                  id
+                  question
+                  outcomeTokenMarginalPrices
+                }
+                outcomeIndex
+                price
+                shares
+                blockTimestamp
+              }
+            }
+          `
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch Polymarket data');
+      }
+
+      const data = await response.json();
+      const trades = data.data?.trades || [];
+
+      // Insert mock trades based on real Polymarket activity
+      for (const trade of trades.slice(0, 3)) { // Limit to 3 trades
+        await fetch('/api/order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            tokenId: trade.market.id,
+            side: Math.random() > 0.5 ? 'buy' : 'sell',
+            qty: Math.floor(Math.random() * 10) + 1,
+            price: parseFloat(trade.price),
+            isShadowTrade: true // Mark as shadow trade
+          }),
+        });
+      }
+
+      toast.success(`Mirrored ${Math.min(trades.length, 3)} real trades!`, { id: 'shadow' });
+
+      // Refresh data
+      // mutate('/api/positions');
+      // mutate('/api/history');
+
+    } catch (error) {
+      console.error('Shadow trading error:', error);
+      toast.error('Failed to start shadow trading', { id: 'shadow' });
+    }
+  };
+
+  // Handle onboarding completion
+  const handleOnboardingComplete = () => {
+    setShowOnboardingModal(false);
+    localStorage.setItem(`onboarding_seen_${user.id}`, 'true');
+    toast.success('Welcome to PolyProp! Let\'s start trading!');
+  };
+
   // Check if balance is near equity limit (e.g., within 10% of max challenge size)
   const equityLimitNear = balance > (challengeSize * 0.9);
   const maxEquityLimit = challengeSize * 2; // Example: 2x challenge size
@@ -293,6 +400,32 @@ function TradersPageContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 md:pt-0">
+      {/* Confetti Celebration */}
+      {showConfetti && (
+        <Confetti
+          width={window.innerWidth}
+          height={window.innerHeight}
+          numberOfPieces={300}
+          recycle={false}
+          gravity={0.3}
+        />
+      )}
+
+      {/* Demo Mode Banner */}
+      {isDemoMode && showDemoBadge && (
+        <div className="bg-yellow-500 text-yellow-900 px-4 py-3 text-center relative">
+          <div className="flex items-center justify-center gap-2">
+            <span className="font-semibold">🎯 Demo Mode: Virtual Trades - Pass Challenge to Go Live!</span>
+          </div>
+          <button
+            onClick={() => setShowDemoBadge(false)}
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-yellow-800 hover:text-yellow-900"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col lg:flex-row min-h-screen">
         {/* Desktop Side Panel */}
         <div className="hidden lg:block">
@@ -443,11 +576,36 @@ function TradersPageContent() {
           <Tab.Panels>
             <Tab.Panel>
               {challengeData ? (
-                <ProgressTracker
-                  challengeData={challengeData}
-                  challengeSize={challengeSize}
-                  onChallengeComplete={handleChallengeComplete}
-                />
+                <div>
+                  <ProgressTracker
+                    challengeData={challengeData}
+                    challengeSize={challengeSize}
+                    onChallengeComplete={handleChallengeComplete}
+                    isDemoMode={isDemoMode}
+                  />
+
+                  {/* Shadow Trading Button - Only in demo mode */}
+                  {isDemoMode && (
+                    <div className="mt-6 bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
+                      <div className="text-center">
+                        <h3 className="text-lg font-semibold text-white mb-2">🎭 Shadow Trading</h3>
+                        <p className="text-slate-400 text-sm mb-4">
+                          Mirror real Polymarket trades to practice with live market data
+                        </p>
+                        <button
+                          onClick={handleShadowTrading}
+                          className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
+                        >
+                          <span>👻</span>
+                          Start Shadow Trading
+                        </button>
+                        <p className="text-xs text-slate-500 mt-2">
+                          This will create mock trades based on real Polymarket activity
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 text-center">
                   <h3 className="text-xl font-semibold text-white mb-4">No Active Challenge</h3>
@@ -577,6 +735,13 @@ function TradersPageContent() {
 
       {/* Mobile Side Panel */}
       <SidePanel isOpen={showSidePanel} onClose={() => setShowSidePanel(false)} isMobile={true} />
+
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboardingModal}
+        onClose={() => setShowOnboardingModal(false)}
+        onComplete={handleOnboardingComplete}
+      />
         </div>
       </div>
     </div>
