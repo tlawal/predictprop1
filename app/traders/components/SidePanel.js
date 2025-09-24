@@ -14,7 +14,7 @@ import CertGenerator from './CertGenerator';
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
-export default function SidePanel({ isOpen, onClose, isMobile = false }) {
+export default function SidePanel({ isOpen, onClose, isMobile = false, collapsed = false, onToggleCollapse }) {
   const { t } = useTranslation();
   const { user, logout } = usePrivy();
   const { isAuthenticated } = useSupabaseAuth();
@@ -43,11 +43,104 @@ export default function SidePanel({ isOpen, onClose, isMobile = false }) {
     onClose?.();
   };
 
-  const panelContent = (
-    <div className="flex flex-col h-full bg-slate-800/95 backdrop-blur-sm">
+  const collapsedContent = (
+    <div className="flex flex-col h-full bg-slate-800/95 backdrop-blur-sm w-16 transition-all duration-300">
+      {/* Collapse Toggle Button */}
+      <div className="p-3 border-b border-slate-700 flex justify-center">
+        <button
+          onClick={onToggleCollapse}
+          className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white transition-colors"
+          title="Expand Sidebar"
+        >
+          <svg className="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Collapsed Profile Section */}
+      <div className="p-3 border-b border-slate-700 flex justify-center">
+        <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center" title="Profile">
+          👤
+        </div>
+      </div>
+
+      {/* Collapsed Certificate Section */}
+      <div className="p-3 border-b border-slate-700 flex justify-center">
+        <div className="w-8 h-8 bg-yellow-600 rounded-full flex items-center justify-center" title="Certificate">
+          🏆
+        </div>
+      </div>
+
+      {/* Collapsed Navigation */}
+      <div className="flex-1 p-3 space-y-3">
+        <div className="flex justify-center">
+          <button className="w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded-lg flex items-center justify-center transition-colors" title="Contracts & Terms">
+            📋
+          </button>
+        </div>
+        <div className="flex justify-center">
+          <button className="w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded-lg flex items-center justify-center transition-colors" title="Trading Rules">
+            📖
+          </button>
+        </div>
+        <div className="flex justify-center">
+          <button className="w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded-lg flex items-center justify-center transition-colors" title="Withdrawals">
+            💰
+          </button>
+        </div>
+        <div className="flex justify-center">
+          <button className="w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded-lg flex items-center justify-center transition-colors" title="Leaderboards">
+            🏆
+          </button>
+        </div>
+      </div>
+
+      {/* Collapsed Notifications */}
+      <div className="p-3 border-t border-slate-700 flex justify-center">
+        <div className="relative">
+          <div className="w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded-lg flex items-center justify-center transition-colors" title="Notifications">
+            🔔
+          </div>
+          {notificationsData?.unreadCount > 0 && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
+              {notificationsData.unreadCount}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Collapsed Logout */}
+      <div className="p-3 border-t border-slate-700 flex justify-center">
+        <button
+          onClick={handleLogout}
+          className="w-8 h-8 bg-red-600 hover:bg-red-700 rounded-lg flex items-center justify-center transition-colors"
+          title="Logout"
+        >
+          🚪
+        </button>
+      </div>
+    </div>
+  );
+
+  const expandedContent = (
+    <div className="flex flex-col h-full bg-slate-800/95 backdrop-blur-sm w-80 transition-all duration-300">
+      {/* Collapse Toggle Button */}
+      <div className="p-4 border-b border-slate-700 flex justify-end">
+        <button
+          onClick={onToggleCollapse}
+          className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white transition-colors"
+          title="Collapse Sidebar"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      </div>
+
       {/* Profile Section */}
       <div className="p-6 border-b border-slate-700">
-        <h3 className="text-lg font-semibold text-white mb-4">Profile</h3>
+        <h3 className="text-lg font-semibold text-white mb-4">{t('profile.title')}</h3>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -253,7 +346,7 @@ export default function SidePanel({ isOpen, onClose, isMobile = false }) {
                     leaveTo="translate-x-full"
                   >
                     <Dialog.Panel className="pointer-events-auto w-screen max-w-md">
-                      {panelContent}
+                      {expandedContent}
                     </Dialog.Panel>
                   </Transition.Child>
                 </div>
@@ -379,10 +472,10 @@ export default function SidePanel({ isOpen, onClose, isMobile = false }) {
     );
   }
 
-  // Desktop version - fixed sidebar
+  // Desktop version - collapsible sidebar
   return (
-    <div className="w-80 h-full border-r border-slate-700">
-      {panelContent}
+    <div className={`h-full border-r border-slate-700 ${collapsed ? 'w-16' : 'w-80'}`}>
+      {collapsed ? collapsedContent : expandedContent}
 
       {/* Terms Modal */}
       <Transition appear show={showTermsModal} as={Fragment}>

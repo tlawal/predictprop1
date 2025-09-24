@@ -37,6 +37,7 @@ function TradersPageContent() {
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Challenge completion handler
   const handleChallengeComplete = async () => {
@@ -431,8 +432,13 @@ function TradersPageContent() {
 
       <div className="flex flex-col lg:flex-row min-h-screen">
         {/* Desktop Side Panel */}
-        <div className="hidden lg:block">
-          <SidePanel />
+        <div className={`hidden lg:block transition-all duration-300 ease-in-out ${
+          sidebarCollapsed ? 'w-16' : 'w-80'
+        }`}>
+          <SidePanel
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
         </div>
 
         {/* Main Content */}

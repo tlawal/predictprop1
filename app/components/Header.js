@@ -61,8 +61,6 @@ export default function Header() {
               <li><Link href="/">Home</Link></li>
               <li><Link href="/traders">Traders</Link></li>
               <li><Link href="/lps">LPs</Link></li>
-              <li><Link href="/leaderboard">Leaderboard</Link></li>
-              <li><Link href="/refer">Refer & Earn</Link></li>
               <li><Link href="/markets">Markets</Link></li>
               <li>
                 <button className={styles.themeToggle} onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
@@ -157,12 +155,6 @@ export default function Header() {
               <button onClick={closeMoreMenu}>✕</button>
             </div>
             <div className={styles.mobileMoreLinks}>
-              <Link href="/leaderboard" onClick={closeMoreMenu}>
-                🏆 Leaderboard
-              </Link>
-              <Link href="/refer" onClick={closeMoreMenu}>
-                💰 Refer & Earn
-              </Link>
               <Link href="/docs" onClick={closeMoreMenu}>
                 📖 Documentation
               </Link>
