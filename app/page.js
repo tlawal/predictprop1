@@ -15,6 +15,13 @@ export default function Home() {
   const [evaluationType, setEvaluationType] = useState('one-phase');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [clickedCard, setClickedCard] = useState(null);
+
+  const handleCardClick = (cardId) => {
+    setClickedCard(cardId === clickedCard ? null : cardId);
+    // Add a subtle animation effect
+    setTimeout(() => setClickedCard(null), 1000);
+  };
 
   // SWR fetcher function
   const fetcher = (url) => fetch(url).then((res) => res.json());
@@ -502,116 +509,148 @@ export default function Home() {
             </h2>
           </div>
           
-          <div className={styles.hexagonGrid}>
-            <div className={styles.hexagonRow}>
-              <div className={`${styles.hexagonCard} ${styles.hexagonPrimary}`}>
-                <div className={styles.hexagonContent}>
-                  <div className={styles.hexagonIcon}>
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
-                    </svg>
-                    <div className={styles.hexagonGlow}></div>
-                  </div>
-                  <h3>Funded Trading</h3>
-                  <p>Trade with up to $100k, keeping 80% of profits.</p>
-                  <div className={styles.hexagonStats}>
-                    <span className={styles.statValue}>$100K</span>
-                    <span className={styles.statLabel}>Max Capital</span>
-                  </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 max-w-7xl mx-auto">
+            {/* Funded Trading */}
+            <div
+              className={`bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg shadow-md hover:shadow-lg hover:shadow-blue-400/30 transition-all duration-300 p-6 flex flex-col items-stretch min-h-[200px] md:min-h-[250px] cursor-pointer transform hover:-translate-y-2 hover:scale-105 hover:border-blue-400/50 ${
+                clickedCard === 'funded-trading' ? 'animate-pulse shadow-2xl shadow-blue-400/50 border-blue-400/70' : ''
+              }`}
+              onClick={() => handleCardClick('funded-trading')}
+            >
+              <div className="flex flex-col items-center text-center flex-1">
+                <div className={`mt-2 mb-4 transition-transform duration-300 ${clickedCard === 'funded-trading' ? 'scale-110' : ''}`}>
+                  <svg className="w-12 h-12 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+                  </svg>
                 </div>
-                <div className={styles.hexagonBorder}></div>
-              </div>
-              
-              <div className={`${styles.hexagonCard} ${styles.hexagonSecondary}`}>
-                <div className={styles.hexagonContent}>
-                  <div className={styles.hexagonIcon}>
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
-                    </svg>
-                    <div className={styles.hexagonGlow}></div>
-                  </div>
-                  <h3>High-Yield</h3>
-                  <p>Stake USDC for 10-20% APY, withdraw anytime.</p>
-                  <div className={styles.hexagonStats}>
-                    <span className={styles.statValue}>20%</span>
-                    <span className={styles.statLabel}>Max APY</span>
-                  </div>
+                <h3 className="font-bold text-xl sm:text-2xl text-white mb-3">Funded Trading</h3>
+                <p className="text-sm sm:text-base lg:text-lg leading-6 sm:leading-7 text-gray-300 flex-1">
+                  Trade with up to $100k, keeping 80% of profits.
+                </p>
+                <div className="mt-4 text-center">
+                  <div className="text-2xl font-bold text-blue-400">$100K</div>
+                  <div className="text-sm text-gray-400">Max Capital</div>
                 </div>
-                <div className={styles.hexagonBorder}></div>
-              </div>
-              
-              <div className={`${styles.hexagonCard} ${styles.hexagonTertiary}`}>
-                <div className={styles.hexagonContent}>
-                  <div className={styles.hexagonIcon}>
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
-                    </svg>
-                    <div className={styles.hexagonGlow}></div>
-                  </div>
-                  <h3>Real Time</h3>
-                  <p>Growing Fast: Billions traded across Polymarket with advanced tools.</p>
-                  <div className={styles.hexagonStats}>
-                    <span className={styles.statValue}>$2B+</span>
-                    <span className={styles.statLabel}>Volume</span>
-                  </div>
-                </div>
-                <div className={styles.hexagonBorder}></div>
               </div>
             </div>
-            
-            <div className={styles.hexagonRow}>
-              <div className={`${styles.hexagonCard} ${styles.hexagonSecondary}`}>
-                <div className={styles.hexagonContent}>
-                  <div className={styles.hexagonIcon}>
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
-                    </svg>
-                    <div className={styles.hexagonGlow}></div>
-                  </div>
-                  <h3>Referrals</h3>
-                  <p>Earn 10% of trader fees or 5% of LP yields in USDC.</p>
-                  <div className={styles.hexagonStats}>
-                    <span className={styles.statValue}>10%</span>
-                    <span className={styles.statLabel}>Commission</span>
-                  </div>
+
+            {/* High-Yield */}
+            <div
+              className={`bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg shadow-md hover:shadow-lg hover:shadow-green-400/30 transition-all duration-300 p-6 flex flex-col items-stretch min-h-[200px] md:min-h-[250px] cursor-pointer transform hover:-translate-y-2 hover:scale-105 hover:border-green-400/50 ${
+                clickedCard === 'high-yield' ? 'animate-pulse shadow-2xl shadow-green-400/50 border-green-400/70' : ''
+              }`}
+              onClick={() => handleCardClick('high-yield')}
+            >
+              <div className="flex flex-col items-center text-center flex-1">
+                <div className={`mt-2 mb-4 transition-transform duration-300 ${clickedCard === 'high-yield' ? 'scale-110' : ''}`}>
+                  <svg className="w-12 h-12 text-green-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+                  </svg>
                 </div>
-                <div className={styles.hexagonBorder}></div>
+                <h3 className="font-bold text-xl sm:text-2xl text-white mb-3">High-Yield</h3>
+                <p className="text-sm sm:text-base lg:text-lg leading-6 sm:leading-7 text-gray-300 flex-1">
+                  Stake USDC for 10-20% APY, withdraw anytime.
+                </p>
+                <div className="mt-4 text-center">
+                  <div className="text-2xl font-bold text-green-400">20%</div>
+                  <div className="text-sm text-gray-400">Max APY</div>
+                </div>
               </div>
-              
-              <div className={`${styles.hexagonCard} ${styles.hexagonPrimary}`}>
-                <div className={styles.hexagonContent}>
-                  <div className={styles.hexagonIcon}>
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
-                    </svg>
-                    <div className={styles.hexagonGlow}></div>
-                  </div>
-                  <h3>Instant Payouts</h3>
-                  <p>Get paid immediately when you win trades.</p>
-                  <div className={styles.hexagonStats}>
-                    <span className={styles.statValue}>24h</span>
-                    <span className={styles.statLabel}>Payout</span>
-                  </div>
+            </div>
+
+            {/* Real Time */}
+            <div
+              className={`bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg shadow-md hover:shadow-lg hover:shadow-purple-400/30 transition-all duration-300 p-6 flex flex-col items-stretch min-h-[200px] md:min-h-[250px] cursor-pointer transform hover:-translate-y-2 hover:scale-105 hover:border-purple-400/50 ${
+                clickedCard === 'real-time' ? 'animate-pulse shadow-2xl shadow-purple-400/50 border-purple-400/70' : ''
+              }`}
+              onClick={() => handleCardClick('real-time')}
+            >
+              <div className="flex flex-col items-center text-center flex-1">
+                <div className={`mt-2 mb-4 transition-transform duration-300 ${clickedCard === 'real-time' ? 'scale-110' : ''}`}>
+                  <svg className="w-12 h-12 text-purple-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+                  </svg>
                 </div>
-                <div className={styles.hexagonBorder}></div>
+                <h3 className="font-bold text-xl sm:text-2xl text-white mb-3">Real Time</h3>
+                <p className="text-sm sm:text-base lg:text-lg leading-6 sm:leading-7 text-gray-300 flex-1">
+                  Growing Fast: Billions traded across Polymarket with advanced tools.
+                </p>
+                <div className="mt-4 text-center">
+                  <div className="text-2xl font-bold text-purple-400">$2B+</div>
+                  <div className="text-sm text-gray-400">Volume</div>
+                </div>
               </div>
-              
-              <div className={`${styles.hexagonCard} ${styles.hexagonTertiary}`}>
-                <div className={styles.hexagonContent}>
-                  <div className={styles.hexagonIcon}>
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
-                    </svg>
-                    <div className={styles.hexagonGlow}></div>
-                  </div>
-                  <h3>Non-correlated</h3>
-                  <p>Trade politics, sports, macro events & more unaffected by stocks or crypto</p>
-                  <div className={styles.hexagonStats}>
-                    <span className={styles.statValue}>∞</span>
-                    <span className={styles.statLabel}>Markets</span>
-                  </div>
+            </div>
+
+            {/* Referrals */}
+            <div
+              className={`bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg shadow-md hover:shadow-lg hover:shadow-yellow-400/30 transition-all duration-300 p-6 flex flex-col items-stretch min-h-[200px] md:min-h-[250px] cursor-pointer transform hover:-translate-y-2 hover:scale-105 hover:border-yellow-400/50 ${
+                clickedCard === 'referrals' ? 'animate-pulse shadow-2xl shadow-yellow-400/50 border-yellow-400/70' : ''
+              }`}
+              onClick={() => handleCardClick('referrals')}
+            >
+              <div className="flex flex-col items-center text-center flex-1">
+                <div className={`mt-2 mb-4 transition-transform duration-300 ${clickedCard === 'referrals' ? 'scale-110' : ''}`}>
+                  <svg className="w-12 h-12 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+                  </svg>
                 </div>
-                <div className={styles.hexagonBorder}></div>
+                <h3 className="font-bold text-xl sm:text-2xl text-white mb-3">Referrals</h3>
+                <p className="text-sm sm:text-base lg:text-lg leading-6 sm:leading-7 text-gray-300 flex-1">
+                  Earn 10% of trader fees or 5% of LP yields in USDC.
+                </p>
+                <div className="mt-4 text-center">
+                  <div className="text-2xl font-bold text-yellow-400">10%</div>
+                  <div className="text-sm text-gray-400">Commission</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Instant Payouts */}
+            <div
+              className={`bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg shadow-md hover:shadow-lg hover:shadow-cyan-400/30 transition-all duration-300 p-6 flex flex-col items-stretch min-h-[200px] md:min-h-[250px] cursor-pointer transform hover:-translate-y-2 hover:scale-105 hover:border-cyan-400/50 ${
+                clickedCard === 'instant-payouts' ? 'animate-pulse shadow-2xl shadow-cyan-400/50 border-cyan-400/70' : ''
+              }`}
+              onClick={() => handleCardClick('instant-payouts')}
+            >
+              <div className="flex flex-col items-center text-center flex-1">
+                <div className={`mt-2 mb-4 transition-transform duration-300 ${clickedCard === 'instant-payouts' ? 'scale-110' : ''}`}>
+                  <svg className="w-12 h-12 text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+                  </svg>
+                </div>
+                <h3 className="font-bold text-xl sm:text-2xl text-white mb-3">Instant Payouts</h3>
+                <p className="text-sm sm:text-base lg:text-lg leading-6 sm:leading-7 text-gray-300 flex-1">
+                  Get paid immediately when you win trades.
+                </p>
+                <div className="mt-4 text-center">
+                  <div className="text-2xl font-bold text-cyan-400">24h</div>
+                  <div className="text-sm text-gray-400">Payout</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Non-correlated */}
+            <div
+              className={`bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg shadow-md hover:shadow-lg hover:shadow-pink-400/30 transition-all duration-300 p-6 flex flex-col items-stretch min-h-[200px] md:min-h-[250px] cursor-pointer transform hover:-translate-y-2 hover:scale-105 hover:border-pink-400/50 ${
+                clickedCard === 'non-correlated' ? 'animate-pulse shadow-2xl shadow-pink-400/50 border-pink-400/70' : ''
+              }`}
+              onClick={() => handleCardClick('non-correlated')}
+            >
+              <div className="flex flex-col items-center text-center flex-1">
+                <div className={`mt-2 mb-4 transition-transform duration-300 ${clickedCard === 'non-correlated' ? 'scale-110' : ''}`}>
+                  <svg className="w-12 h-12 text-pink-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
+                  </svg>
+                </div>
+                <h3 className="font-bold text-xl sm:text-2xl text-white mb-3">Non-correlated</h3>
+                <p className="text-sm sm:text-base lg:text-lg leading-6 sm:leading-7 text-gray-300 flex-1">
+                  Trade politics, sports, macro events & more unaffected by stocks or crypto.
+                </p>
+                <div className="mt-4 text-center">
+                  <div className="text-2xl font-bold text-pink-400">∞</div>
+                  <div className="text-sm text-gray-400">Markets</div>
+                </div>
               </div>
             </div>
           </div>
