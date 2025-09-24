@@ -18,6 +18,8 @@ import SidePanel from './components/SidePanel';
 import TradingObjectives from './components/TradingObjectives';
 import ResultsProgress from './components/ResultsProgress';
 import OnboardingModal from './components/OnboardingModal';
+import AffiliatesPanel from './components/AffiliatesPanel';
+import CompetitionsPanel from './components/CompetitionsPanel';
 import toast, { Toaster } from 'react-hot-toast';
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
@@ -572,6 +574,28 @@ function TradersPageContent() {
             >
               Performance
             </Tab>
+            <Tab
+              className={({ selected }) =>
+                `w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors ${
+                  selected
+                    ? 'bg-white text-slate-900 shadow'
+                    : 'text-slate-300 hover:bg-white/[0.12] hover:text-white'
+                }`
+              }
+            >
+              Affiliates
+            </Tab>
+            <Tab
+              className={({ selected }) =>
+                `w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors ${
+                  selected
+                    ? 'bg-white text-slate-900 shadow'
+                    : 'text-slate-300 hover:bg-white/[0.12] hover:text-white'
+                }`
+              }
+            >
+              Competitions
+            </Tab>
           </Tab.List>
 
           <Tab.Panels>
@@ -701,6 +725,14 @@ function TradersPageContent() {
                   </div>
                 </div>
               </div>
+            </Tab.Panel>
+
+            <Tab.Panel>
+              <AffiliatesPanel />
+            </Tab.Panel>
+
+            <Tab.Panel>
+              <CompetitionsPanel />
             </Tab.Panel>
           </Tab.Panels>
         </Tab.Group>

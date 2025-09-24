@@ -147,6 +147,13 @@ ALTER TABLE plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE affiliates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE competitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE competition_participants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE risk_thresholds ENABLE ROW LEVEL SECURITY;
+ALTER TABLE risk_alerts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE risk_events ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users table
 CREATE POLICY "Users can view their own profile" ON users
@@ -234,6 +241,61 @@ CREATE POLICY "Admins can view admin logs" ON admin_logs
 CREATE POLICY "Admins can create admin logs" ON admin_logs
   FOR INSERT WITH CHECK (auth.jwt() ->> 'role' = 'admin');
 
+-- RLS Policies for affiliates table
+CREATE POLICY "Users can view their own affiliate data" ON affiliates
+  FOR SELECT USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can create their own affiliate data" ON affiliates
+  FOR INSERT WITH CHECK (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can update their own affiliate data" ON affiliates
+  FOR UPDATE USING (auth.uid()::text = user_id::text);
+
+-- RLS Policies for referrals table
+CREATE POLICY "Users can view referrals they made" ON referrals
+  FOR SELECT USING (auth.uid()::text = referrer_id::text);
+
+CREATE POLICY "Users can create referrals they made" ON referrals
+  FOR INSERT WITH CHECK (auth.uid()::text = referrer_id::text);
+
+-- RLS Policies for competitions table (public read, admin write)
+CREATE POLICY "Anyone can view active competitions" ON competitions
+  FOR SELECT USING (status IN ('active', 'upcoming'));
+
+CREATE POLICY "Admins can manage competitions" ON competitions
+  FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
+
+-- RLS Policies for competition_participants table
+CREATE POLICY "Users can view their competition participations" ON competition_participants
+  FOR SELECT USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can join competitions" ON competition_participants
+  FOR INSERT WITH CHECK (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can leave competitions" ON competition_participants
+  FOR DELETE USING (auth.uid()::text = user_id::text);
+
+-- RLS Policies for risk_thresholds table (admin only)
+CREATE POLICY "Admins can manage risk thresholds" ON risk_thresholds
+  FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
+
+-- RLS Policies for risk_alerts table
+CREATE POLICY "Users can view their own risk alerts" ON risk_alerts
+  FOR SELECT USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Admins can manage all risk alerts" ON risk_alerts
+  FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
+
+-- RLS Policies for risk_events table
+CREATE POLICY "Users can view their own risk events" ON risk_events
+  FOR SELECT USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Admins can view all risk events" ON risk_events
+  FOR SELECT USING (auth.jwt() ->> 'role' = 'admin');
+
+CREATE POLICY "System can create risk events" ON risk_events
+  FOR INSERT WITH CHECK (true);
+
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -265,8 +327,105 @@ CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders
 CREATE TRIGGER update_contracts_updated_at BEFORE UPDATE ON contracts
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_affiliates_updated_at BEFORE UPDATE ON affiliates
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_competitions_updated_at BEFORE UPDATE ON competitions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_risk_alerts_updated_at BEFORE UPDATE ON risk_alerts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- Insert default plans
 INSERT INTO plans (type, description, params, fee) VALUES
   ('1-step', 'Single phase challenge with profit target', '{"roi": 6, "win_rate": 70, "drawdown": 5, "exposure": 15, "min_days": 10}', 99.00),
   ('2-step', 'Two phase challenge with evaluation and profit phases', '{"roi": 10, "win_rate": 70, "drawdown": 5, "exposure": 15, "min_days": 20}', 149.00)
 ON CONFLICT DO NOTHING;
+
+-- Create affiliates table
+CREATE TABLE IF NOT EXISTS affiliates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code TEXT NOT NULL UNIQUE,
+  custom_url TEXT,
+  tier TEXT NOT NULL DEFAULT 'bronze' CHECK (tier IN ('bronze', 'silver', 'gold', 'platinum')),
+  total_referrals INTEGER DEFAULT 0,
+  total_volume NUMERIC(18, 2) DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create referrals table
+CREATE TABLE IF NOT EXISTS referrals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  referrer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  referred_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'inactive')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(referrer_id, referred_user_id)
+);
+
+-- Create competitions table
+CREATE TABLE IF NOT EXISTS competitions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  rules TEXT,
+  prize_pool NUMERIC(10, 2),
+  start_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  end_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'active', 'completed', 'cancelled')),
+  max_participants INTEGER,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create competition_participants table
+CREATE TABLE IF NOT EXISTS competition_participants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  competition_id UUID NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  pnl NUMERIC(18, 2) DEFAULT 0,
+  rank INTEGER,
+  trades_count INTEGER DEFAULT 0,
+  UNIQUE(competition_id, user_id)
+);
+
+-- Create risk_thresholds table
+CREATE TABLE IF NOT EXISTS risk_thresholds (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id UUID REFERENCES users(id),
+  thresholds JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create risk_alerts table
+CREATE TABLE IF NOT EXISTS risk_alerts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  severity TEXT NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'acknowledged', 'dismissed')),
+  triggered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  acknowledged_at TIMESTAMP WITH TIME ZONE,
+  acknowledged_by UUID REFERENCES users(id),
+  dismissed_at TIMESTAMP WITH TIME ZONE,
+  dismissed_by UUID REFERENCES users(id),
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create risk_events table
+CREATE TABLE IF NOT EXISTS risk_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  description TEXT NOT NULL,
+  value TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);

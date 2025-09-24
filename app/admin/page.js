@@ -155,6 +155,17 @@ function AdminPageContent() {
                 }`
               }
             >
+              Risk Triggers
+            </Tab>
+            <Tab
+              className={({ selected }) =>
+                `w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors ${
+                  selected
+                    ? 'bg-white text-slate-900 shadow'
+                    : 'text-slate-300 hover:bg-white/[0.12] hover:text-white'
+                }`
+              }
+            >
               Reports
             </Tab>
             <Tab
@@ -185,6 +196,9 @@ function AdminPageContent() {
             </Tab.Panel>
             <Tab.Panel>
               <RiskPanel adminId={user.id} />
+            </Tab.Panel>
+            <Tab.Panel>
+              <RiskTriggersPanel adminId={user.id} />
             </Tab.Panel>
             <Tab.Panel>
               <ReportsPanel adminId={user.id} />
@@ -556,6 +570,113 @@ function WithdrawalsPanel({ adminId }) {
             )}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+function RiskTriggersPanel({ adminId }) {
+  const { data: riskTriggers } = useSWR('/api/risk-triggers', fetcher);
+  const { data: riskAlerts } = useSWR('/api/risk-alerts', fetcher, { refreshInterval: 15000 });
+
+  return (
+    <div className="space-y-6">
+      {/* Active Alerts */}
+      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
+        <h4 className="text-lg font-semibold text-white mb-4">Active Risk Alerts</h4>
+
+        {riskAlerts?.alerts?.length > 0 ? (
+          <div className="space-y-3">
+            {riskAlerts.alerts.map((alert) => (
+              <div
+                key={alert.id}
+                className={`p-4 rounded-lg border ${
+                  alert.severity === 'critical' ? 'bg-red-500/20 border-red-500/30' :
+                  alert.severity === 'high' ? 'bg-orange-500/20 border-orange-500/30' :
+                  'bg-yellow-500/20 border-yellow-500/30'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-white">{alert.title}</span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        alert.severity === 'critical' ? 'bg-red-500 text-white' :
+                        alert.severity === 'high' ? 'bg-orange-500 text-white' :
+                        'bg-yellow-500 text-black'
+                      }`}>
+                        {alert.severity.toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="text-slate-300 text-sm">{alert.message}</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      User: {alert.userEmail} • {new Date(alert.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded">
+                      Acknowledge
+                    </button>
+                    <button className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded">
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-slate-400">No active risk alerts</p>
+        )}
+      </div>
+
+      {/* Risk Thresholds */}
+      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
+        <h4 className="text-lg font-semibold text-white mb-4">Risk Threshold Configuration</h4>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Max Drawdown (%)
+            </label>
+            <div className="text-white bg-slate-700 px-3 py-2 rounded">
+              {riskTriggers?.thresholds?.drawdownPercent || 5}%
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Max Exposure (%)
+            </label>
+            <div className="text-white bg-slate-700 px-3 py-2 rounded">
+              {riskTriggers?.thresholds?.exposurePercent || 15}%
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Daily Loss Limit (%)
+            </label>
+            <div className="text-white bg-slate-700 px-3 py-2 rounded">
+              {riskTriggers?.thresholds?.dailyLossPercent || 5}%
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Max Trades/Day
+            </label>
+            <div className="text-white bg-slate-700 px-3 py-2 rounded">
+              {riskTriggers?.thresholds?.maxTradesPerDay || 50}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-slate-300 mb-2">
+            Alert Email
+          </label>
+          <div className="text-white bg-slate-700 px-3 py-2 rounded">
+            {riskTriggers?.thresholds?.alertEmail || 'admin@polyprop.com'}
+          </div>
+        </div>
       </div>
     </div>
   );
