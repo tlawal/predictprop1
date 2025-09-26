@@ -701,9 +701,6 @@ function MarketsPageContent() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 pb-20">
-        {/* AI Recommended Section */}
-        <AIRecommendedSection />
-
         {/* Trending Markets Section */}
         <TrendingMarkets />
 
