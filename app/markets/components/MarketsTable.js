@@ -122,6 +122,10 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
             aValue = a.outcomePrices?.[1] || a.noOdds || 0;
             bValue = b.outcomePrices?.[1] || b.noOdds || 0;
             break;
+          case 'volume':
+            aValue = a.volume || 0;
+            bValue = b.volume || 0;
+            break;
           case 'volume24hr':
             aValue = a.volume24hr || 0;
             bValue = b.volume24hr || 0;
@@ -150,14 +154,17 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
   // Get sort icon and direction for a column
   const getSortIndicator = (key) => {
     const sort = sortConfig.find(s => s.key === key);
-    if (!sort) return null;
 
     return (
       <span className="inline-flex items-center ml-2">
-        {sort.direction === 'asc' ? (
-          <ChevronUpIcon className="w-4 h-4 text-teal-400" />
+        {sort ? (
+          sort.direction === 'asc' ? (
+            <ChevronUpIcon className="w-4 h-4 text-blue-400" />
+          ) : (
+            <ChevronDownIcon className="w-4 h-4 text-blue-400" />
+          )
         ) : (
-          <ChevronDownIcon className="w-4 h-4 text-teal-400" />
+          <ChevronUpIcon className="w-4 h-4 text-gray-500" />
         )}
       </span>
     );
@@ -422,7 +429,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
             <thead className="bg-slate-700/50">
               <tr>
                 <th
-                  className="px-6 py-4 text-left text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none"
+                  className={`px-6 py-4 text-left text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'question') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('question', e)}
                   data-tooltip-id="question-tooltip"
                   data-tooltip-content="Sort by market question (alphabetical)"
@@ -434,7 +441,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                 </th>
                 <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300">Chart</th>
                 <th
-                  className="px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none"
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'yesOdds') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('yesOdds', e)}
                   data-tooltip-id="yes-odds-tooltip"
                   data-tooltip-content="Sort by Yes odds (probability)"
@@ -445,7 +452,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none"
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'noOdds') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('noOdds', e)}
                   data-tooltip-id="no-odds-tooltip"
                   data-tooltip-content="Sort by No odds (probability)"
@@ -456,30 +463,30 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none"
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'volume') ? 'bg-blue-900/50' : ''}`}
+                  onClick={(e) => handleSortClick('volume', e)}
+                  data-tooltip-id="volume-tooltip"
+                  data-tooltip-content="Sort by total trading volume"
+                >
+                  <div className="flex items-center justify-end">
+                    Total Volume
+                    {getSortIndicator('volume')}
+                  </div>
+                </th>
+                <th
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'volume24hr') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('volume24hr', e)}
                   data-tooltip-id="volume24h-tooltip"
                   data-tooltip-content="Sort by 24-hour trading volume"
                 >
                   <div className="flex items-center justify-end">
-                    Vol 24h
+                    24hr Volume
                     {getSortIndicator('volume24hr')}
-                  </div>
-                </th>
-                <th
-                  className="px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none"
-                  onClick={(e) => handleSortClick('volume1wk', e)}
-                  data-tooltip-id="volume1w-tooltip"
-                  data-tooltip-content="Sort by 1-week trading volume"
-                >
-                  <div className="flex items-center justify-end">
-                    Vol 1w
-                    {getSortIndicator('volume1wk')}
                   </div>
                 </th>
                 <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300">Edge</th>
                 <th
-                  className="px-6 py-4 text-left text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none"
+                  className={`px-6 py-4 text-left text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'endDateIso') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('endDateIso', e)}
                   data-tooltip-id="expires-tooltip"
                   data-tooltip-content="Sort by market expiration date"
@@ -631,17 +638,17 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
         </span>
       </td>
 
-      {/* Volume 24h Column */}
+      {/* Total Volume Column */}
       <td className="px-6 py-4 text-right">
         <span className="text-sm text-gray-300">
-          {formatVolume(market.volume24hr || 0)}
+          {formatVolume(market.volume || 0)}
         </span>
       </td>
 
-      {/* Volume 1w Column */}
+      {/* 24hr Volume Column */}
       <td className="px-6 py-4 text-right">
         <span className="text-sm text-gray-300">
-          {formatVolume(market.volume1wk || 0)}
+          {formatVolume(market.volume24hr || 0)}
         </span>
       </td>
 
@@ -883,8 +890,8 @@ function MarketCard({ market, onMarketClick, onMarketInsights, onMarketSelectFor
 
                 {/* Volume Row */}
                 <div className="flex items-center gap-4 text-xs text-gray-400">
-                  <span>24h: {formatVolume(market.volume24hr || 0)}</span>
-                  <span>1w: {formatVolume(market.volume1wk || 0)}</span>
+                  <span>Total: {formatVolume(market.volume || 0)}</span>
+                  <span>24hr: {formatVolume(market.volume24hr || 0)}</span>
                 </div>
               </div>
             </div>
@@ -908,15 +915,15 @@ function MarketCard({ market, onMarketClick, onMarketInsights, onMarketSelectFor
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
                   <div className="text-lg font-semibold text-white">
-                    {formatVolume(market.volume24hr || 0)}
+                    {formatVolume(market.volume || 0)}
                   </div>
-                  <div className="text-xs text-gray-400">24h Volume</div>
+                  <div className="text-xs text-gray-400">Total Volume</div>
                 </div>
                 <div className="text-center">
                   <div className="text-lg font-semibold text-white">
-                    {formatVolume(market.volume1wk || 0)}
+                    {formatVolume(market.volume24hr || 0)}
                   </div>
-                  <div className="text-xs text-gray-400">1w Volume</div>
+                  <div className="text-xs text-gray-400">24hr Volume</div>
                 </div>
               </div>
 

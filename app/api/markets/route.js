@@ -69,6 +69,7 @@ export async function GET(request) {
         yesOdds: parseFloat(event.outcomePrices?.[0] || '0.5'),
         noOdds: parseFloat(event.outcomePrices?.[1] || '0.5'),
         volume: parseFloat(event.volume || 0),
+        volume24hr: parseFloat(event.volume24hr || 0),
         endDate: event.endDate,
         endDateIso: event.endDate ? new Date(event.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
         category: 'Featured',
