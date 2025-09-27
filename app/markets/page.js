@@ -695,9 +695,9 @@ function MarketsPageContent() {
           {/* WS Ticker Marquee */}
           <div className="w-full overflow-hidden">
             <WSTickerMarquee />
-          </div>
         </div>
-      </section>
+      </div>
+    </section>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 pb-20">

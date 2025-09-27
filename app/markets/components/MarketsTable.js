@@ -421,7 +421,6 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
         <table ref={tableRef} className="w-full">
             <thead className="bg-slate-700/50">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-12"></th>
                 <th
                   className="px-6 py-4 text-left text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none"
                   onClick={(e) => handleSortClick('question', e)}
@@ -577,38 +576,26 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
       className="hover:bg-slate-700/30 transition-all duration-300 cursor-pointer"
       onClick={() => onMarketClick(market)}
     >
-      {/* Icon Column */}
-      <td className="px-6 py-4">
-        <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-700 flex items-center justify-center">
-          {market.icon ? (
-            <Image
-              src={market.icon}
-              alt={market.category || 'Market'}
-              width={32}
-              height={32}
-              className="object-cover"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'block';
-              }}
-            />
-          ) : null}
-          <div className={`w-6 h-6 ${market.icon ? 'hidden' : 'block'}`}>
-            <svg className="w-full h-full text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-        </div>
-      </td>
-
       {/* Question Column */}
       <td className="px-6 py-4">
-        <div className="space-y-1">
-          <div className="font-semibold text-white text-sm leading-tight">
-            {market.question}
-          </div>
-          <div className="text-xs text-gray-400">
-            {market.category}
+        <div className="flex items-center gap-3">
+          <Image
+            src={market.icon}
+            alt={market.question}
+            width={32}
+            height={32}
+            className="rounded-full object-cover flex-shrink-0"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+          <div className="space-y-1 min-w-0 flex-1">
+            <div className="font-semibold text-white text-sm leading-tight">
+              {market.question}
+            </div>
+            <div className="text-xs text-gray-400">
+              {market.endDateIso ? `Closes ${market.endDateIso}` : formatDate(market.endDate)}
+            </div>
           </div>
         </div>
       </td>
@@ -830,7 +817,7 @@ function MarketCard({ market, onMarketClick, onMarketInsights, onMarketSelectFor
                 {market.icon ? (
                   <Image
                     src={market.icon}
-                    alt={market.category || 'Market'}
+                    alt={market.question}
                     width={48}
                     height={48}
                     className="object-cover"

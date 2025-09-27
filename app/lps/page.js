@@ -158,10 +158,10 @@ export default function LPsPage() {
 
       {/* Yield Graph */}
       <section className={styles.graphSection}>
-        <div className={styles.sectionHeader}>
+            <div className={styles.sectionHeader}>
           <h2>Yield Performance</h2>
           <p>{authenticated ? "Track your vault performance over the last 30 days" : "Example yield performance (connect wallet for personalized data)"}</p>
-        </div>
+            </div>
         <YieldGraph yieldData={displayYieldData?.chartData || []} />
       </section>
 
@@ -177,18 +177,18 @@ export default function LPsPage() {
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
           </button>
-
-          <button
+                  
+                  <button 
             className={`${styles.actionButton} ${styles.secondary} ${!authenticated ? styles.disabled : ''}`}
             onClick={authenticated ? () => setShowWithdrawModal(true) : () => router.push('/traders')}
             disabled={authenticated && (!displayVaultData?.userShares || displayVaultData.userShares === '0')}
-          >
+                  >
             <span>{authenticated ? 'Withdraw' : 'View Traders'}</span>
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M7 10l5 5 5-5z"/>
             </svg>
-          </button>
-        </div>
+                  </button>
+                </div>
 
         {!authenticated && (
           <div className={styles.connectPrompt}>
@@ -197,7 +197,7 @@ export default function LPsPage() {
             <p className={styles.connectPromptSubtext}>No wallet? No problem - explore our platform first!</p>
           </div>
         )}
-      </section>
+        </section>
 
       {/* Deposit Modal */}
       {showDepositModal && (

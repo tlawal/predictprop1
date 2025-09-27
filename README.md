@@ -592,14 +592,14 @@ The platform features real-time market data integration, interactive charting, c
    ```env
    # Polymarket API (Public - no API key required for read-only)
    NEXT_PUBLIC_POLYMARKET_API_KEY=your_polymarket_api_key
-
+   
    # Privy Authentication
    NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id_here
-
+   
    # Supabase (Optional - for production database)
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-
+   
    # Alchemy (Optional - for enhanced Web3 features)
    ALCHEMY_API_KEY=your_alchemy_api_key
    ```

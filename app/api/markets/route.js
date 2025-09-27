@@ -75,7 +75,8 @@ export async function GET(request) {
         status: event.closed ? 'closed' : 'open',
         source: 'polymarket',
         url: `https://polymarket.com/event/${event.slug || event.id}`,
-        featured: true
+        featured: true,
+        icon: event.iconOptimized?.imageUrlOptimized || event.icon || event.imageOptimized?.imageUrlOptimized
       }));
 
       const data = {
