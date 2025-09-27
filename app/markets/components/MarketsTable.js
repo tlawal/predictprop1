@@ -130,6 +130,10 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
             aValue = a.volume24hr || 0;
             bValue = b.volume24hr || 0;
             break;
+          case 'liquidity':
+            aValue = a.liquidity || 0;
+            bValue = b.liquidity || 0;
+            break;
           case 'volume1wk':
             aValue = a.volume1wk || 0;
             bValue = b.volume1wk || 0;
@@ -428,20 +432,12 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
         <table ref={tableRef} className="w-full">
             <thead className="bg-slate-700/50">
               <tr>
-                <th
-                  className={`px-6 py-4 text-left text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'question') ? 'bg-blue-900/50' : ''}`}
-                  onClick={(e) => handleSortClick('question', e)}
-                  data-tooltip-id="question-tooltip"
-                  data-tooltip-content="Sort by market question (alphabetical)"
-                >
-                  <div className="flex items-center">
-                    Question
-                    {getSortIndicator('question')}
-                  </div>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-1/2">
+                  Question
                 </th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300">Chart</th>
+                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300 w-20">Chart</th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'yesOdds') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-24 ${sortConfig.some(s => s.key === 'yesOdds') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('yesOdds', e)}
                   data-tooltip-id="yes-odds-tooltip"
                   data-tooltip-content="Sort by Yes odds (probability)"
@@ -452,7 +448,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                   </div>
                 </th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'noOdds') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-24 ${sortConfig.some(s => s.key === 'noOdds') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('noOdds', e)}
                   data-tooltip-id="no-odds-tooltip"
                   data-tooltip-content="Sort by No odds (probability)"
@@ -463,7 +459,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                   </div>
                 </th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'volume') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-24 ${sortConfig.some(s => s.key === 'volume') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('volume', e)}
                   data-tooltip-id="volume-tooltip"
                   data-tooltip-content="Sort by total trading volume"
@@ -474,7 +470,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                   </div>
                 </th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'volume24hr') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-24 ${sortConfig.some(s => s.key === 'volume24hr') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('volume24hr', e)}
                   data-tooltip-id="volume24h-tooltip"
                   data-tooltip-content="Sort by 24-hour trading volume"
@@ -484,9 +480,20 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                     {getSortIndicator('volume24hr')}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300">Edge</th>
                 <th
-                  className={`px-6 py-4 text-left text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'endDateIso') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-24 ${sortConfig.some(s => s.key === 'liquidity') ? 'bg-blue-900/50' : ''}`}
+                  onClick={(e) => handleSortClick('liquidity', e)}
+                  data-tooltip-id="liquidity-tooltip"
+                  data-tooltip-content="Sort by market liquidity"
+                >
+                  <div className="flex items-center justify-end">
+                    Liquidity
+                    {getSortIndicator('liquidity')}
+                  </div>
+                </th>
+                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300 w-16">Edge</th>
+                <th
+                  className={`px-6 py-4 text-left text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-24 ${sortConfig.some(s => s.key === 'endDateIso') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('endDateIso', e)}
                   data-tooltip-id="expires-tooltip"
                   data-tooltip-content="Sort by market expiration date"
@@ -496,7 +503,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                     {getSortIndicator('endDateIso')}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300">Actions</th>
+                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300 w-20">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
@@ -536,7 +543,9 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
       <Tooltip id="question-tooltip" place="top" />
       <Tooltip id="yes-odds-tooltip" place="top" />
       <Tooltip id="no-odds-tooltip" place="top" />
+      <Tooltip id="volume-tooltip" place="top" />
       <Tooltip id="volume24h-tooltip" place="top" />
+      <Tooltip id="liquidity-tooltip" place="top" />
       <Tooltip id="volume1w-tooltip" place="top" />
       <Tooltip id="expires-tooltip" place="top" />
 
@@ -596,13 +605,8 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
               e.target.style.display = 'none';
             }}
           />
-          <div className="space-y-1 min-w-0 flex-1">
-            <div className="font-semibold text-white text-sm leading-tight">
-              {market.question}
-            </div>
-            <div className="text-xs text-gray-400">
-              {market.endDateIso ? `Closes ${market.endDateIso}` : formatDate(market.endDate)}
-            </div>
+          <div className="font-semibold text-white text-sm leading-tight min-w-0 flex-1">
+            {market.question}
           </div>
         </div>
       </td>
@@ -649,6 +653,13 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
       <td className="px-6 py-4 text-right">
         <span className="text-sm text-gray-300">
           {formatVolume(market.volume24hr || 0)}
+        </span>
+      </td>
+
+      {/* Liquidity Column */}
+      <td className="px-6 py-4 text-right">
+        <span className={`text-sm ${market.liquidity < 10000 ? 'text-red-400 font-semibold' : 'text-gray-300'}`}>
+          ${(market.liquidity / 1000).toFixed(0)}k
         </span>
       </td>
 
@@ -892,6 +903,9 @@ function MarketCard({ market, onMarketClick, onMarketInsights, onMarketSelectFor
                 <div className="flex items-center gap-4 text-xs text-gray-400">
                   <span>Total: {formatVolume(market.volume || 0)}</span>
                   <span>24hr: {formatVolume(market.volume24hr || 0)}</span>
+                  <span className={market.liquidity < 10000 ? 'text-red-400 font-semibold' : ''}>
+                    Liq: ${(market.liquidity / 1000).toFixed(0)}k
+                  </span>
                 </div>
               </div>
             </div>
