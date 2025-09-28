@@ -432,12 +432,12 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
         <table ref={tableRef} className="w-full">
             <thead className="bg-slate-700/50">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-1/2">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-3/5">
                   Question
                 </th>
                 <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300 w-20">Chart</th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-24 ${sortConfig.some(s => s.key === 'yesOdds') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 ${sortConfig.some(s => s.key === 'yesOdds') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('yesOdds', e)}
                   data-tooltip-id="yes-odds-tooltip"
                   data-tooltip-content="Sort by Yes odds (probability)"
@@ -448,7 +448,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                   </div>
                 </th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-24 ${sortConfig.some(s => s.key === 'noOdds') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 ${sortConfig.some(s => s.key === 'noOdds') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('noOdds', e)}
                   data-tooltip-id="no-odds-tooltip"
                   data-tooltip-content="Sort by No odds (probability)"
@@ -459,7 +459,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                   </div>
                 </th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-24 ${sortConfig.some(s => s.key === 'volume') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 ${sortConfig.some(s => s.key === 'volume') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('volume', e)}
                   data-tooltip-id="volume-tooltip"
                   data-tooltip-content="Sort by total trading volume"
@@ -470,7 +470,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                   </div>
                 </th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-24 ${sortConfig.some(s => s.key === 'volume24hr') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 ${sortConfig.some(s => s.key === 'volume24hr') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('volume24hr', e)}
                   data-tooltip-id="volume24h-tooltip"
                   data-tooltip-content="Sort by 24-hour trading volume"
@@ -481,7 +481,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                   </div>
                 </th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-24 ${sortConfig.some(s => s.key === 'liquidity') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 ${sortConfig.some(s => s.key === 'liquidity') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('liquidity', e)}
                   data-tooltip-id="liquidity-tooltip"
                   data-tooltip-content="Sort by market liquidity"
