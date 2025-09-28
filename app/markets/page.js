@@ -22,41 +22,72 @@ function LiveMarketsMarquee({ trendingData }) {
   if (!trendingMarkets.length) return null;
 
   return (
-    <div className="relative w-full h-10 overflow-hidden bg-slate-800/50 backdrop-blur-sm rounded-lg border border-slate-700 mt-4">
-      <Marquee
-        velocity={25}
-        direction="ltr"
-        scatterRandomly={false}
-        resetAfterTries={200}
-        onInit={() => {}}
-        onFinish={() => {}}
-      >
-        {trendingMarkets.map((market, index) => {
+    <div className="relative w-full overflow-hidden bg-slate-800/50 backdrop-blur-sm rounded-lg border border-slate-700 mt-4">
+      {/* Horizontal marquee for sm+ screens */}
+      <div className="hidden sm:block h-10">
+        <Marquee
+          velocity={30}
+          direction="ltr"
+          scatterRandomly={false}
+          resetAfterTries={200}
+          pauseOnHover={true}
+          onInit={() => {}}
+          onFinish={() => {}}
+        >
+          {trendingMarkets.map((market, index) => {
+            const yesPrice = Math.round(market.yesOdds * 100);
+            const volume24hr = market.volume24hr || 0;
+            const volumeDisplay = volume24hr >= 1000 ? `${(volume24hr / 1000).toFixed(0)}k` : volume24hr.toFixed(0);
+
+            // Get a short version of the question (first 30 chars for mobile, 40 for desktop)
+            const shortQuestion = market.question.length > 30
+              ? market.question.substring(0, 27) + "..."
+              : market.question;
+
+            return (
+              <div key={market.id} className="flex items-center gap-2 sm:gap-3 px-4 whitespace-nowrap">
+                <span className="text-teal-400 font-semibold text-xs sm:text-sm">
+                  {shortQuestion}
+                </span>
+                <span className="text-gray-300 text-xs sm:text-sm">
+                  Yes {yesPrice}%
+                </span>
+                <span className="text-gray-400 text-xs">
+                  • Vol ${volumeDisplay}
+                </span>
+                <span className="mx-2 sm:mx-4 text-gray-600">•</span>
+              </div>
+            );
+          })}
+        </Marquee>
+      </div>
+
+      {/* Vertical stack fallback for mobile screens */}
+      <div className="block sm:hidden p-3 space-y-2 max-h-32 overflow-y-auto">
+        {trendingMarkets.slice(0, 5).map((market, index) => {
           const yesPrice = Math.round(market.yesOdds * 100);
           const volume24hr = market.volume24hr || 0;
           const volumeDisplay = volume24hr >= 1000 ? `${(volume24hr / 1000).toFixed(0)}k` : volume24hr.toFixed(0);
 
-          // Get a short version of the question (first 40 chars)
-          const shortQuestion = market.question.length > 40
-            ? market.question.substring(0, 37) + "..."
+          // Shorter text for mobile vertical layout
+          const shortQuestion = market.question.length > 25
+            ? market.question.substring(0, 22) + "..."
             : market.question;
 
           return (
-            <div key={market.id} className="flex items-center gap-3 px-6 whitespace-nowrap">
-              <span className="text-teal-400 font-semibold text-sm">
-                {shortQuestion}
-              </span>
-              <span className="text-gray-300 text-sm">
-                Yes {yesPrice}%
-              </span>
-              <span className="text-gray-400 text-xs">
-                • Vol ${volumeDisplay}
-              </span>
-              <span className="mx-4 text-gray-600">•</span>
+            <div key={market.id} className="flex items-center justify-between py-1 px-2 rounded bg-slate-700/30">
+              <div className="flex-1 min-w-0">
+                <div className="text-teal-400 font-semibold text-xs truncate">
+                  {shortQuestion}
+                </div>
+                <div className="text-gray-300 text-xs">
+                  Yes {yesPrice}% • Vol ${volumeDisplay}
+                </div>
+              </div>
             </div>
           );
         })}
-      </Marquee>
+      </div>
     </div>
   );
 }
