@@ -428,82 +428,83 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
           </div>
 
       {/* Markets Table - Desktop */}
-      <div className="hidden lg:block bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl overflow-hidden">
-        <table ref={tableRef} className="w-full">
+      <div className="hidden md:block bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table ref={tableRef} className="min-w-full">
             <thead className="bg-slate-700/50">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-3/5">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-2/5 md:w-1/2 lg:w-3/5">
                   Question
                 </th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300 w-20">Chart</th>
+                <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300 w-16 md:w-20">Chart</th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 ${sortConfig.some(s => s.key === 'yesOdds') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'yesOdds') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('yesOdds', e)}
                   data-tooltip-id="yes-odds-tooltip"
                   data-tooltip-content="Sort by Yes odds (probability)"
                 >
-                  <div className="flex items-center justify-end">
+                  <div className="flex items-center justify-center">
                     Yes Odds
                     {getSortIndicator('yesOdds')}
                   </div>
                 </th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 ${sortConfig.some(s => s.key === 'noOdds') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'noOdds') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('noOdds', e)}
                   data-tooltip-id="no-odds-tooltip"
                   data-tooltip-content="Sort by No odds (probability)"
                 >
-                  <div className="flex items-center justify-end">
+                  <div className="flex items-center justify-center">
                     No Odds
                     {getSortIndicator('noOdds')}
                   </div>
                 </th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 ${sortConfig.some(s => s.key === 'volume') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'volume') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('volume', e)}
                   data-tooltip-id="volume-tooltip"
                   data-tooltip-content="Sort by total trading volume"
                 >
-                  <div className="flex items-center justify-end">
+                  <div className="flex items-center justify-center">
                     Total Volume
                     {getSortIndicator('volume')}
                   </div>
                 </th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 ${sortConfig.some(s => s.key === 'volume24hr') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'volume24hr') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('volume24hr', e)}
                   data-tooltip-id="volume24h-tooltip"
                   data-tooltip-content="Sort by 24-hour trading volume"
                 >
-                  <div className="flex items-center justify-end">
+                  <div className="flex items-center justify-center">
                     24hr Volume
                     {getSortIndicator('volume24hr')}
                   </div>
                 </th>
                 <th
-                  className={`px-6 py-4 text-right text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 ${sortConfig.some(s => s.key === 'liquidity') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'liquidity') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('liquidity', e)}
                   data-tooltip-id="liquidity-tooltip"
                   data-tooltip-content="Sort by market liquidity"
                 >
-                  <div className="flex items-center justify-end">
+                  <div className="flex items-center justify-center">
                     Liquidity
                     {getSortIndicator('liquidity')}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300 w-16">Edge</th>
+                <th className="px-3 py-4 text-center text-sm font-semibold text-gray-300 w-12 md:w-16">Edge</th>
                 <th
-                  className={`px-6 py-4 text-left text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-24 ${sortConfig.some(s => s.key === 'endDateIso') ? 'bg-blue-900/50' : ''}`}
+                  className={`px-4 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 md:w-24 ${sortConfig.some(s => s.key === 'endDateIso') ? 'bg-blue-900/50' : ''}`}
                   onClick={(e) => handleSortClick('endDateIso', e)}
                   data-tooltip-id="expires-tooltip"
                   data-tooltip-content="Sort by market expiration date"
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center justify-center">
                     Expires
                     {getSortIndicator('endDateIso')}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300 w-20">Actions</th>
+                <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300 w-16 md:w-20">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
@@ -521,6 +522,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
               ))}
             </tbody>
           </table>
+        </div>
       </div>
 
       {/* Markets Cards - Mobile */}
