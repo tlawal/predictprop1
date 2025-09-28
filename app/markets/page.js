@@ -27,7 +27,7 @@ function LiveMarketsMarquee({ trendingData }) {
       <div className="h-10 w-full overflow-x-hidden">
         <Marquee
           velocity={20} // Slower on mobile for readability
-          direction="left"
+          direction="rtl" // Right-to-left scrolling for proper left-to-right text flow
           scatterRandomly={false}
           resetAfterTries={200}
           pauseOnHover={true}
@@ -39,9 +39,9 @@ function LiveMarketsMarquee({ trendingData }) {
             const volume24hr = market.volume24hr || 0;
             const volumeDisplay = volume24hr >= 1000 ? `${(volume24hr / 1000).toFixed(0)}k` : volume24hr.toFixed(0);
 
-            // Responsive text length: shorter on mobile for better scrolling
-            const shortQuestion = market.question.length > 25
-              ? market.question.substring(0, 22) + "..."
+            // Shorter text for mobile scrolling readability
+            const shortQuestion = market.question.length > 20
+              ? market.question.substring(0, 17) + "..."
               : market.question;
 
             return (
@@ -49,13 +49,13 @@ function LiveMarketsMarquee({ trendingData }) {
                 key={market.id}
                 className="inline-flex flex-row flex-nowrap items-center gap-4 sm:gap-6 px-4 whitespace-nowrap"
               >
-                <span className="text-teal-400 font-semibold text-xs sm:text-sm">
+                <span className="text-teal-400 font-semibold text-xs sm:text-sm whitespace-nowrap">
                   {shortQuestion}
                 </span>
-                <span className="text-gray-300 text-xs sm:text-sm">
+                <span className="text-gray-300 text-xs sm:text-sm whitespace-nowrap">
                   Yes {yesPrice}%
                 </span>
-                <span className="text-gray-400 text-xs">
+                <span className="text-gray-400 text-xs whitespace-nowrap">
                   • Vol ${volumeDisplay}
                 </span>
                 <span className="mx-2 sm:mx-4 text-gray-600">•</span>
