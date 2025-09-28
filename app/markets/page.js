@@ -23,10 +23,10 @@ function LiveMarketsMarquee({ trendingData }) {
 
   return (
     <div className="relative w-full overflow-x-hidden bg-slate-800/50 backdrop-blur-sm rounded-lg border border-slate-700 mt-4">
-      {/* Continuous horizontal marquee for all screens */}
-      <div className="h-10 w-full overflow-x-hidden">
+      {/* Continuous horizontal marquee for all screens - single line only */}
+      <div className="h-6 w-full overflow-x-hidden flex items-center">
         <Marquee
-          velocity={20} // Slower on mobile for readability
+          velocity={15} // Even slower for mobile readability
           direction="rtl" // Right-to-left scrolling for proper left-to-right text flow
           scatterRandomly={false}
           resetAfterTries={200}
@@ -39,26 +39,26 @@ function LiveMarketsMarquee({ trendingData }) {
             const volume24hr = market.volume24hr || 0;
             const volumeDisplay = volume24hr >= 1000 ? `${(volume24hr / 1000).toFixed(0)}k` : volume24hr.toFixed(0);
 
-            // Shorter text for mobile scrolling readability
-            const shortQuestion = market.question.length > 20
-              ? market.question.substring(0, 17) + "..."
+            // Very short text for single-line mobile scrolling
+            const shortQuestion = market.question.length > 15
+              ? market.question.substring(0, 12) + "..."
               : market.question;
 
             return (
               <div
                 key={market.id}
-                className="inline-flex flex-row flex-nowrap items-center gap-4 sm:gap-6 px-4 whitespace-nowrap"
+                className="inline-flex flex-row flex-nowrap items-center gap-2 sm:gap-4 px-3 whitespace-nowrap"
               >
-                <span className="text-teal-400 font-semibold text-xs sm:text-sm whitespace-nowrap">
+                <span className="text-teal-400 font-semibold text-xs whitespace-nowrap">
                   {shortQuestion}
                 </span>
-                <span className="text-gray-300 text-xs sm:text-sm whitespace-nowrap">
-                  Yes {yesPrice}%
+                <span className="text-gray-300 text-xs whitespace-nowrap">
+                  {yesPrice}%
                 </span>
                 <span className="text-gray-400 text-xs whitespace-nowrap">
-                  • Vol ${volumeDisplay}
+                  ${volumeDisplay}
                 </span>
-                <span className="mx-2 sm:mx-4 text-gray-600">•</span>
+                <span className="mx-1 sm:mx-2 text-gray-600">•</span>
               </div>
             );
           })}
