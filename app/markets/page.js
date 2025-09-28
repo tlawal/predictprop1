@@ -39,10 +39,8 @@ function LiveMarketsMarquee({ trendingData }) {
             const volume24hr = market.volume24hr || 0;
             const volumeDisplay = volume24hr >= 1000 ? `${(volume24hr / 1000).toFixed(0)}k` : volume24hr.toFixed(0);
 
-            // Very short text for single-line mobile scrolling
-            const shortQuestion = market.question.length > 15
-              ? market.question.substring(0, 12) + "..."
-              : market.question;
+            // Show full question text for scrolling
+            const fullQuestion = market.question;
 
             return (
               <div
@@ -50,7 +48,7 @@ function LiveMarketsMarquee({ trendingData }) {
                 className="inline-flex flex-row flex-nowrap items-center gap-2 sm:gap-4 px-3 whitespace-nowrap"
               >
                 <span className="text-teal-400 font-semibold text-xs whitespace-nowrap">
-                  {shortQuestion}
+                  {fullQuestion}
                 </span>
                 <span className="text-gray-300 text-xs whitespace-nowrap">
                   {yesPrice}%
