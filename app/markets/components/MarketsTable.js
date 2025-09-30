@@ -5,7 +5,7 @@ import Image from 'next/image';
 import useSWR from 'swr';
 import { Disclosure } from '@headlessui/react';
 import { Tooltip } from 'react-tooltip';
-import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { ChevronUpIcon, ChevronDownIcon, StarIcon } from '@heroicons/react/24/outline';
 import dynamic from 'next/dynamic';
 
 // Dynamic import for Chart.js components to avoid SSR issues
@@ -19,6 +19,59 @@ import polymarketWebSocket from '../../../lib/websocket';
 
 // Stable empty array reference for Zustand selectors
 const EMPTY_ARRAY = [];
+
+// Custom hook for managing watch state
+const useWatchState = () => {
+  const [watchedMarkets, setWatchedMarkets] = useState(new Set());
+
+  // Load watched markets on mount
+  useEffect(() => {
+    const loadWatchedMarkets = () => {
+      try {
+        // Load from localStorage
+        const localWatches = localStorage.getItem('watchedMarkets');
+        if (localWatches) {
+          const marketIds = new Set(JSON.parse(localWatches));
+          setWatchedMarkets(marketIds);
+
+          // Update websocket with watched markets
+          marketIds.forEach(marketId => {
+            polymarketWebSocket.addWatchedMarket(marketId);
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load watched markets:', error);
+      }
+    };
+
+    loadWatchedMarkets();
+  }, []);
+
+  const toggleWatch = useCallback(async (marketId, question) => {
+    const isWatching = watchedMarkets.has(marketId);
+
+    try {
+      // Use localStorage only
+      const newWatchedMarkets = new Set(watchedMarkets);
+      if (isWatching) {
+        newWatchedMarkets.delete(marketId);
+        polymarketWebSocket.removeWatchedMarket(marketId);
+      } else {
+        newWatchedMarkets.add(marketId);
+        polymarketWebSocket.addWatchedMarket(marketId);
+      }
+      setWatchedMarkets(newWatchedMarkets);
+
+      // Save to localStorage
+      const marketIds = Array.from(newWatchedMarkets);
+      localStorage.setItem('watchedMarkets', JSON.stringify(marketIds));
+    } catch (error) {
+      console.error('Failed to toggle watch:', error);
+    }
+  }, [watchedMarkets]);
+
+  return { watchedMarkets, toggleWatch };
+};
 
 // Custom hook to get price history without selector issues
 const usePriceHistory = (tokenId) => {
@@ -90,6 +143,9 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
 
   // Get price history from Zustand store
   const getPriceHistory = useOddsStore(state => state.getPriceHistory);
+
+  // Watch state management
+  const { watchedMarkets, toggleWatch } = useWatchState();
 
   // Use prop markets or fallback to empty array
   const markets = propMarkets || [];
@@ -518,6 +574,8 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                   formatDate={formatDate}
                   formatVolume={formatVolume}
                   sortConfig={sortConfig}
+                  isWatching={watchedMarkets.has(market.id)}
+                  onToggleWatch={toggleWatch}
                 />
               ))}
             </tbody>
@@ -564,7 +622,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
 }
 
 // Enhanced market row component for desktop
-function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, formatDate, formatVolume, sortConfig }) {
+function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, formatDate, formatVolume, sortConfig, isWatching, onToggleWatch }) {
   // Get orderbook data for tooltip
   const { data: orderbookData } = useSWR(
     `/api/orderbook?tokenId=${market.id}`,
@@ -691,31 +749,16 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
           <button
             onClick={(e) => {
               e.stopPropagation();
-              // Watch market functionality
-              fetch('/api/watch', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  marketId: market.id,
-                  question: market.question,
-                  currentYesProb: market.yesOdds * 100
-                })
-              }).then(() => {
-                // Simple notification
-                const toast = document.createElement('div');
-                toast.className = 'fixed top-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
-                toast.textContent = 'Added to watchlist!';
-                document.body.appendChild(toast);
-                setTimeout(() => document.body.removeChild(toast), 2000);
-              });
+              onToggleWatch(market.id, market.question);
             }}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
-            title="Watch Market"
+            className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+              isWatching
+                ? 'bg-yellow-600 hover:bg-yellow-700 text-yellow-100'
+                : 'bg-slate-700 hover:bg-slate-600 text-gray-300'
+            }`}
+            title={isWatching ? 'Unwatch Market' : 'Watch Market'}
           >
-            <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
+            <StarIcon className={`w-4 h-4 ${isWatching ? 'fill-current' : ''}`} />
           </button>
 
           <button

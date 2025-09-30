@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Dialog, Transition } from '@headlessui/react';
+import toast, { Toaster } from 'react-hot-toast';
 import Fuse from 'fuse.js';
 import Image from 'next/image';
 import Marquee from 'react-marquee-slider';
@@ -79,6 +80,18 @@ function MarketsPageContent() {
 
   // Advanced filters state
   const [filters, setFilters] = useState(() => {
+    // Check for categories parameter first (comma-separated format)
+    const categoriesParam = searchParams.get('categories');
+    if (categoriesParam) {
+      const categories = categoriesParam.split(',').map(cat => cat.trim()).filter(Boolean);
+      return {
+        categories,
+        status: ['open'], // Default to open markets
+        time: []
+      };
+    }
+
+    // Fallback to filters parameter (JSON format)
     const filtersParam = searchParams.get('filters');
     if (filtersParam) {
       try {
@@ -87,6 +100,7 @@ function MarketsPageContent() {
         console.warn('Invalid filters parameter:', e);
       }
     }
+
     return {
       categories: [],
       status: ['open'], // Default to open markets
@@ -103,10 +117,18 @@ function MarketsPageContent() {
     // Update URL with filters
     const params = new URLSearchParams(searchParams);
 
-    if (newFilters.categories.length > 0 || newFilters.status.length > 0 || newFilters.time.length > 0) {
-      params.set('filters', encodeURIComponent(JSON.stringify(newFilters)));
-    } else {
+    // Use simple categories parameter if only categories are selected
+    if (newFilters.categories.length > 0 && newFilters.status.length === 1 && newFilters.status[0] === 'open' && newFilters.time.length === 0) {
+      params.set('categories', newFilters.categories.join(','));
       params.delete('filters');
+    } else if (newFilters.categories.length > 0 || newFilters.status.length > 0 || newFilters.time.length > 0) {
+      // Use JSON format for complex filters
+      params.set('filters', encodeURIComponent(JSON.stringify(newFilters)));
+      params.delete('categories');
+    } else {
+      // No filters
+      params.delete('filters');
+      params.delete('categories');
     }
 
     // Preserve other params
@@ -120,7 +142,26 @@ function MarketsPageContent() {
   const filterMarkets = (markets) => {
     if (!markets) return [];
 
-    return markets.filter(market => {
+    let filtered = markets;
+
+    // Apply search filter using Fuse.js fuzzy search
+    if (debouncedSearch && debouncedSearch.trim()) {
+      const fuse = new Fuse(filtered, {
+        keys: [
+          { name: 'question', weight: 0.7 },
+          { name: 'description', weight: 0.2 },
+          { name: 'tags', weight: 0.1 }
+        ],
+        threshold: 0.3, // Lower threshold = stricter matching
+        includeScore: true,
+        shouldSort: true,
+      });
+
+      const searchResults = fuse.search(debouncedSearch.trim());
+      filtered = searchResults.map(result => result.item);
+    }
+
+    return filtered.filter(market => {
       // Category filter
       if (filters.categories.length > 0) {
         const marketCategories = [
@@ -184,11 +225,22 @@ function MarketsPageContent() {
     }
   );
 
+  // Debounced search
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // Apply client-side filtering
   const filteredMarkets = useMemo(() => {
     if (!allMarketsData?.markets) return [];
     return filterMarkets(allMarketsData.markets);
-  }, [allMarketsData, filters]);
+  }, [allMarketsData, filters, debouncedSearch]);
 
   // Fetch trending markets for the trending section
   const { data: trendingData } = useSWR(
@@ -213,18 +265,6 @@ function MarketsPageContent() {
       dedupingInterval: 300000, // 5 minutes
     }
   );
-
-  // Debounced search
-  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
 
   const handleMarketClick = (market) => {
     setSelectedMarket(market);
@@ -454,6 +494,19 @@ function MarketsPageContent() {
           onClose={handleCloseModal}
         />
       )}
+
+      {/* Toast Notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#1f2937',
+            color: '#f3f4f6',
+            border: '1px solid #374151'
+          }
+        }}
+      />
     </div>
   );
 }
