@@ -7,6 +7,8 @@ import { Disclosure } from '@headlessui/react';
 import { Tooltip } from 'react-tooltip';
 import { ChevronUpIcon, ChevronDownIcon, StarIcon } from '@heroicons/react/24/outline';
 import dynamic from 'next/dynamic';
+import { FixedSizeList as List } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 
 // Dynamic import for Chart.js components to avoid SSR issues
 const ProbabilitySparkline = dynamic(() => import('./ProbabilitySparkline'), {
@@ -137,7 +139,7 @@ const CountdownRenderer = ({ days, hours, minutes, seconds, completed }) => {
   }
 };
 
-export default function MarketsTable({ markets: propMarkets, searchQuery, sortOrder, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, tableRef, isLoading: propIsLoading, onSearchChange, onFiltersToggle, filters, searchInputRef }) {
+export default function MarketsTable({ markets: propMarkets, searchQuery, sortOrder, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, tableRef, isLoading: propIsLoading, onSearchChange, searchInputRef, onToggleFilters }) {
 
   const [wsPriceChanges, setWsPriceChanges] = useState(new Map()); // Track WS price changes
 
@@ -434,31 +436,25 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
               onChange={(e) => onSearchChange?.(e.target.value)}
               className="w-full px-4 py-3 text-base bg-slate-800/50 backdrop-blur-sm border border-slate-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
+              {onToggleFilters && (
+                <button
+                  onClick={onToggleFilters}
+                  className="p-1 rounded-md hover:bg-slate-600/30 transition-colors"
+                  title="Toggle Filters"
+                >
+                  <svg className="w-5 h-5 text-gray-400 hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Filters Button */}
-        {onFiltersToggle && (
-          <button
-            onClick={onFiltersToggle}
-            className="flex items-center gap-2 px-4 py-3 bg-slate-800/50 backdrop-blur-sm border border-slate-600 rounded-xl text-white hover:bg-slate-700/50 transition-colors whitespace-nowrap"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-            </svg>
-            Filters
-            {filters && (filters.categories?.length > 0 || filters.status?.length > 0 || filters.time?.length > 0) && (
-              <span className="bg-teal-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1">
-                {(filters.categories?.length || 0) + (filters.status?.length || 0) + (filters.time?.length || 0)}
-              </span>
-            )}
-          </button>
-        )}
       </div>
 
       {/* Markets Count */}
@@ -485,118 +481,147 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
 
       {/* Markets Table - Desktop */}
       <div className="hidden md:block bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl overflow-hidden">
+        {/* Fixed Header */}
+        <div className="bg-slate-700/50">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-2/5 md:w-1/2 lg:w-3/5">
+                    Question
+                  </th>
+                  <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300 w-16 md:w-20">Chart</th>
+                  <th
+                    className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'yesOdds') ? 'bg-blue-900/50' : ''}`}
+                    onClick={(e) => handleSortClick('yesOdds', e)}
+                    data-tooltip-id="yes-odds-tooltip"
+                    data-tooltip-content="Sort by Yes odds (probability)"
+                  >
+                    <div className="flex items-center justify-center">
+                      Yes Odds
+                      {getSortIndicator('yesOdds')}
+                    </div>
+                  </th>
+                  <th
+                    className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'noOdds') ? 'bg-blue-900/50' : ''}`}
+                    onClick={(e) => handleSortClick('noOdds', e)}
+                    data-tooltip-id="no-odds-tooltip"
+                    data-tooltip-content="Sort by No odds (probability)"
+                  >
+                    <div className="flex items-center justify-center">
+                      No Odds
+                      {getSortIndicator('noOdds')}
+                    </div>
+                  </th>
+                  <th
+                    className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'volume') ? 'bg-blue-900/50' : ''}`}
+                    onClick={(e) => handleSortClick('volume', e)}
+                    data-tooltip-id="volume-tooltip"
+                    data-tooltip-content="Sort by total trading volume"
+                  >
+                    <div className="flex items-center justify-center">
+                      Total Volume
+                      {getSortIndicator('volume')}
+                    </div>
+                  </th>
+                  <th
+                    className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'volume24hr') ? 'bg-blue-900/50' : ''}`}
+                    onClick={(e) => handleSortClick('volume24hr', e)}
+                    data-tooltip-id="volume24h-tooltip"
+                    data-tooltip-content="Sort by 24-hour trading volume"
+                  >
+                    <div className="flex items-center justify-center">
+                      24hr Volume
+                      {getSortIndicator('volume24hr')}
+                    </div>
+                  </th>
+                  <th
+                    className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'liquidity') ? 'bg-blue-900/50' : ''}`}
+                    onClick={(e) => handleSortClick('liquidity', e)}
+                    data-tooltip-id="liquidity-tooltip"
+                    data-tooltip-content="Sort by market liquidity"
+                  >
+                    <div className="flex items-center justify-center">
+                      Liquidity
+                      {getSortIndicator('liquidity')}
+                    </div>
+                  </th>
+                  <th className="px-3 py-4 text-center text-sm font-semibold text-gray-300 w-12 md:w-16">Edge</th>
+                  <th
+                    className={`px-4 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 md:w-24 ${sortConfig.some(s => s.key === 'endDateIso') ? 'bg-blue-900/50' : ''}`}
+                    onClick={(e) => handleSortClick('endDateIso', e)}
+                    data-tooltip-id="expires-tooltip"
+                    data-tooltip-content="Sort by market expiration date"
+                  >
+                    <div className="flex items-center justify-center">
+                      Expires
+                      {getSortIndicator('endDateIso')}
+                    </div>
+                  </th>
+                  <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300 w-16 md:w-20">Actions</th>
+                </tr>
+              </thead>
+            </table>
+          </div>
+        </div>
+
+        {/* Virtualized Table Body */}
         <div className="overflow-x-auto">
-          <table ref={tableRef} className="min-w-full">
-            <thead className="bg-slate-700/50">
-              <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-2/5 md:w-1/2 lg:w-3/5">
-                  Question
-                </th>
-                <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300 w-16 md:w-20">Chart</th>
-                <th
-                  className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'yesOdds') ? 'bg-blue-900/50' : ''}`}
-                  onClick={(e) => handleSortClick('yesOdds', e)}
-                  data-tooltip-id="yes-odds-tooltip"
-                  data-tooltip-content="Sort by Yes odds (probability)"
-                >
-                  <div className="flex items-center justify-center">
-                    Yes Odds
-                    {getSortIndicator('yesOdds')}
-                  </div>
-                </th>
-                <th
-                  className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'noOdds') ? 'bg-blue-900/50' : ''}`}
-                  onClick={(e) => handleSortClick('noOdds', e)}
-                  data-tooltip-id="no-odds-tooltip"
-                  data-tooltip-content="Sort by No odds (probability)"
-                >
-                  <div className="flex items-center justify-center">
-                    No Odds
-                    {getSortIndicator('noOdds')}
-                  </div>
-                </th>
-                <th
-                  className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'volume') ? 'bg-blue-900/50' : ''}`}
-                  onClick={(e) => handleSortClick('volume', e)}
-                  data-tooltip-id="volume-tooltip"
-                  data-tooltip-content="Sort by total trading volume"
-                >
-                  <div className="flex items-center justify-center">
-                    Total Volume
-                    {getSortIndicator('volume')}
-                  </div>
-                </th>
-                <th
-                  className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'volume24hr') ? 'bg-blue-900/50' : ''}`}
-                  onClick={(e) => handleSortClick('volume24hr', e)}
-                  data-tooltip-id="volume24h-tooltip"
-                  data-tooltip-content="Sort by 24-hour trading volume"
-                >
-                  <div className="flex items-center justify-center">
-                    24hr Volume
-                    {getSortIndicator('volume24hr')}
-                  </div>
-                </th>
-                <th
-                  className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'liquidity') ? 'bg-blue-900/50' : ''}`}
-                  onClick={(e) => handleSortClick('liquidity', e)}
-                  data-tooltip-id="liquidity-tooltip"
-                  data-tooltip-content="Sort by market liquidity"
-                >
-                  <div className="flex items-center justify-center">
-                    Liquidity
-                    {getSortIndicator('liquidity')}
-                  </div>
-                </th>
-                <th className="px-3 py-4 text-center text-sm font-semibold text-gray-300 w-12 md:w-16">Edge</th>
-                <th
-                  className={`px-4 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 md:w-24 ${sortConfig.some(s => s.key === 'endDateIso') ? 'bg-blue-900/50' : ''}`}
-                  onClick={(e) => handleSortClick('endDateIso', e)}
-                  data-tooltip-id="expires-tooltip"
-                  data-tooltip-content="Sort by market expiration date"
-                >
-                  <div className="flex items-center justify-center">
-                    Expires
-                    {getSortIndicator('endDateIso')}
-                  </div>
-                </th>
-                <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300 w-16 md:w-20">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700">
-              {sortedMarkets.map((market, index) => (
-                <MarketRow
-                  key={market.id || index}
-                  market={market}
-                  onMarketClick={onMarketClick}
-                  onMarketInsights={onMarketInsights}
-                  onMarketSelectForOrderbook={onMarketSelectForOrderbook}
-                  formatDate={formatDate}
-                  formatVolume={formatVolume}
-                  sortConfig={sortConfig}
-                  isWatching={watchedMarkets.has(market.id)}
-                  onToggleWatch={toggleWatch}
-                />
-              ))}
-            </tbody>
-          </table>
+          <AutoSizer disableHeight>
+            {({ width }) => (
+              <table className="min-w-full">
+                <tbody className="divide-y divide-slate-700">
+                  <List
+                    height={Math.min(sortedMarkets.length * 50, 600)} // Max height of 600px, 50px per row
+                    itemCount={sortedMarkets.length}
+                    itemSize={50} // Height per row
+                    overscanCount={10} // Render 10 extra items outside visible area
+                    width={width}
+                    itemData={{
+                      markets: sortedMarkets,
+                      onMarketClick,
+                      onMarketInsights,
+                      onMarketSelectForOrderbook,
+                      formatDate,
+                      formatVolume,
+                      sortConfig,
+                      watchedMarkets,
+                      toggleWatch
+                    }}
+                  >
+                    {VirtualizedMarketRow}
+                  </List>
+                </tbody>
+              </table>
+            )}
+          </AutoSizer>
         </div>
       </div>
 
       {/* Markets Cards - Mobile */}
-      <div className="lg:hidden space-y-4">
-        {sortedMarkets.map((market, index) => (
-          <MarketCard
-            key={market.id || index}
-            market={market}
-            onMarketClick={onMarketClick}
-            onMarketInsights={onMarketInsights}
-            onMarketSelectForOrderbook={onMarketSelectForOrderbook}
-            formatDate={formatDate}
-            formatVolume={formatVolume}
-            wsPriceChanges={wsPriceChanges}
-          />
-        ))}
+      <div className="lg:hidden">
+        <AutoSizer disableHeight>
+          {({ width }) => (
+            <List
+              height={Math.min(sortedMarkets.length * 120, 600)} // Max height of 600px, ~120px per card
+              itemCount={sortedMarkets.length}
+              itemSize={120} // Height per card
+              overscanCount={5} // Render 5 extra cards outside visible area
+              width={width}
+              itemData={{
+                markets: sortedMarkets,
+                onMarketClick,
+                onMarketInsights,
+                onMarketSelectForOrderbook,
+                formatDate,
+                formatVolume,
+                wsPriceChanges
+              }}
+            >
+              {VirtualizedMarketCard}
+            </List>
+          )}
+        </AutoSizer>
       </div>
 
       {/* Tooltips */}
@@ -620,6 +645,195 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
     </div>
   );
 }
+
+// Virtualized market row component for react-window
+const VirtualizedMarketRow = React.memo(({ index, style, data }) => {
+  const {
+    markets,
+    onMarketClick,
+    onMarketInsights,
+    onMarketSelectForOrderbook,
+    formatDate,
+    formatVolume,
+    sortConfig,
+    watchedMarkets,
+    toggleWatch
+  } = data;
+
+  const market = markets[index];
+  const isWatching = watchedMarkets.has(market.id);
+
+  // Get orderbook data for tooltip
+  const { data: orderbookData } = useSWR(
+    `/api/orderbook?tokenId=${market.id}`,
+    (url) => fetch(url).then(res => res.json()),
+    {
+      refreshInterval: 60000, // 1 minute
+      revalidateOnFocus: false,
+    }
+  );
+
+  // Calculate AI hint - potential mispricing detection
+  const priceHistory = usePriceHistory(market.id || market.tokenId);
+  const hasHighEdge = priceHistory.length > 1 &&
+    market.volume1wk < 5000 &&
+    Math.abs(priceHistory[priceHistory.length - 1].yesPrice - priceHistory[priceHistory.length - 2].yesPrice) > 0.05;
+
+  // Create orderbook tooltip content
+  const getOrderbookTooltip = () => {
+    if (!orderbookData) return "Loading orderbook data...";
+
+    const { summary } = orderbookData;
+    return `Bid: $${summary.bestBid?.toFixed(4) || 'N/A'} Ask: $${summary.bestAsk?.toFixed(4) || 'N/A'} Spread: ${orderbookData.spread?.percentage?.toFixed(2) || 'N/A'}%`;
+  };
+
+  return (
+    <tr
+      className="hover:bg-slate-700/30 transition-all duration-300 cursor-pointer"
+      style={{ height: '50px' }}
+      onClick={() => onMarketClick(market)}
+    >
+            {/* Question Column */}
+            <td className="px-6 py-4">
+              <div className="flex items-center gap-3">
+                <Image
+                  src={market.icon}
+                  alt={market.question}
+                  width={32}
+                  height={32}
+                  className="rounded-full object-cover flex-shrink-0"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+                <div className="font-semibold text-white text-sm leading-tight min-w-0 flex-1">
+                  {market.question}
+                </div>
+              </div>
+            </td>
+
+            {/* Chart Column */}
+            <td className="px-6 py-4 text-center">
+              <ProbabilitySparkline tokenId={market.id} yesPrice={market.yesOdds} />
+            </td>
+
+            {/* Yes Odds Column */}
+            <td className="px-6 py-4 text-right">
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-300 ease-in-out ${
+                  market.yesOdds > 0.5 ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-300'
+                } ${market.lastUpdate ? 'animate-pulse' : ''}`}
+                data-tooltip-id={`orderbook-${market.id}-tooltip`}
+                data-tooltip-content={getOrderbookTooltip()}
+              >
+                {(market.yesOdds * 100).toFixed(0)}%
+              </span>
+            </td>
+
+            {/* No Odds Column */}
+            <td className="px-6 py-4 text-right">
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-300 ease-in-out ${
+                  market.noOdds > 0.5 ? 'bg-red-900 text-red-300' : 'bg-gray-700 text-gray-300'
+                } ${market.lastUpdate ? 'animate-pulse' : ''}`}
+                data-tooltip-id={`orderbook-${market.id}-tooltip`}
+                data-tooltip-content={getOrderbookTooltip()}
+              >
+                {(market.noOdds * 100).toFixed(0)}%
+              </span>
+            </td>
+
+            {/* Total Volume Column */}
+            <td className="px-6 py-4 text-right">
+              <span className="text-sm text-gray-300">
+                {formatVolume(market.volume || 0)}
+              </span>
+            </td>
+
+            {/* 24hr Volume Column */}
+            <td className="px-6 py-4 text-right">
+              <span className="text-sm text-gray-300">
+                {formatVolume(market.volume24hr || 0)}
+              </span>
+            </td>
+
+            {/* Liquidity Column */}
+            <td className="px-6 py-4 text-right">
+              <span className={`text-sm ${market.liquidity < 10000 ? 'text-red-400 font-semibold' : 'text-gray-300'}`}>
+                ${(market.liquidity / 1000).toFixed(0)}k
+              </span>
+            </td>
+
+            {/* AI Hint Column */}
+            <td className="px-6 py-4 text-center">
+              {hasHighEdge && (
+                <span
+                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-900 text-yellow-200 border border-yellow-600"
+                  data-tooltip-id={`ai-hint-${market.id}-tooltip`}
+                  data-tooltip-content="Potential mispricing detected: High price movement with low volume. Consider checking for edge."
+                >
+                  🤖 Edge
+                </span>
+              )}
+            </td>
+
+            {/* Expires Column */}
+            <td className="px-6 py-4 text-left">
+              <span className="text-sm text-gray-300">
+                {market.endDateIso ? `Closes ${market.endDateIso}` : formatDate(market.endDate)}
+              </span>
+            </td>
+
+            {/* Actions Column */}
+            <td className="px-6 py-4 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleWatch(market.id, market.question);
+                  }}
+                  className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+                    isWatching
+                      ? 'bg-yellow-600 hover:bg-yellow-700 text-yellow-100'
+                      : 'bg-slate-700 hover:bg-slate-600 text-gray-300'
+                  }`}
+                  title={isWatching ? 'Unwatch Market' : 'Watch Market'}
+                >
+                  <StarIcon className={`w-4 h-4 ${isWatching ? 'fill-current' : ''}`} />
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarketInsights(market);
+                  }}
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+                  title="View Insights"
+                >
+                  <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </button>
+
+                <a
+                  href={market.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                  title="View on Polymarket"
+                >
+                  <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              </div>
+            </td>
+          </tr>
+  );
+});
+
+VirtualizedMarketRow.displayName = 'VirtualizedMarketRow';
 
 // Enhanced market row component for desktop
 function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, formatDate, formatVolume, sortConfig, isWatching, onToggleWatch }) {
@@ -791,6 +1005,245 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
     </tr>
   );
 }
+
+// Virtualized mobile card component
+const VirtualizedMarketCard = React.memo(({ index, style, data }) => {
+  const {
+    markets,
+    onMarketClick,
+    onMarketInsights,
+    onMarketSelectForOrderbook,
+    formatDate,
+    formatVolume,
+    wsPriceChanges
+  } = data;
+
+  const market = markets[index];
+
+  return (
+    <div style={style} className="px-1">
+      <Disclosure>
+        {({ open }) => (
+          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-lg overflow-hidden">
+            {/* Action Buttons - Outside Disclosure */}
+            <div className="flex items-center justify-end gap-2 p-4 pb-0">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Watch market functionality
+                  fetch('/api/watch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      marketId: market.id,
+                      question: market.question,
+                      currentYesProb: market.yesOdds * 100
+                    })
+                  }).then(() => {
+                    // Simple notification
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed top-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
+                    toast.textContent = 'Added to watchlist!';
+                    document.body.appendChild(toast);
+                    setTimeout(() => document.body.removeChild(toast), 2000);
+                  });
+                }}
+                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+                title="Watch Market"
+              >
+                <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarketInsights(market);
+                }}
+                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+                title="View Insights"
+              >
+                <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarketClick(market);
+                }}
+                className="px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium rounded transition-colors"
+              >
+                Trade
+              </button>
+
+              <a
+                href={market.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            </div>
+
+            {/* Main Card - Click to Expand */}
+            <Disclosure.Button
+              className="w-full p-4 pt-2 text-left hover:bg-slate-800/70 transition-all duration-200"
+              onClick={(e) => {
+                // Only expand, don't trigger market click
+                e.stopPropagation();
+              }}
+            >
+              <div className="flex items-start gap-4">
+                {/* Icon */}
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-700 flex items-center justify-center flex-shrink-0">
+                  {market.icon ? (
+                    <Image
+                      src={market.icon}
+                      alt={market.question}
+                      width={48}
+                      height={48}
+                      className="object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                  ) : null}
+                  <div className={`w-8 h-8 ${market.icon ? 'hidden' : 'block'}`}>
+                    <svg className="w-full h-full text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold text-white text-sm leading-tight flex-1 mr-2">
+                      {market.question}
+                    </h3>
+                    {/* Expand Icon */}
+                    <svg
+                      className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+
+                  {/* Badges Row */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <HighEdgeChip market={market} />
+                    <span className="text-xs text-gray-400">{market.category}</span>
+                  </div>
+
+                  {/* Odds and Chart Row */}
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400">YES</span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-all duration-300 ease-in-out ${
+                        market.yesOdds > 0.5 ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-300'
+                      } ${market.lastUpdate ? 'animate-pulse' : ''}`}>
+                        {(market.yesOdds * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400">NO</span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-all duration-300 ease-in-out ${
+                        market.noOdds > 0.5 ? 'bg-red-900 text-red-300' : 'bg-gray-700 text-gray-300'
+                      } ${market.lastUpdate ? 'animate-pulse' : ''}`}>
+                        {(market.noOdds * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    {/* Mini Chart */}
+                    <div className="flex-1 max-w-[80px]">
+                      <ProbabilitySparkline tokenId={market.id} yesPrice={market.yesOdds} />
+                    </div>
+                  </div>
+
+                  {/* Volume Row */}
+                  <div className="flex items-center gap-4 text-xs text-gray-400">
+                    <span>Total: {formatVolume(market.volume || 0)}</span>
+                    <span>24hr: {formatVolume(market.volume24hr || 0)}</span>
+                    <span className={market.liquidity < 10000 ? 'text-red-400 font-semibold' : ''}>
+                      Liq: ${(market.liquidity / 1000).toFixed(0)}k
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Disclosure.Button>
+
+            {/* Expandable Details */}
+            <Disclosure.Panel className="border-t border-slate-700 bg-slate-800/30">
+              <div className="p-4 space-y-4">
+                {/* Countdown Timer */}
+                {market.endDate && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-400">Time Remaining:</span>
+                    <Countdown
+                      date={new Date(market.endDate)}
+                      renderer={CountdownRenderer}
+                    />
+                  </div>
+                )}
+
+                {/* Detailed Volumes */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-white">
+                      {formatVolume(market.volume || 0)}
+                    </div>
+                    <div className="text-xs text-gray-400">Total Volume</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-white">
+                      {formatVolume(market.volume24hr || 0)}
+                    </div>
+                    <div className="text-xs text-gray-400">24hr Volume</div>
+                  </div>
+                </div>
+
+                {/* Market Details */}
+                <div className="text-sm text-gray-300">
+                  <div className="flex justify-between mb-2">
+                    <span>Market ID:</span>
+                    <span className="font-mono text-xs">{market.id.slice(0, 8)}...</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span>Created:</span>
+                    <span>{market.createdAt ? new Date(market.createdAt).toLocaleDateString() : 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Closes:</span>
+                    <span>{market.endDateIso || formatDate(market.endDate)}</span>
+                  </div>
+                </div>
+
+                {/* Full Probability Chart */}
+                <div className="pt-2">
+                  <div className="text-sm text-gray-400 mb-2">Probability Trend (Last 10 Updates)</div>
+                  <ProbabilitySparkline tokenId={market.id} yesPrice={market.yesOdds} />
+                </div>
+              </div>
+            </Disclosure.Panel>
+          </div>
+        )}
+      </Disclosure>
+    </div>
+  );
+});
+
+VirtualizedMarketCard.displayName = 'VirtualizedMarketCard';
 
 // Mobile card component
 function MarketCard({ market, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, formatDate, formatVolume, wsPriceChanges }) {

@@ -19,8 +19,33 @@ export async function GET(request) {
     const created_after = searchParams.get('created_after');
     const time_filter = searchParams.get('time_filter');
 
-    // Build cache key
-    const cacheKey = `markets:${q}:${category}:${active}:${closed}:${order}:${limit}:${offset}:${created_after}:${time_filter}`;
+    // Advanced filtering parameters
+    const minLiquidity = searchParams.get('minLiquidity');
+    const maxLiquidity = searchParams.get('maxLiquidity');
+    const minVolume = searchParams.get('minVolume');
+    const maxVolume = searchParams.get('maxVolume');
+    const minVolume24hr = searchParams.get('minVolume24hr');
+    const maxVolume24hr = searchParams.get('maxVolume24hr');
+    const minSpread = searchParams.get('minSpread');
+    const maxSpread = searchParams.get('maxSpread');
+    const minProbability = searchParams.get('minProbability');
+    const maxProbability = searchParams.get('maxProbability');
+    const categories = searchParams.get('categories')?.split(',') || [];
+    const tags = searchParams.get('tags')?.split(',') || [];
+    const status = searchParams.get('status')?.split(',') || [];
+    const featured = searchParams.get('featured') === 'true';
+    const restricted = searchParams.get('restricted') === 'true';
+    const creator = searchParams.get('creator');
+    const createdAfter = searchParams.get('createdAfter');
+    const createdBefore = searchParams.get('createdBefore');
+    const expiresBefore = searchParams.get('expiresBefore');
+
+    // Build cache key (simplified for advanced filters)
+    const cacheKey = `markets:${q}:${category}:${active}:${closed}:${order}:${limit}:${offset}:${JSON.stringify({
+      minLiquidity, maxLiquidity, minVolume, maxVolume, minVolume24hr, maxVolume24hr,
+      minSpread, maxSpread, minProbability, maxProbability, categories, tags, status,
+      featured, restricted, creator, createdAfter, createdBefore, expiresBefore
+    })}`;
 
     // Check cache first
     const cached = cache.get(cacheKey);
@@ -98,8 +123,10 @@ export async function GET(request) {
     // Fetch from Polymarket service for regular requests
     const data = await polymarketService.fetchMarkets(params);
 
-    // Apply client-side time filtering if needed
+    // Apply advanced server-side filtering
     let markets = data.markets || [];
+
+    // Time filtering (legacy)
     if (time_filter) {
       const now = new Date();
       markets = markets.filter(market => {
@@ -116,11 +143,114 @@ export async function GET(request) {
             return true;
         }
       });
-
-      // Update total count after filtering
-      data.total = markets.length;
-      data.markets = markets;
     }
+
+    // Advanced filtering
+    markets = markets.filter(market => {
+      // Categories filter
+      if (categories.length > 0) {
+        const marketCategories = [
+          ...(market.categories || []),
+          ...(market.tags || []),
+          market.category
+        ].filter(Boolean).map(c => c.toLowerCase());
+
+        const hasMatchingCategory = categories.some(cat =>
+          marketCategories.some(marketCat =>
+            marketCat.includes(cat.toLowerCase())
+          )
+        );
+        if (!hasMatchingCategory) return false;
+      }
+
+      // Tags filter
+      if (tags.length > 0) {
+        const marketTags = (market.tags || []).map(t => t.toLowerCase());
+        const hasMatchingTag = tags.some(tag =>
+          marketTags.some(marketTag =>
+            marketTag.includes(tag.toLowerCase())
+          )
+        );
+        if (!hasMatchingTag) return false;
+      }
+
+      // Status filter
+      if (status.length > 0) {
+        const marketStatus = market.closed ? 'closed' : 'open';
+        if (!status.includes(marketStatus)) return false;
+      }
+
+      // Featured filter
+      if (featured && !market.featured) return false;
+
+      // Restricted filter
+      if (restricted && !market.restricted) return false;
+
+      // Creator filter
+      if (creator && market.creator) {
+        const creatorMatch = market.creator.toLowerCase().includes(creator.toLowerCase());
+        if (!creatorMatch) return false;
+      }
+
+      // Liquidity filter
+      if (minLiquidity || maxLiquidity) {
+        const liquidity = parseFloat(market.liquidity || market.openInterest || 0);
+        if (minLiquidity && liquidity < parseFloat(minLiquidity)) return false;
+        if (maxLiquidity && liquidity > parseFloat(maxLiquidity)) return false;
+      }
+
+      // Volume filter
+      if (minVolume || maxVolume) {
+        const volume = parseFloat(market.volume || 0);
+        if (minVolume && volume < parseFloat(minVolume)) return false;
+        if (maxVolume && volume > parseFloat(maxVolume)) return false;
+      }
+
+      // 24h Volume filter
+      if (minVolume24hr || maxVolume24hr) {
+        const volume24hr = parseFloat(market.volume24hr || market.volume || 0);
+        if (minVolume24hr && volume24hr < parseFloat(minVolume24hr)) return false;
+        if (maxVolume24hr && volume24hr > parseFloat(maxVolume24hr)) return false;
+      }
+
+      // Spread filter (calculate from outcomePrices)
+      if (maxSpread) {
+        const outcomePrices = market.outcomePrices || [];
+        if (outcomePrices.length >= 2) {
+          const spread = Math.abs(outcomePrices[0] - outcomePrices[1]) * 100; // Convert to percentage
+          if (spread > parseFloat(maxSpread)) return false;
+        }
+      }
+
+      // Probability filter (Yes probability)
+      if (minProbability || maxProbability) {
+        const probability = (market.yesOdds || market.outcomePrices?.[0] || 0.5) * 100;
+        if (minProbability && probability < parseFloat(minProbability)) return false;
+        if (maxProbability && probability > parseFloat(maxProbability)) return false;
+      }
+
+      // Date filters
+      if (createdAfter) {
+        const createdDate = new Date(market.createdAt || market.timestamp);
+        if (createdDate < new Date(createdAfter)) return false;
+      }
+
+      if (createdBefore) {
+        const createdDate = new Date(market.createdAt || market.timestamp);
+        if (createdDate > new Date(createdBefore)) return false;
+      }
+
+      if (expiresBefore) {
+        const endDate = new Date(market.endDate);
+        if (endDate > new Date(expiresBefore)) return false;
+      }
+
+      return true;
+    });
+
+    // Update total count after filtering
+    data.total = markets.length;
+    data.markets = markets;
 
     // Ensure volume24hr field is present for sorting
     if (order.includes('volume24hr')) {

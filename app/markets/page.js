@@ -74,61 +74,101 @@ function MarketsPageContent() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [selectedSort, setSelectedSort] = useState(searchParams.get('sort') || 'volume24hr_desc');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [filtersModalOpen, setFiltersModalOpen] = useState(false);
   const [selectedMarket, setSelectedMarket] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Advanced filters state
+  // Advanced filters state with comprehensive URL syncing
   const [filters, setFilters] = useState(() => {
-    // Check for categories parameter first (comma-separated format)
-    const categoriesParam = searchParams.get('categories');
-    if (categoriesParam) {
-      const categories = categoriesParam.split(',').map(cat => cat.trim()).filter(Boolean);
-      return {
-        categories,
-        status: ['open'], // Default to open markets
-        time: []
-      };
-    }
-
-    // Fallback to filters parameter (JSON format)
+    // Try to load from URL filters parameter (JSON format)
     const filtersParam = searchParams.get('filters');
     if (filtersParam) {
       try {
-        return JSON.parse(decodeURIComponent(filtersParam));
+        const parsedFilters = JSON.parse(decodeURIComponent(filtersParam));
+        // Convert date strings back to Date objects
+        if (parsedFilters.createdAfter) parsedFilters.createdAfter = new Date(parsedFilters.createdAfter);
+        if (parsedFilters.createdBefore) parsedFilters.createdBefore = new Date(parsedFilters.createdBefore);
+        if (parsedFilters.expiresBefore) parsedFilters.expiresBefore = new Date(parsedFilters.expiresBefore);
+        return parsedFilters;
       } catch (e) {
         console.warn('Invalid filters parameter:', e);
       }
     }
 
+    // Default filters
     return {
+      // Basic filters
       categories: [],
+      tags: [],
       status: ['open'], // Default to open markets
-      time: []
+      featured: false,
+      restricted: false,
+
+      // Advanced filters
+      probabilityMin: 0,
+      probabilityMax: 100,
+      volumeMin: 0,
+      volumeMax: 10000000,
+      volume24hrMin: 0,
+      volume24hrMax: 10000000,
+      liquidityMin: 0,
+      liquidityMax: 10000000,
+      spreadMax: 20,
+      createdAfter: null,
+      createdBefore: null,
+      expiresBefore: null,
+      creator: '',
+
+      // Date ranges (for client-side filtering)
+      dateRange: [null, null]
     };
   });
   const tableRef = useRef(null);
   const searchInputRef = useRef(null);
 
-  // Filter change handler
+  // Advanced filter change handler with comprehensive URL syncing
   const handleFiltersChange = (newFilters) => {
     setFilters(newFilters);
 
-    // Update URL with filters
+    // Update URL with filters (always use JSON format for advanced filters)
     const params = new URLSearchParams(searchParams);
 
-    // Use simple categories parameter if only categories are selected
-    if (newFilters.categories.length > 0 && newFilters.status.length === 1 && newFilters.status[0] === 'open' && newFilters.time.length === 0) {
-      params.set('categories', newFilters.categories.join(','));
-      params.delete('filters');
-    } else if (newFilters.categories.length > 0 || newFilters.status.length > 0 || newFilters.time.length > 0) {
-      // Use JSON format for complex filters
-      params.set('filters', encodeURIComponent(JSON.stringify(newFilters)));
-      params.delete('categories');
+    // Check if any filters are active (excluding defaults)
+    const hasActiveFilters = (
+      newFilters.categories.length > 0 ||
+      newFilters.tags.length > 0 ||
+      newFilters.status.length !== 1 || newFilters.status[0] !== 'open' ||
+      newFilters.featured ||
+      newFilters.restricted ||
+      newFilters.probabilityMin > 0 ||
+      newFilters.probabilityMax < 100 ||
+      newFilters.volumeMin > 0 ||
+      newFilters.volumeMax < 10000000 ||
+      newFilters.volume24hrMin > 0 ||
+      newFilters.volume24hrMax < 10000000 ||
+      newFilters.liquidityMin > 0 ||
+      newFilters.liquidityMax < 10000000 ||
+      newFilters.spreadMax < 20 ||
+      newFilters.createdAfter ||
+      newFilters.createdBefore ||
+      newFilters.expiresBefore ||
+      newFilters.creator ||
+      (newFilters.dateRange && (newFilters.dateRange[0] || newFilters.dateRange[1]))
+    );
+
+    if (hasActiveFilters) {
+      // Prepare filters for URL encoding (convert Date objects to ISO strings)
+      const filtersForUrl = {
+        ...newFilters,
+        createdAfter: newFilters.createdAfter?.toISOString() || null,
+        createdBefore: newFilters.createdBefore?.toISOString() || null,
+        expiresBefore: newFilters.expiresBefore?.toISOString() || null,
+        dateRange: newFilters.dateRange?.map(d => d?.toISOString() || null) || [null, null]
+      };
+      params.set('filters', encodeURIComponent(JSON.stringify(filtersForUrl)));
     } else {
-      // No filters
       params.delete('filters');
-      params.delete('categories');
     }
 
     // Preserve other params
@@ -138,83 +178,37 @@ function MarketsPageContent() {
     router.push(`?${params.toString()}`, { scroll: false });
   };
 
-  // Client-side filtering function
-  const filterMarkets = (markets) => {
-    if (!markets) return [];
+  // Build dynamic API URL with server-side filtering
+  const buildApiUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set('limit', '200'); // Fetch more markets for client-side filtering
 
-    let filtered = markets;
+    // Add server-side filter parameters
+    if (filters.categories?.length > 0) params.set('categories', filters.categories.join(','));
+    if (filters.tags?.length > 0) params.set('tags', filters.tags.join(','));
+    if (filters.status?.length > 0) params.set('status', filters.status.join(','));
+    if (filters.featured) params.set('featured', 'true');
+    if (filters.restricted) params.set('restricted', 'true');
+    if (filters.minLiquidity) params.set('minLiquidity', filters.minLiquidity);
+    if (filters.maxLiquidity) params.set('maxLiquidity', filters.maxLiquidity);
+    if (filters.minVolume) params.set('minVolume', filters.minVolume);
+    if (filters.maxVolume) params.set('maxVolume', filters.maxVolume);
+    if (filters.minVolume24hr) params.set('minVolume24hr', filters.minVolume24hr);
+    if (filters.maxVolume24hr) params.set('maxVolume24hr', filters.maxVolume24hr);
+    if (filters.maxSpread) params.set('maxSpread', filters.maxSpread);
+    if (filters.minProbability) params.set('minProbability', filters.minProbability);
+    if (filters.maxProbability) params.set('maxProbability', filters.maxProbability);
+    if (filters.creator) params.set('creator', filters.creator);
+    if (filters.createdAfter) params.set('createdAfter', filters.createdAfter.toISOString());
+    if (filters.createdBefore) params.set('createdBefore', filters.createdBefore.toISOString());
+    if (filters.expiresBefore) params.set('expiresBefore', filters.expiresBefore.toISOString());
 
-    // Apply search filter using Fuse.js fuzzy search
-    if (debouncedSearch && debouncedSearch.trim()) {
-      const fuse = new Fuse(filtered, {
-        keys: [
-          { name: 'question', weight: 0.7 },
-          { name: 'description', weight: 0.2 },
-          { name: 'tags', weight: 0.1 }
-        ],
-        threshold: 0.3, // Lower threshold = stricter matching
-        includeScore: true,
-        shouldSort: true,
-      });
+    return `/api/markets?${params.toString()}`;
+  }, [filters]);
 
-      const searchResults = fuse.search(debouncedSearch.trim());
-      filtered = searchResults.map(result => result.item);
-    }
-
-    return filtered.filter(market => {
-      // Category filter
-      if (filters.categories.length > 0) {
-        const marketCategories = [
-          ...(market.categories || []),
-          ...(market.tags || []),
-          market.category,
-          market.sport
-        ].filter(Boolean).map(cat => cat.toLowerCase());
-
-        const hasMatchingCategory = filters.categories.some(filterCat =>
-          marketCategories.includes(filterCat.toLowerCase())
-        );
-
-        if (!hasMatchingCategory) return false;
-      }
-
-      // Status filter
-      if (filters.status.length > 0) {
-        const marketStatus = market.closed ? 'closed' : 'open';
-        if (!filters.status.includes(marketStatus)) return false;
-      }
-
-      // Time filter
-      if (filters.time.length > 0) {
-        if (!market.endDateIso) return false;
-
-        const endDate = new Date(market.endDateIso);
-        const now = new Date();
-
-        const hasMatchingTime = filters.time.some(timeFilter => {
-          switch (timeFilter) {
-            case '<1wk':
-              return endDate <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-            case '1-4wk':
-              const week4 = new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000);
-              return endDate > new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) && endDate <= week4;
-            default:
-              return false;
-          }
-        });
-
-        if (!hasMatchingTime) return false;
-      }
-
-      return true;
-    });
-  };
-
-  // Removed old oddsStore usage - now handled by MarketsTable component
-
-  // Fetch all markets for client-side filtering
+  // Fetch markets with server-side filtering
   const { data: allMarketsData, isLoading: marketsLoading } = useSWR(
-    '/api/markets?limit=200', // Fetch more markets for client-side filtering
+    buildApiUrl,
     (url) => fetch(url).then(res => res.json()),
     {
       refreshInterval: 300000, // 5 minutes
@@ -225,22 +219,123 @@ function MarketsPageContent() {
     }
   );
 
+  // For performance testing, use mocked data instead of API data
+  const testWithMockData = false; // Set to true to test with 500 mocked markets
+  const mockedMarketsData = testWithMockData ? { markets: generateMockedMarkets(500) } : null;
+  const marketsData = mockedMarketsData || allMarketsData;
+
+  // Pre-indexed Fuse instance for better performance
+  const [fuseIndex, setFuseIndex] = useState(null);
+
+  // Pre-index markets when SWR data loads
+  useEffect(() => {
+    if (marketsData?.markets) {
+      const fuse = new Fuse(marketsData.markets, {
+        keys: [
+          { name: 'question', weight: 0.7 },
+          { name: 'tags', weight: 0.3 }
+        ],
+        threshold: 0.4, // Lower threshold = stricter matching
+        includeScore: true,
+        shouldSort: true,
+      });
+      setFuseIndex(fuse);
+    }
+  }, [marketsData]);
+
+  // Simplified client-side filtering function (most filtering now done server-side)
+  const filterMarkets = (markets) => {
+    if (!markets) return [];
+
+    let filtered = markets;
+
+    // Apply search filter using pre-indexed Fuse.js or fallback to simple search
+    if (debouncedSearch && debouncedSearch.trim()) {
+      const searchTerm = debouncedSearch.trim().toLowerCase();
+
+      if (fuseIndex) {
+        // Use optimized Fuse.js search
+        try {
+          const searchResults = fuseIndex.search(searchTerm);
+          filtered = searchResults.map(result => result.item);
+        } catch (error) {
+          console.warn('Fuse.js search failed, falling back to simple search:', error);
+          // Fallback to simple string matching
+          filtered = markets.filter(market =>
+            market.question?.toLowerCase().includes(searchTerm) ||
+            market.tags?.some(tag => tag.toLowerCase().includes(searchTerm)) ||
+            market.description?.toLowerCase().includes(searchTerm)
+          );
+        }
+      } else {
+        // Fallback to simple string matching for immediate response
+        filtered = markets.filter(market =>
+          market.question?.toLowerCase().includes(searchTerm) ||
+          market.tags?.some(tag => tag.toLowerCase().includes(searchTerm)) ||
+          market.description?.toLowerCase().includes(searchTerm)
+        );
+      }
+    }
+
+    // Client-side date range filtering (for custom date ranges)
+    if (filters.dateRange && (filters.dateRange[0] || filters.dateRange[1])) {
+      filtered = filtered.filter(market => {
+        const marketDate = new Date(market.endDate || market.createdAt);
+        if (filters.dateRange[0] && marketDate < filters.dateRange[0]) return false;
+        if (filters.dateRange[1] && marketDate > filters.dateRange[1]) return false;
+        return true;
+      });
+    }
+
+    return filtered;
+  };
+
+  // Removed old oddsStore usage - now handled by MarketsTable component
+
+  // Generate mocked markets for performance testing (uncomment to test with 500 markets)
+  const generateMockedMarkets = (count = 500) => {
+    const categories = ['Politics', 'Sports', 'Crypto', 'Weather', 'Entertainment', 'Technology', 'Finance'];
+    const sports = ['Football', 'Basketball', 'Baseball', 'Soccer', 'Tennis', 'Golf'];
+
+    return Array.from({ length: count }, (_, i) => ({
+      id: `market_${i}`,
+      question: `Will ${['Team A', 'Player X', 'Candidate Y', 'Company Z'][i % 4]} ${['win the championship', 'break the record', 'win the election', 'reach $1T market cap'][i % 4]} in ${2024 + (i % 5)}?`,
+      description: `Detailed description for market ${i}`,
+      tags: [categories[i % categories.length], sports[i % sports.length]],
+      category: categories[i % categories.length],
+      sport: sports[i % sports.length],
+      yesOdds: Math.random() * 0.8 + 0.1, // 0.1 to 0.9
+      noOdds: Math.random() * 0.8 + 0.1,
+      volume: Math.floor(Math.random() * 100000) + 1000,
+      volume24hr: Math.floor(Math.random() * 10000) + 100,
+      liquidity: Math.floor(Math.random() * 50000) + 1000,
+      volume1wk: Math.floor(Math.random() * 200000) + 5000,
+      closed: Math.random() > 0.8,
+      endDateIso: new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+      icon: `https://via.placeholder.com/32x32/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=${i}`,
+      url: `https://polymarket.com/market/${i}`,
+      createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+      tokenId: `token_${i}`,
+      outcomePrices: [Math.random() * 0.8 + 0.1, Math.random() * 0.8 + 0.1]
+    }));
+  };
+
   // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-    }, 300);
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
   // Apply client-side filtering
   const filteredMarkets = useMemo(() => {
-    if (!allMarketsData?.markets) return [];
-    return filterMarkets(allMarketsData.markets);
-  }, [allMarketsData, filters, debouncedSearch]);
+    if (!marketsData?.markets) return [];
+    return filterMarkets(marketsData.markets);
+  }, [marketsData, filters, debouncedSearch, filterMarkets]);
 
   // Fetch trending markets for the trending section
   const { data: trendingData } = useSWR(
@@ -412,20 +507,93 @@ function MarketsPageContent() {
       </section>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 pb-20">
+      <div className="flex">
+        {/* Sidebar Filters - Desktop */}
+        <div className={`hidden lg:block transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'w-0' : 'w-80'}`}>
+          {!sidebarCollapsed && (
+          <FiltersComponent
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            resultCount={filteredMarkets.length}
+            markets={marketsData?.markets || []}
+          />
+          )}
+        </div>
+
+        {/* Collapse/Expand Toggle Button */}
+        <button
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="hidden lg:flex fixed top-24 left-4 z-50 items-center justify-center w-10 h-10 bg-slate-800/95 backdrop-blur-sm border border-slate-600 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/95 transition-all duration-200"
+          title={sidebarCollapsed ? "Show Filters" : "Hide Filters"}
+        >
+          <svg
+            className={`w-5 h-5 transition-transform duration-200 ${sidebarCollapsed ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        {/* Main Content Area */}
+        <div className={`flex-1 max-w-7xl mx-auto px-4 pb-20 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-12' : 'lg:ml-4'}`}>
+        {/* No Results Message */}
+        {filteredMarkets.length === 0 && !marketsLoading && (
+          <div className="text-center py-16 px-4">
+            <div className="max-w-md mx-auto">
+              <div className="text-6xl mb-6">🔍</div>
+              <h3 className="text-xl font-semibold text-gray-300 mb-2">
+                No markets match your filters
+              </h3>
+              <p className="text-gray-500 mb-6">
+                Try adjusting your search terms or filter criteria to find more markets.
+              </p>
+              <button
+                onClick={() => handleFiltersChange({
+                  categories: [],
+                  tags: [],
+                  status: ['open'],
+                  featured: false,
+                  restricted: false,
+                  probabilityMin: 0,
+                  probabilityMax: 100,
+                  volumeMin: 0,
+                  volumeMax: 10000000,
+                  volume24hrMin: 0,
+                  volume24hrMax: 10000000,
+                  liquidityMin: 0,
+                  liquidityMax: 10000000,
+                  spreadMax: 20,
+                  createdAfter: null,
+                  createdBefore: null,
+                  expiresBefore: null,
+                  creator: '',
+                  dateRange: [null, null]
+                })}
+                className="px-6 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-medium transition-colors"
+              >
+                Reset All Filters
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Markets Table */}
-        <MarketsTable
+        {filteredMarkets.length > 0 && (
+          <MarketsTable
           markets={filteredMarkets}
           searchQuery={debouncedSearch}
           sortOrder={getSortOrderParam(selectedSort)}
           onMarketClick={handleMarketClick}
           tableRef={tableRef}
-          isLoading={marketsLoading}
+          isLoading={!marketsData}
           onSearchChange={setSearchQuery}
-          onFiltersToggle={() => setFiltersModalOpen(true)}
-          filters={filters}
           searchInputRef={searchInputRef}
-        />
+          onToggleFilters={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
+        )}
+        </div>
       </div>
 
       {/* Filters Modal */}
@@ -471,12 +639,12 @@ function MarketsPageContent() {
                     </div>
                     <FiltersComponent
                       filters={filters}
-                      onFiltersChange={(newFilters) => {
-                        handleFiltersChange(newFilters);
-                        // Auto-close modal on desktop after applying filters
-                        setFiltersModalOpen(false);
-                      }}
+                      onFiltersChange={handleFiltersChange}
+                      resultCount={filteredMarkets.length}
                       isModal={true}
+                      isOpen={filtersModalOpen}
+                      onClose={() => setFiltersModalOpen(false)}
+                      markets={marketsData?.markets || []}
                     />
                   </div>
                 </Dialog.Panel>
