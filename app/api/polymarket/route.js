@@ -33,7 +33,7 @@ export async function GET() {
             headers: {
               'Accept': 'application/json',
               'Content-Type': 'application/json',
-              'User-Agent': 'PredictProp/1.0',
+              'User-Agent': 'PolyProp/1.0',
             },
             signal: controller.signal,
           });

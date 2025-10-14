@@ -75,7 +75,7 @@ export async function GET(request) {
       const response = await fetch('https://gamma-api.polymarket.com/events?featured=true&closed=false&limit=40', {
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'PredictProp/1.0'
+          'User-Agent': 'PolyProp/1.0'
         }
       });
 

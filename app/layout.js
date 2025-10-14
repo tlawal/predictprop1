@@ -2,7 +2,7 @@ import RootLayoutClient from './layout.client';
 import './globals.css';
 
 export const metadata = {
-  title: 'PredictProp',
+  title: 'PolyProp',
   description: 'Decentralized Prop Trading Platform',
   viewport: {
     width: 'device-width',

@@ -52,7 +52,7 @@ export default function Header() {
               </defs>
               <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.5L20 8v8l-8 4-8-4V8l8-3.5z"/>
             </svg>
-            PredictProp
+            PolyProp
           </div>
 
           {/* Desktop Navigation */}

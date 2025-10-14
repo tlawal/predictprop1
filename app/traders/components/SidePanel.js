@@ -195,7 +195,7 @@ export default function SidePanel({ isOpen, onClose, isMobile = false, collapsed
               <div className="w-12 h-12 bg-slate-600 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl">
                 📜
               </div>
-              <h4 className="text-lg font-bold text-white mb-2">PredictProp Trader</h4>
+              <h4 className="text-lg font-bold text-white mb-2">PolyProp Trader</h4>
               <div className="space-y-2 text-sm text-gray-400 mb-4">
                 <div className="flex justify-between">
                   <span>Lifetime Payouts:</span>

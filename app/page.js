@@ -459,7 +459,7 @@ export default function Home() {
                     <div className={styles.stepGlow}></div>
                   </div>
                   <h3>Get Funded</h3>
-                  <p>Pass the rules and start trading with PredictProp&apos;s capital up to $100,000.</p>
+                  <p>Pass the rules and start trading with PolyProp&apos;s capital up to $100,000.</p>
                   <div className={styles.stepMeta}>
                     <span className={styles.stepDuration}>Instant</span>
                     <span className={styles.stepDifficulty}>Automatic</span>
@@ -502,7 +502,7 @@ export default function Home() {
           <div className={styles.featuresHeader}>
             <div className={styles.sectionBadge}>
               <span className={styles.badgeIcon}>✨</span>
-              <span>Why PredictProp</span>
+              <span>Why PolyProp</span>
             </div>
             <h2 className={styles.featuresTitle}>
               <span className={styles.titleGradient}>The Future of Prediction Trading</span>
