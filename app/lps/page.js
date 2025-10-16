@@ -113,7 +113,7 @@ export default function LPsPage() {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} pt-20 md:pt-0`}>
       {/* Hero Section */}
       <section className={styles.hero}>
           <div className={styles.heroContent}>
@@ -121,7 +121,7 @@ export default function LPsPage() {
             <span className={styles.titleGradient}>Liquidity Vault</span>
           </h1>
           <p className={styles.heroSubtitle}>
-            Earn high yields by providing liquidity to top prediction markets traders and top market makers. Stake USDC and receive automated returns w/ AI optimization.
+            Earn high yields by providing liquidity to top prediction markets traders and top market makers. Stake USDC and receive automated returns.
           </p>
         </div>
       </section>

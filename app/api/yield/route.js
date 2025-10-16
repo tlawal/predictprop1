@@ -194,9 +194,7 @@ function generateRuleBasedYield(tvl) {
   return {
     apy: Math.round((baseApy + aiBonus) * 100) / 100,
     aiOptimized: aiBonus > 0,
-    aiInsight: aiBonus > 0
-      ? `AI optimized allocation increased APY by +${aiBonus}%`
-      : 'Current allocation is performing optimally',
+    aiInsight: 'Current allocation is performing optimally',
     breakdown: { fees: 0.60, splits: 0.40 },
     aiRecommendations: {
       fees: aiBonus > 0 ? 0.65 : 0.60,
