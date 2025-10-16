@@ -183,6 +183,17 @@ function AdminPageContent() {
                 }`
               }
             >
+              Payments
+            </Tab>
+            <Tab
+              className={({ selected }) =>
+                `w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors ${
+                  selected
+                    ? 'bg-white text-slate-900 shadow'
+                    : 'text-slate-300 hover:bg-white/[0.12] hover:text-white'
+                }`
+              }
+            >
               Withdrawals
             </Tab>
           </Tab.List>
@@ -208,6 +219,9 @@ function AdminPageContent() {
             </Tab.Panel>
             <Tab.Panel>
               <ReportsPanel adminId={user.id} />
+            </Tab.Panel>
+            <Tab.Panel>
+              <PaymentsPanel adminId={user.id} />
             </Tab.Panel>
             <Tab.Panel>
               <WithdrawalsPanel adminId={user.id} />
@@ -683,6 +697,160 @@ function RiskTriggersPanel({ adminId }) {
             {riskTriggers?.thresholds?.alertEmail || 'admin@polyprop.com'}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Payments Panel Component
+function PaymentsPanel({ adminId }) {
+  const { data: paymentsData, mutate } = useSWR('/api/admin/payments?limit=100', fetcher);
+
+  const updatePaymentStatus = async (paymentId, newStatus, notes) => {
+    try {
+      const response = await fetch('/api/admin/payments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: paymentId,
+          status: newStatus,
+          notes,
+          adminId
+        }),
+      });
+
+      if (response.ok) {
+        mutate(); // Refresh data
+        toast.success(`Payment status updated to ${newStatus}`);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to update payment');
+      }
+    } catch (error) {
+      console.error('Error updating payment:', error);
+      toast.error('Error updating payment');
+    }
+  };
+
+  const totalRevenue = paymentsData?.payments
+    ?.filter(payment => payment.status === 'completed')
+    ?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+
+  const pendingPayments = paymentsData?.payments
+    ?.filter(payment => payment.status === 'pending').length || 0;
+
+  return (
+    <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
+      <h2 className="text-xl font-semibold text-white mb-6">Payment Management</h2>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-slate-700/30 rounded-lg p-4">
+          <h3 className="font-semibold text-white mb-3">Total Revenue</h3>
+          <div className="text-2xl font-bold text-green-400">${totalRevenue.toFixed(2)}</div>
+          <p className="text-sm text-slate-400">From completed payments</p>
+        </div>
+
+        <div className="bg-slate-700/30 rounded-lg p-4">
+          <h3 className="font-semibold text-white mb-3">Pending Payments</h3>
+          <div className="text-2xl font-bold text-yellow-400">{pendingPayments}</div>
+          <p className="text-sm text-slate-400">Awaiting confirmation</p>
+        </div>
+
+        <div className="bg-slate-700/30 rounded-lg p-4">
+          <h3 className="font-semibold text-white mb-3">Success Rate</h3>
+          <div className="text-2xl font-bold text-blue-400">
+            {paymentsData?.payments?.length > 0
+              ? ((paymentsData.payments.filter(p => p.status === 'completed').length / paymentsData.payments.length) * 100).toFixed(1)
+              : 0}%
+          </div>
+          <p className="text-sm text-slate-400">Payment completion rate</p>
+        </div>
+      </div>
+
+      {/* Payments Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-slate-400 border-b border-slate-600">
+            <tr>
+              <th className="text-left py-3 px-2">Payment ID</th>
+              <th className="text-left py-3 px-2">User</th>
+              <th className="text-left py-3 px-2">Plan</th>
+              <th className="text-right py-3 px-2">Amount</th>
+              <th className="text-left py-3 px-2">Method</th>
+              <th className="text-left py-3 px-2">Status</th>
+              <th className="text-left py-3 px-2">Type</th>
+              <th className="text-left py-3 px-2">Date</th>
+              <th className="text-left py-3 px-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paymentsData?.payments?.map((payment) => (
+              <tr key={payment.id} className="border-b border-slate-700 hover:bg-slate-700/30">
+                <td className="py-3 px-2 text-white font-mono text-xs">
+                  {payment.id.slice(0, 8)}...
+                </td>
+                <td className="py-3 px-2 text-slate-300">
+                  <div>
+                    <div>{payment.user?.email || 'Unknown'}</div>
+                    <div className="text-xs text-slate-500 font-mono">
+                      {payment.user_id?.slice(0, 6)}...{payment.user_id?.slice(-4)}
+                    </div>
+                  </div>
+                </td>
+                <td className="py-3 px-2 text-slate-300">
+                  {payment.plan_id || payment.challenge_id || 'N/A'}
+                </td>
+                <td className="py-3 px-2 text-right text-green-400 font-semibold">
+                  ${payment.amount.toFixed(2)}
+                </td>
+                <td className="py-3 px-2 text-slate-300 capitalize">
+                  {payment.metadata?.paymentMethod || 'stripe'}
+                </td>
+                <td className="py-3 px-2">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    payment.status === 'completed' ? 'bg-green-900 text-green-300' :
+                    payment.status === 'pending' ? 'bg-yellow-900 text-yellow-300' :
+                    payment.status === 'failed' ? 'bg-red-900 text-red-300' :
+                    'bg-slate-700 text-slate-300'
+                  }`}>
+                    {payment.status}
+                  </span>
+                </td>
+                <td className="py-3 px-2 text-slate-300 capitalize">
+                  {payment.type?.replace('_', ' ') || 'evaluation_fee'}
+                </td>
+                <td className="py-3 px-2 text-slate-300">
+                  {new Date(payment.created_at).toLocaleDateString()}
+                </td>
+                <td className="py-3 px-2">
+                  {payment.status === 'pending' && (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => updatePaymentStatus(payment.id, 'completed', 'Manually approved by admin')}
+                        className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => updatePaymentStatus(payment.id, 'failed', 'Rejected by admin')}
+                        className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            )) || (
+              <tr>
+                <td colSpan="9" className="py-8 text-center text-slate-400">
+                  No payment records found
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

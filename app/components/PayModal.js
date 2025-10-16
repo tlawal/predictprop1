@@ -8,13 +8,13 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { ethers } from 'ethers';
 import toast from 'react-hot-toast';
+import USDCPaymentProcessor from '../../lib/usdc-payment';
 
 // Initialize Stripe (replace with your publishable key)
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder');
 
-// USDC Contract on Polygon (replace with actual contract)
-const USDC_CONTRACT_ADDRESS = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
-const PLATFORM_WALLET = '0x742d35Cc6735d1F5c8a5a0b5f5c8a5a0b5f5c8a5'; // Replace with actual wallet
+// Initialize USDC Payment Processor
+const usdcProcessor = new USDCPaymentProcessor('polygon');
 
 const PaymentMethod = ({ method, selected, onChange, plan }) => {
   const isSelected = selected === method.id;
@@ -74,7 +74,8 @@ const StripeCheckoutForm = ({ plan, onSuccess, onError }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           planId: plan.id,
-          amount: plan.fee
+          amount: plan.fee,
+          userId: plan.userId || user.id
         }),
       });
 
@@ -96,7 +97,11 @@ const StripeCheckoutForm = ({ plan, onSuccess, onError }) => {
       }
 
       // Payment succeeded
-      onSuccess({ paymentMethod: 'stripe', transactionId: result.paymentIntent.id });
+      onSuccess({
+        paymentMethod: 'stripe',
+        transactionId: result.paymentIntent.id,
+        paymentRecordId: result.paymentRecordId
+      });
     } catch (error) {
       console.error('Payment error:', error);
       onError(error.message);
@@ -145,6 +150,26 @@ const StripeCheckoutForm = ({ plan, onSuccess, onError }) => {
 const CryptoPaymentForm = ({ plan, onSuccess, onError }) => {
   const { user } = usePrivy();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [usdcBalance, setUsdcBalance] = useState(null);
+
+  useEffect(() => {
+    // Check USDC balance when component mounts
+    const checkBalance = async () => {
+      if (user?.wallet?.address && window.ethereum) {
+        try {
+          const initResult = await usdcProcessor.initialize(window.ethereum);
+          if (initResult.success) {
+            const balance = await usdcProcessor.getUSDCBalance(user.wallet.address);
+            setUsdcBalance(balance);
+          }
+        } catch (error) {
+          console.error('Error checking USDC balance:', error);
+        }
+      }
+    };
+
+    checkBalance();
+  }, [user?.wallet?.address]);
 
   const handleCryptoPayment = async () => {
     if (!user?.wallet?.address) {
@@ -160,40 +185,42 @@ const CryptoPaymentForm = ({ plan, onSuccess, onError }) => {
         throw new Error('Please install MetaMask or another Web3 wallet');
       }
 
-      // Request account access
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-
-      // Check if we're on Polygon network
-      const network = await provider.getNetwork();
-      if (network.chainId !== 137) {
-        throw new Error('Please switch to Polygon network');
+      // Initialize USDC processor
+      const initResult = await usdcProcessor.initialize(window.ethereum);
+      if (!initResult.success) {
+        throw new Error(initResult.error);
       }
 
-      // USDC Contract (this is a simplified version - you'd need the actual ABI)
-      const usdcContract = new ethers.Contract(
-        USDC_CONTRACT_ADDRESS,
-        ['function approve(address spender, uint256 amount) returns (bool)', 'function transfer(address to, uint256 amount) returns (bool)'],
-        signer
-      );
+      // Check network
+      const networkCheck = await usdcProcessor.checkNetwork();
+      if (!networkCheck.isCorrect) {
+        // Try to switch network
+        const switchResult = await usdcProcessor.switchNetwork();
+        if (!switchResult.success) {
+          throw new Error(`Please switch to Polygon network. Current chain: ${networkCheck.currentChainId}`);
+        }
+        // Wait a moment for network switch
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
 
-      const amount = ethers.utils.parseUnits(plan.fee.toString(), 6); // USDC has 6 decimals
+      // Process the payment
+      const result = await usdcProcessor.processPayment(plan.fee, plan.id, user.id);
 
-      // First approve the platform wallet to spend USDC
-      const approveTx = await usdcContract.approve(PLATFORM_WALLET, amount);
-      await approveTx.wait();
-
-      // Then transfer the USDC
-      const transferTx = await usdcContract.transfer(PLATFORM_WALLET, amount);
-      const receipt = await transferTx.wait();
+      if (!result.success) {
+        throw new Error(result.error);
+      }
 
       // Payment succeeded
-      onSuccess({ paymentMethod: 'crypto', transactionId: receipt.transactionHash });
+      onSuccess({
+        paymentMethod: 'usdc',
+        transactionId: result.transactionHash,
+        amount: plan.fee,
+        userAddress: result.userAddress,
+        timestamp: result.timestamp
+      });
 
     } catch (error) {
-      console.error('Crypto payment error:', error);
+      console.error('USDC payment error:', error);
       onError(error.message || 'Payment failed');
     } finally {
       setIsProcessing(false);
@@ -221,6 +248,11 @@ const CryptoPaymentForm = ({ plan, onSuccess, onError }) => {
         <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">
           {ethers.utils.formatUnits(ethers.utils.parseUnits(plan.fee.toString(), 6), 6)} USDC
         </div>
+        {usdcBalance && (
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+            Your balance: {parseFloat(usdcBalance.balance).toFixed(2)} USDC
+          </div>
+        )}
       </div>
 
       <button
@@ -267,10 +299,13 @@ export default function PayModal({ isOpen, onClose, plan, onPaymentSuccess }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: plan.userId, // This should be passed from the parent
+          userId: plan.userId || user.id,
           planType: plan.type,
           balance: plan.params?.starting_balance || 5000, // Default balance
-          payment: paymentResult
+          payment: {
+            ...paymentResult,
+            paymentRecordId: paymentResult.paymentRecordId
+          }
         }),
       });
 
