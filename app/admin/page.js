@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-import { usePrivy } from '@privy-io/react-auth';
+import { useAuth, useUser } from '@clerk/nextjs';
 import { Tab } from '@headlessui/react';
 import useSWR from 'swr';
 import { supabase } from '../../lib/supabase';
@@ -18,15 +18,16 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 
 function AdminPageContent() {
   const router = useRouter();
-  const { user, ready, logout } = usePrivy();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Check admin status
   useEffect(() => {
-    if (!ready) return;
+    if (!isLoaded) return;
 
-    if (!user) {
+    if (!isSignedIn) {
       router.push('/');
       return;
     }
@@ -48,19 +49,25 @@ function AdminPageContent() {
         }
         */
 
-        // Temporarily allow all authenticated users access to admin panel
+        // Check if user has admin role in Clerk metadata
+        const isUserAdmin = user?.publicMetadata?.role === 'admin';
+
+        if (!isUserAdmin) {
+          router.push('/');
+          return;
+        }
+
         setIsAdmin(true);
       } catch (error) {
         console.error('Error checking admin status:', error);
-        // Temporarily allow access even on error
-        setIsAdmin(true);
+        router.push('/');
       } finally {
         setLoading(false);
       }
     };
 
     checkAdminStatus();
-  }, [ready, user, router]);
+  }, [isLoaded, isSignedIn, user, router]);
 
   if (loading) {
     return (

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { usePrivy } from '@privy-io/react-auth';
+import { useAuth, useUser } from '@clerk/nextjs';
 import { Tab } from '@headlessui/react';
 import useSWR from 'swr';
 import { supabase } from '../../lib/supabase';
@@ -27,7 +27,8 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 function TradersPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, ready } = usePrivy();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
   const [activeTab, setActiveTab] = useState(0);
   const [selectedPosition, setSelectedPosition] = useState(null);
   const [showCloseModal, setShowCloseModal] = useState(false);
@@ -91,10 +92,10 @@ function TradersPageContent() {
 
   // Auth check
   useEffect(() => {
-    if (ready && !user) {
+    if (isLoaded && !isSignedIn) {
       router.push('/?error=unauth');
     }
-  }, [ready, user, router]);
+  }, [isLoaded, isSignedIn, router]);
 
 
 
@@ -125,14 +126,14 @@ function TradersPageContent() {
 
   // First load onboarding modal
   useEffect(() => {
-    if (ready && user && challengeData) {
+    if (isLoaded && isSignedIn && user && challengeData) {
       // Check if user has seen onboarding (stored in localStorage)
       const hasSeenOnboarding = localStorage.getItem(`onboarding_seen_${user.id}`);
       if (!hasSeenOnboarding) {
         setShowOnboardingModal(true);
       }
     }
-  }, [ready, user, challengeData]);
+  }, [isLoaded, isSignedIn, user, challengeData]);
 
   // Check if challenge is already passed (switch to live mode)
   useEffect(() => {
@@ -243,8 +244,8 @@ function TradersPageContent() {
     };
   }, [user]);
 
-  // Show loading if auth is not ready
-  if (!ready) {
+  // Show loading if auth is not loaded
+  if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-white text-lg">Loading...</div>

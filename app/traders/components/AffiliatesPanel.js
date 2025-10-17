@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePrivy } from '@privy-io/react-auth';
+import { useUser } from '@clerk/nextjs';
 import useSWR from 'swr';
 import { Copy, ExternalLink, Users, DollarSign, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -11,7 +11,7 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export default function AffiliatesPanel() {
   const { t } = useTranslation();
-  const { user } = usePrivy();
+  const { user } = useUser();
   const [customUrl, setCustomUrl] = useState('');
 
   // Fetch affiliate data

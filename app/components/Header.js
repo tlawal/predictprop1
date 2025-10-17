@@ -4,21 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTheme } from '../ThemeContext';
-import { usePrivy } from '@privy-io/react-auth';
+import { SignInButton, UserButton, useAuth, useUser } from '@clerk/nextjs';
 import styles from '../styles/Header.module.css';
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
-  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-
-  const handleAuth = () => {
-    if (authenticated) {
-      logout();
-    } else {
-      login();
-    }
-  };
 
   const toggleMoreMenu = () => {
     setIsMoreMenuOpen(!isMoreMenuOpen);
@@ -28,13 +21,13 @@ export default function Header() {
     setIsMoreMenuOpen(false);
   };
 
-  // Debug logging for Privy state
-  console.log('Privy Debug:', {
-    ready,
-    authenticated,
+  // Debug logging for Clerk state
+  console.log('Clerk Debug:', {
+    isLoaded,
+    isSignedIn,
     user: user ? {
-      email: user.email?.address,
-      wallet: user.wallet?.address?.slice(0, 10) + '...'
+      email: user.primaryEmailAddress?.emailAddress,
+      id: user.id
     } : null
   });
 
@@ -77,40 +70,53 @@ export default function Header() {
                 </button>
               </li>
               <li>
-                <button className={styles.connectOrb} onClick={handleAuth}>
-                  {!ready ? (
-                    'Loading...'
-                  ) : authenticated ? (
-                    <div className={styles.userInfo}>
-                      <span className={styles.userName}>
-                        {user?.email?.address || user?.wallet?.address?.slice(0, 6) + '...' || 'User'}
-                      </span>
-                      <span className={styles.logoutText}>Logout</span>
-                    </div>
-                  ) : (
-                    'Connect Wallet'
-                  )}
-                </button>
+                {!isLoaded ? (
+                  <button className={styles.connectOrb} disabled>
+                    Loading...
+                  </button>
+                ) : isSignedIn ? (
+                  <UserButton
+                    appearance={{
+                      elements: {
+                        avatarBox: styles.userAvatar,
+                        userButtonPopoverCard: styles.userMenu
+                      }
+                    }}
+                  />
+                ) : (
+                  <SignInButton mode="modal">
+                    <button className={styles.connectOrb}>
+                      Connect
+                    </button>
+                  </SignInButton>
+                )}
               </li>
             </ul>
           </nav>
 
 
-          {/* Mobile Connect Wallet Button */}
+          {/* Mobile Connect Button */}
           <div className={styles.mobileConnect}>
-            <button className={styles.mobileConnectOrb} onClick={handleAuth}>
-              {!ready ? (
+            {!isLoaded ? (
+              <button className={styles.mobileConnectOrb} disabled>
                 <span>Loading...</span>
-              ) : authenticated ? (
-                <div className={styles.mobileUserInfo}>
-                  <span className={styles.mobileUserName}>
-                    {user?.email?.address?.slice(0, 8) + '...' || user?.wallet?.address?.slice(0, 6) + '...' || 'User'}
-                  </span>
-                </div>
-              ) : (
-                <span>Connect</span>
-              )}
-            </button>
+              </button>
+            ) : isSignedIn ? (
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: styles.mobileUserAvatar,
+                    userButtonPopoverCard: styles.mobileUserMenu
+                  }
+                }}
+              />
+            ) : (
+              <SignInButton mode="modal">
+                <button className={styles.mobileConnectOrb}>
+                  <span>Connect</span>
+                </button>
+              </SignInButton>
+            )}
           </div>
         </div>
 

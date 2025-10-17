@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePrivy } from '@privy-io/react-auth';
+import { useAuth, useUser } from '@clerk/nextjs';
 import useSWR from 'swr';
 import Link from 'next/link';
 import VaultStatsCard from './components/VaultStatsCard';
@@ -16,12 +16,13 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export default function LPsPage() {
   const router = useRouter();
-  const { ready, authenticated, user } = usePrivy();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showBreakdownModal, setShowBreakdownModal] = useState(false);
 
-  // No longer auth-gated - show placeholder data for non-authenticated users
+  // No longer auth-gated - show placeholder data for non-signed-in users
 
   // Fetch vault data (always fetch, will show placeholders for non-auth)
   const { data: vaultData, error: vaultError } = useSWR(
@@ -37,7 +38,7 @@ export default function LPsPage() {
     { refreshInterval: 300000 } // 5 minutes
   );
 
-  // Placeholder data for non-authenticated users
+  // Placeholder data for non-signed-in users
   const placeholderVaultData = {
     tvl: '2,450,000',
     userBalance: '0',
@@ -82,12 +83,12 @@ export default function LPsPage() {
     return data;
   }
 
-  // Use placeholder data if not authenticated
-  const displayVaultData = authenticated ? vaultData : placeholderVaultData;
-  const displayYieldData = authenticated ? yieldData : placeholderYieldData;
+  // Use placeholder data if not signed in
+  const displayVaultData = isSignedIn ? vaultData : placeholderVaultData;
+  const displayYieldData = isSignedIn ? yieldData : placeholderYieldData;
 
-  // Show loading if auth is not ready
-  if (!ready) {
+  // Show loading if auth is not loaded
+  if (!isLoaded) {
     return (
       <div className={styles.loadingContainer}>
         <div className={styles.loadingSpinner}></div>
@@ -141,17 +142,17 @@ export default function LPsPage() {
             value={displayYieldData?.apy || '0'}
             subtitle="Annual yield"
             icon="📈"
-            badge={displayYieldData?.aiOptimized && authenticated ? 'AI Optimized' : null}
+            badge={displayYieldData?.aiOptimized && isSignedIn ? 'AI Optimized' : null}
             aiInsight={displayYieldData?.aiInsight}
             onClick={handleStatsCardClick}
           />
           <VaultStatsCard
             title="Your Yield"
-            value={authenticated ? (displayVaultData?.userYield || '0') : '—'}
-            subtitle={authenticated ? "Total earned" : "Connect wallet to deposit & earn"}
+            value={isSignedIn ? (displayVaultData?.userYield || '0') : '—'}
+            subtitle={isSignedIn ? "Total earned" : "Sign in to deposit & earn"}
             icon="💎"
-            onClick={authenticated ? handleStatsCardClick : () => router.push('/?connect=true')}
-            disabled={!authenticated}
+            onClick={isSignedIn ? handleStatsCardClick : () => router.push('/')}
+            disabled={!isSignedIn}
           />
         </div>
       </section>
@@ -160,7 +161,7 @@ export default function LPsPage() {
       <section className={styles.graphSection}>
             <div className={styles.sectionHeader}>
           <h2>Yield Performance</h2>
-          <p>{authenticated ? "Track your vault performance over the last 30 days" : "Example yield performance (connect wallet for personalized data)"}</p>
+          <p>{isSignedIn ? "Track your vault performance over the last 30 days" : "Example yield performance (sign in for personalized data)"}</p>
             </div>
         <YieldGraph yieldData={displayYieldData?.chartData || []} />
       </section>
@@ -169,28 +170,28 @@ export default function LPsPage() {
       <section className={styles.actionsSection}>
         <div className={styles.actionsGrid}>
           <button
-            className={`${styles.actionButton} ${styles.primary} ${!authenticated ? styles.disabled : ''}`}
-            onClick={authenticated ? () => setShowDepositModal(true) : () => router.push('/?connect=true')}
+            className={`${styles.actionButton} ${styles.primary} ${!isSignedIn ? styles.disabled : ''}`}
+            onClick={isSignedIn ? () => setShowDepositModal(true) : () => router.push('/')}
           >
-            <span>{authenticated ? 'Deposit USDC' : 'Connect Wallet to Deposit'}</span>
+            <span>{isSignedIn ? 'Deposit USDC' : 'Sign In to Deposit'}</span>
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
           </button>
                   
                   <button 
-            className={`${styles.actionButton} ${styles.secondary} ${!authenticated ? styles.disabled : ''}`}
-            onClick={authenticated ? () => setShowWithdrawModal(true) : () => router.push('/traders')}
-            disabled={authenticated && (!displayVaultData?.userShares || displayVaultData.userShares === '0')}
+            className={`${styles.actionButton} ${styles.secondary} ${!isSignedIn ? styles.disabled : ''}`}
+            onClick={isSignedIn ? () => setShowWithdrawModal(true) : () => router.push('/traders')}
+            disabled={isSignedIn && (!displayVaultData?.userShares || displayVaultData.userShares === '0')}
                   >
-            <span>{authenticated ? 'Withdraw' : 'View Traders'}</span>
+            <span>{isSignedIn ? 'Withdraw' : 'View Traders'}</span>
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M7 10l5 5 5-5z"/>
             </svg>
                   </button>
                 </div>
 
-        {!authenticated && (
+        {!isSignedIn && (
           <div className={styles.connectPrompt}>
             <div className={styles.connectPromptIcon}>🔗</div>
             <p>Connect your wallet to start earning high yields and access personalized AI insights.</p>

@@ -1,13 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useUser } from '@clerk/nextjs';
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function DepositForm({ onClose, onSuccess, userBalance }) {
-  const { user } = usePrivy();
-  const { wallets } = useWallets();
-  const walletClient = wallets?.[0]; // Get the first wallet
+  const { user } = useUser();
+  // Wallet functionality disabled with Clerk authentication
   const [amount, setAmount] = useState('');
   const [slippage, setSlippage] = useState(0.5);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,65 +24,8 @@ export default function DepositForm({ onClose, onSuccess, userBalance }) {
   };
 
   const handleDeposit = async () => {
-    if (!amount || parseFloat(amount) <= 0) {
-      toast.error('Please enter a valid amount');
-      return;
-    }
-
-    if (parseFloat(amount) > parseFloat(userBalance || '0')) {
-      toast.error('Insufficient balance');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      // Step 1: Approve USDC
-      setStep('approving');
-      toast.loading('Approving USDC...', { id: 'approve' });
-
-      // Mock approval transaction
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      toast.success('USDC approved successfully!', { id: 'approve' });
-
-      // Step 2: Deposit
-      setStep('depositing');
-      toast.loading('Depositing funds...', { id: 'deposit' });
-
-      // Mock deposit transaction
-      await new Promise(resolve => setTimeout(resolve, 3000));
-
-      toast.success('Deposit successful! Yield accruing.', { id: 'deposit' });
-
-      // Generate mock transaction hash
-      const txHash = '0x' + Math.random().toString(16).substr(2, 64);
-
-      setTimeout(() => {
-        toast.success(
-          <div>
-            <p>Deposit confirmed!</p>
-            <a
-              href={`https://polygonscan.com/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 underline"
-            >
-              View on PolygonScan
-            </a>
-          </div>,
-          { duration: 5000 }
-        );
-      }, 1000);
-
-      onSuccess();
-    } catch (error) {
-      console.error('Deposit error:', error);
-      toast.error('Deposit failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-      setStep('input');
-    }
+    // Wallet operations are not available with Clerk authentication
+    toast.error('Wallet operations are not available with email authentication. Please use a Web3 wallet for deposits.');
   };
 
   const isValidAmount = amount && parseFloat(amount) > 0 && parseFloat(amount) <= parseFloat(userBalance || '0');

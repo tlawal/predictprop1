@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Transition, RadioGroup } from '@headlessui/react';
 import { Fragment } from 'react';
-import { usePrivy, useSolanaWallets } from '@privy-io/react-auth';
+import { useUser } from '@clerk/nextjs';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { ethers } from 'ethers';
@@ -148,83 +148,19 @@ const StripeCheckoutForm = ({ plan, onSuccess, onError }) => {
 };
 
 const CryptoPaymentForm = ({ plan, onSuccess, onError }) => {
-  const { user } = usePrivy();
+  const { user } = useUser();
   const [isProcessing, setIsProcessing] = useState(false);
   const [usdcBalance, setUsdcBalance] = useState(null);
 
   useEffect(() => {
-    // Check USDC balance when component mounts
-    const checkBalance = async () => {
-      if (user?.wallet?.address && window.ethereum) {
-        try {
-          const initResult = await usdcProcessor.initialize(window.ethereum);
-          if (initResult.success) {
-            const balance = await usdcProcessor.getUSDCBalance(user.wallet.address);
-            setUsdcBalance(balance);
-          }
-        } catch (error) {
-          console.error('Error checking USDC balance:', error);
-        }
-      }
-    };
-
-    checkBalance();
-  }, [user?.wallet?.address]);
+    // USDC payment is disabled with Clerk authentication
+    // as Clerk doesn't provide wallet addresses
+    setUsdcBalance(0);
+  }, []);
 
   const handleCryptoPayment = async () => {
-    if (!user?.wallet?.address) {
-      onError('No wallet connected');
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      // Check if MetaMask or another Web3 wallet is available
-      if (!window.ethereum) {
-        throw new Error('Please install MetaMask or another Web3 wallet');
-      }
-
-      // Initialize USDC processor
-      const initResult = await usdcProcessor.initialize(window.ethereum);
-      if (!initResult.success) {
-        throw new Error(initResult.error);
-      }
-
-      // Check network
-      const networkCheck = await usdcProcessor.checkNetwork();
-      if (!networkCheck.isCorrect) {
-        // Try to switch network
-        const switchResult = await usdcProcessor.switchNetwork();
-        if (!switchResult.success) {
-          throw new Error(`Please switch to Polygon network. Current chain: ${networkCheck.currentChainId}`);
-        }
-        // Wait a moment for network switch
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-
-      // Process the payment
-      const result = await usdcProcessor.processPayment(plan.fee, plan.id, user.id);
-
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      // Payment succeeded
-      onSuccess({
-        paymentMethod: 'usdc',
-        transactionId: result.transactionHash,
-        amount: plan.fee,
-        userAddress: result.userAddress,
-        timestamp: result.timestamp
-      });
-
-    } catch (error) {
-      console.error('USDC payment error:', error);
-      onError(error.message || 'Payment failed');
-    } finally {
-      setIsProcessing(false);
-    }
+    // USDC payment is not available with Clerk authentication
+    onError('USDC payments are not available with email authentication. Please use Stripe payment.');
   };
 
   return (

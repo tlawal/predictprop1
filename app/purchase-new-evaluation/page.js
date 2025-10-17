@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePrivy } from '@privy-io/react-auth';
+import { useAuth, useUser } from '@clerk/nextjs';
 import { useForm, FormProvider } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -160,7 +160,8 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 
 function PurchaseEvaluationPageContent() {
   const router = useRouter();
-  const { user, ready, login } = usePrivy();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
 
   // Initialize state - will be updated by useEffect
   const [accountType, setAccountType] = useState('1-step');
@@ -249,10 +250,10 @@ function PurchaseEvaluationPageContent() {
   };
 
   const handlePurchase = async (data) => {
-    if (!ready) return;
+    if (!isLoaded) return;
 
-    if (!user) {
-      login();
+    if (!isSignedIn) {
+      router.push('/?error=unauth');
       return;
     }
 
@@ -263,10 +264,10 @@ function PurchaseEvaluationPageContent() {
 
     // Store billing info in Supabase
     try {
+      // Update existing user with billing info (user already exists from Clerk sync)
       const { error } = await supabase
         .from('users')
-        .upsert({
-          id: user.id,
+        .update({
           email: data.email,
           billing_info: {
             firstName: data.firstName,
@@ -277,7 +278,8 @@ function PurchaseEvaluationPageContent() {
             country: data.country,
             postalZip: data.postalZip
           }
-        });
+        })
+        .eq('user_id_text', user.id); // Update the user that matches Clerk ID
 
       if (error) {
         console.error('Error storing billing info:', error);
@@ -294,7 +296,7 @@ function PurchaseEvaluationPageContent() {
     }
   };
 
-  if (!ready) {
+  if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-white">Loading...</div>
@@ -475,7 +477,7 @@ function PurchaseEvaluationPageContent() {
               params: {
                 starting_balance: selectedPlan.balance
               },
-              userId: user?.id,
+              userId: user?.id, // This is the Privy DID, will be stored in user_id_text
               addons: selectedAddons
             }}
             onSuccess={(result) => {

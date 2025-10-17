@@ -3,12 +3,12 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { languages } from '../../lib/i18n';
-import { usePrivy } from '@privy-io/react-auth';
+import { useUser } from '@clerk/nextjs';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 
 export default function LanguageSwitcher() {
   const { t, i18n } = useTranslation();
-  const { user } = usePrivy();
+  const { user } = useUser();
 
   const handleLanguageChange = async (event) => {
     const languageCode = event.target.value;

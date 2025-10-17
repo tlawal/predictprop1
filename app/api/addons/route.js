@@ -30,6 +30,15 @@ export async function GET(request) {
     const { data: addons, error } = await query;
 
     if (error) {
+      // If the table doesn't exist yet, return empty array instead of error
+      if (error.code === 'PGRST205' || error.message?.includes("Could not find the table")) {
+        console.warn('Add-ons table does not exist yet, returning empty array');
+        return NextResponse.json({
+          addons: [],
+          total: 0
+        });
+      }
+
       console.error('Error fetching add-ons:', error);
       return NextResponse.json(
         { error: 'Failed to fetch add-ons', message: error.message },
@@ -89,6 +98,15 @@ export async function POST(request) {
       .single();
 
     if (error) {
+      // If the table doesn't exist yet, return a helpful error
+      if (error.code === 'PGRST205' || error.message?.includes("Could not find the table")) {
+        console.warn('Add-ons table does not exist yet');
+        return NextResponse.json(
+          { error: 'Add-ons table not available', message: 'Database migration may not be complete' },
+          { status: 503 }
+        );
+      }
+
       console.error('Error creating add-on:', error);
       return NextResponse.json(
         { error: 'Failed to create add-on', message: error.message },
@@ -142,6 +160,15 @@ export async function PUT(request) {
       .single();
 
     if (error) {
+      // If the table doesn't exist yet, return a helpful error
+      if (error.code === 'PGRST205' || error.message?.includes("Could not find the table")) {
+        console.warn('Add-ons table does not exist yet');
+        return NextResponse.json(
+          { error: 'Add-ons table not available', message: 'Database migration may not be complete' },
+          { status: 503 }
+        );
+      }
+
       console.error('Error updating add-on:', error);
       return NextResponse.json(
         { error: 'Failed to update add-on', message: error.message },
@@ -187,6 +214,15 @@ export async function DELETE(request) {
       .single();
 
     if (error) {
+      // If the table doesn't exist yet, return a helpful error
+      if (error.code === 'PGRST205' || error.message?.includes("Could not find the table")) {
+        console.warn('Add-ons table does not exist yet');
+        return NextResponse.json(
+          { error: 'Add-ons table not available', message: 'Database migration may not be complete' },
+          { status: 503 }
+        );
+      }
+
       console.error('Error deactivating add-on:', error);
       return NextResponse.json(
         { error: 'Failed to deactivate add-on', message: error.message },

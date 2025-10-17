@@ -1,6 +1,6 @@
 'use client';
 
-import { PrivyProvider } from '@privy-io/react-auth';
+import { ClerkProvider } from '@clerk/nextjs';
 import { ThemeProvider } from './ThemeContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -14,17 +14,12 @@ function LayoutContent({ children }) {
 
   return (
     <ThemeProvider>
-      <PrivyProvider
-        appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'cmf779kit0058ld0boewrfnqe'}
-        config={{
-          loginMethods: ['email', 'google', 'twitter', 'wallet'],
-          appearance: {
-            theme: 'dark',
-            accentColor: '#2DD4BF',
-            logo: 'https://polymarket.com/images/logo.svg'
-          },
-          embeddedWallets: {
-            createOnLogin: 'users-without-wallets'
+      <ClerkProvider
+        publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+        appearance={{
+          baseTheme: 'dark',
+          variables: {
+            colorPrimary: '#2DD4BF'
           }
         }}
       >
@@ -33,7 +28,7 @@ function LayoutContent({ children }) {
           {children}
           <Footer />
         </SupabaseAuthProvider>
-      </PrivyProvider>
+      </ClerkProvider>
     </ThemeProvider>
   );
 }

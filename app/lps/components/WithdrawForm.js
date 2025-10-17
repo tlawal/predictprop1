@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { useUser } from '@clerk/nextjs';
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function WithdrawForm({ onClose, onSuccess, userShares, lockPeriod }) {
-  const { user } = usePrivy();
+  const { user } = useUser();
   const [shares, setShares] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [lockStatus, setLockStatus] = useState(null);
@@ -49,58 +49,8 @@ export default function WithdrawForm({ onClose, onSuccess, userShares, lockPerio
   };
 
   const handleWithdraw = async () => {
-    if (!shares || parseFloat(shares) <= 0) {
-      toast.error('Please enter a valid amount of shares');
-      return;
-    }
-
-    if (parseFloat(shares) > parseFloat(userShares || '0')) {
-      toast.error('Insufficient shares');
-      return;
-    }
-
-    if (lockStatus === 'locked') {
-      toast.error('Funds are still locked. Please wait for the lock period to end.');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      toast.loading('Withdrawing funds...', { id: 'withdraw' });
-
-      // Mock withdrawal transaction
-      await new Promise(resolve => setTimeout(resolve, 3000));
-
-      toast.success('Withdrawal successful!', { id: 'withdraw' });
-
-      // Generate mock transaction hash
-      const txHash = '0x' + Math.random().toString(16).substr(2, 64);
-
-      setTimeout(() => {
-        toast.success(
-          <div>
-            <p>Withdrawal confirmed!</p>
-            <a
-              href={`https://polygonscan.com/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 underline"
-            >
-              View on PolygonScan
-            </a>
-          </div>,
-          { duration: 5000 }
-        );
-      }, 1000);
-
-      onSuccess();
-    } catch (error) {
-      console.error('Withdrawal error:', error);
-      toast.error('Withdrawal failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    // Wallet operations are not available with Clerk authentication
+    toast.error('Wallet operations are not available with email authentication. Please use a Web3 wallet for withdrawals.');
   };
 
   const isValidShares = shares && parseFloat(shares) > 0 && parseFloat(shares) <= parseFloat(userShares || '0');

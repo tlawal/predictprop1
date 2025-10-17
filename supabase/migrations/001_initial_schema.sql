@@ -3,12 +3,13 @@ ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id TEXT PRIMARY KEY,
   email TEXT,
   wallet TEXT NOT NULL UNIQUE,
   language TEXT NOT NULL DEFAULT 'en',
   verified BOOLEAN NOT NULL DEFAULT FALSE,
   role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'affiliate')),
+  billing_info JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -16,7 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- Create challenges table
 CREATE TABLE IF NOT EXISTS challenges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   plan_type TEXT NOT NULL CHECK (plan_type IN ('1-step', '2-step', 'free-trial')),
   balance NUMERIC(20, 2) NOT NULL DEFAULT 0,
   params JSONB NOT NULL DEFAULT '{
@@ -77,10 +78,10 @@ CREATE TABLE IF NOT EXISTS orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id TEXT NOT NULL UNIQUE,
   plan_id UUID NOT NULL REFERENCES plans(id),
-  user_id UUID NOT NULL REFERENCES users(id),
+  user_id TEXT NOT NULL REFERENCES users(id),
   addons JSONB DEFAULT '{}',
   amount NUMERIC(10, 2) NOT NULL,
-  affiliate_id UUID REFERENCES users(id),
+  affiliate_id TEXT REFERENCES users(id),
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'cancelled', 'refunded')),
   payment_method TEXT CHECK (payment_method IN ('stripe', 'crypto', 'bank_transfer')),
   notes TEXT,
@@ -91,7 +92,7 @@ CREATE TABLE IF NOT EXISTS orders (
 -- Create contracts table
 CREATE TABLE IF NOT EXISTS contracts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id),
+  user_id TEXT NOT NULL REFERENCES users(id),
   type TEXT NOT NULL CHECK (type IN ('terms_of_service', 'privacy_policy', 'trading_agreement')),
   version TEXT NOT NULL,
   content TEXT NOT NULL,
@@ -108,7 +109,7 @@ CREATE TABLE IF NOT EXISTS contracts (
 -- Create admin_logs table
 CREATE TABLE IF NOT EXISTS admin_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  admin_id UUID NOT NULL REFERENCES users(id),
+  admin_id TEXT NOT NULL REFERENCES users(id),
   action TEXT NOT NULL,
   entity_type TEXT NOT NULL,
   entity_id UUID NOT NULL,
@@ -383,7 +384,7 @@ ON CONFLICT DO NOTHING;
 -- Create affiliates table
 CREATE TABLE IF NOT EXISTS affiliates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   code TEXT NOT NULL UNIQUE,
   custom_url TEXT,
   tier TEXT NOT NULL DEFAULT 'bronze' CHECK (tier IN ('bronze', 'silver', 'gold', 'platinum')),
@@ -396,8 +397,8 @@ CREATE TABLE IF NOT EXISTS affiliates (
 -- Create referrals table
 CREATE TABLE IF NOT EXISTS referrals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  referrer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  referred_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  referrer_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  referred_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'inactive')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -415,7 +416,7 @@ CREATE TABLE IF NOT EXISTS competitions (
   end_date TIMESTAMP WITH TIME ZONE NOT NULL,
   status TEXT NOT NULL DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'active', 'completed', 'cancelled')),
   max_participants INTEGER,
-  created_by UUID REFERENCES users(id),
+  created_by TEXT REFERENCES users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -435,7 +436,7 @@ CREATE TABLE IF NOT EXISTS competition_participants (
 -- Create risk_thresholds table
 CREATE TABLE IF NOT EXISTS risk_thresholds (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  admin_id UUID REFERENCES users(id),
+  admin_id TEXT REFERENCES users(id),
   thresholds JSONB NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -443,17 +444,17 @@ CREATE TABLE IF NOT EXISTS risk_thresholds (
 -- Create risk_alerts table
 CREATE TABLE IF NOT EXISTS risk_alerts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   message TEXT NOT NULL,
   severity TEXT NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical')),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'acknowledged', 'dismissed')),
   triggered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   acknowledged_at TIMESTAMP WITH TIME ZONE,
-  acknowledged_by UUID REFERENCES users(id),
+  acknowledged_by TEXT REFERENCES users(id),
   dismissed_at TIMESTAMP WITH TIME ZONE,
-  dismissed_by UUID REFERENCES users(id),
-  created_by UUID REFERENCES users(id),
+  dismissed_by TEXT REFERENCES users(id),
+  created_by TEXT REFERENCES users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -461,7 +462,7 @@ CREATE TABLE IF NOT EXISTS risk_alerts (
 -- Create risk_events table
 CREATE TABLE IF NOT EXISTS risk_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   event_type TEXT NOT NULL,
   description TEXT NOT NULL,
   value TEXT,
@@ -472,7 +473,7 @@ CREATE TABLE IF NOT EXISTS risk_events (
 CREATE TABLE IF NOT EXISTS payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   stripe_payment_intent_id TEXT,
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   amount NUMERIC(10, 2) NOT NULL,
   currency TEXT NOT NULL DEFAULT 'USD',
   status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
@@ -485,7 +486,7 @@ CREATE TABLE IF NOT EXISTS payments (
 -- Create payouts table
 CREATE TABLE IF NOT EXISTS payouts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   amount NUMERIC(10, 2) NOT NULL,
   currency TEXT NOT NULL DEFAULT 'USD',
   method TEXT NOT NULL CHECK (method IN ('stripe', 'usdc', 'bank_transfer')),

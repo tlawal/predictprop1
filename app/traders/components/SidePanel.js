@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePrivy } from '@privy-io/react-auth';
+import { useUser, useClerk } from '@clerk/nextjs';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +17,8 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export default function SidePanel({ isOpen, onClose, isMobile = false, collapsed = false, onToggleCollapse }) {
   const { t } = useTranslation();
-  const { user, logout } = usePrivy();
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const { isAuthenticated } = useSupabaseAuth();
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
@@ -40,7 +41,7 @@ export default function SidePanel({ isOpen, onClose, isMobile = false, collapsed
 
 
   const handleLogout = () => {
-    logout();
+    signOut();
     onClose?.();
   };
 

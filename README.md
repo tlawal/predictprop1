@@ -1,4 +1,47 @@
-# PredictProp
+# PolyProp
+
+## Clerk Authentication Setup
+
+PolyProp uses Clerk for authentication. Follow these steps to set up authentication:
+
+### 1. Create a Clerk Account
+1. Go to [clerk.com](https://clerk.com) and create a new account
+2. Create a new application
+
+### 2. Configure Authentication Methods
+1. In your Clerk dashboard, go to **User & Authentication** → **Email, Phone, Username**
+2. Enable **Email** and **Social providers** you want (Google, Twitter, etc.)
+3. Configure sign-up/sign-in settings as needed
+
+### 3. Get API Keys
+1. In your Clerk dashboard, go to **API Keys**
+2. Copy the following values:
+   - **Publishable Key**: Starts with `pk_test_` or `pk_live_`
+   - **Secret Key**: Starts with `sk_test_` or `sk_live_`
+
+### 4. Configure Environment Variables
+Add these to your `.env.local` file:
+```env
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_publishable_key_here
+CLERK_SECRET_KEY=sk_test_your_secret_key_here
+```
+
+### 5. Configure Redirect URLs (Important!)
+In your Clerk dashboard, go to **Paths** and add these URLs:
+- **Sign-in URL**: `http://localhost:3000`
+- **Sign-up URL**: `http://localhost:3000`
+- **After sign-in URL**: `http://localhost:3000/traders`
+- **After sign-up URL**: `http://localhost:3000/traders`
+
+For production, replace `localhost:3000` with your domain.
+
+### 6. Make Yourself an Admin
+After setting up authentication, run this SQL in your Supabase SQL Editor:
+```sql
+UPDATE auth.users
+SET raw_user_meta_data = raw_user_meta_data || '{"role": "admin"}'::jsonb
+WHERE email = 'your-email@example.com';
+```
 
 ## Supabase Setup
 
