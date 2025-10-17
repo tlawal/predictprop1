@@ -11,6 +11,7 @@ import { supabase } from '../../../lib/supabase';
 import { useSupabaseAuth } from '../../../lib/hooks/useSupabaseAuth';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import CertGenerator from './CertGenerator';
+import BuyEvaluationSection from './BuyEvaluationSection';
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
@@ -220,6 +221,9 @@ export default function SidePanel({ isOpen, onClose, isMobile = false, collapsed
           </div>
         )}
       </div>
+
+      {/* Buy Evaluation Section */}
+      <BuyEvaluationSection onClose={onClose} />
 
       {/* Navigation Links */}
       <div className="flex-1 p-6 space-y-4">

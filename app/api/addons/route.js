@@ -3,7 +3,7 @@ import { supabase } from '../../../lib/supabase';
 
 // Simple in-memory cache
 const cache = new Map();
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes for plans (less critical)
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 export async function GET(request) {
   try {
@@ -11,35 +11,35 @@ export async function GET(request) {
     const includeInactive = searchParams.get('includeInactive') === 'true';
 
     // Check cache
-    const cacheKey = `plans:${includeInactive}`;
+    const cacheKey = `addons:${includeInactive}`;
     const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       return NextResponse.json(cached.data);
     }
 
-    // Fetch plans from Supabase
+    // Fetch add-ons from Supabase
     let query = supabase
-      .from('plans')
+      .from('addons')
       .select('*')
-      .order('fee', { ascending: true });
+      .order('price', { ascending: true });
 
     if (!includeInactive) {
       query = query.eq('active', true);
     }
 
-    const { data: plans, error } = await query;
+    const { data: addons, error } = await query;
 
     if (error) {
-      console.error('Error fetching plans:', error);
+      console.error('Error fetching add-ons:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch plans', message: error.message },
+        { error: 'Failed to fetch add-ons', message: error.message },
         { status: 500 }
       );
     }
 
     const result = {
-      plans: plans || [],
-      total: plans?.length || 0
+      addons: addons || [],
+      total: addons?.length || 0
     };
 
     // Cache the result
@@ -51,9 +51,9 @@ export async function GET(request) {
     return NextResponse.json(result);
 
   } catch (error) {
-    console.error('Plans API error:', error);
+    console.error('Add-ons API error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch plans', message: error.message },
+      { error: 'Failed to fetch add-ons', message: error.message },
       { status: 500 }
     );
   }
@@ -62,43 +62,36 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { type, size, params, fee } = body;
+    const { name, description, price, param_key, param_value } = body;
 
-    if (!type || !size || !params || fee === undefined) {
+    if (!name || !description || !param_key || param_value === undefined) {
       return NextResponse.json(
         {
           error: 'Missing required fields',
-          required: ['type', 'size', 'params', 'fee']
+          required: ['name', 'description', 'param_key', 'param_value']
         },
         { status: 400 }
       );
     }
 
-    // Validate plan type
-    if (!['1-step', '2-step'].includes(type)) {
-      return NextResponse.json(
-        { error: 'Invalid plan type. Must be "1-step" or "2-step"' },
-        { status: 400 }
-      );
-    }
-
-    // Create plan in Supabase
-    const { data: plan, error } = await supabase
-      .from('plans')
+    // Create add-on in Supabase
+    const { data: addon, error } = await supabase
+      .from('addons')
       .insert({
-        type,
-        size: parseInt(size),
-        params,
-        fee: parseFloat(fee),
+        name,
+        description,
+        price: parseFloat(price) || 0,
+        param_key,
+        param_value,
         active: true
       })
       .select()
       .single();
 
     if (error) {
-      console.error('Error creating plan:', error);
+      console.error('Error creating add-on:', error);
       return NextResponse.json(
-        { error: 'Failed to create plan', message: error.message },
+        { error: 'Failed to create add-on', message: error.message },
         { status: 500 }
       );
     }
@@ -108,13 +101,13 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      plan: plan
+      addon: addon
     });
 
   } catch (error) {
-    console.error('Plans POST API error:', error);
+    console.error('Add-ons POST API error:', error);
     return NextResponse.json(
-      { error: 'Failed to create plan', message: error.message },
+      { error: 'Failed to create add-on', message: error.message },
       { status: 500 }
     );
   }
@@ -123,34 +116,35 @@ export async function POST(request) {
 export async function PUT(request) {
   try {
     const body = await request.json();
-    const { id, type, size, params, fee, active } = body;
+    const { id, name, description, price, param_key, param_value, active } = body;
 
     if (!id) {
       return NextResponse.json(
-        { error: 'Plan ID is required' },
+        { error: 'Add-on ID is required' },
         { status: 400 }
       );
     }
 
-    // Update plan in Supabase
+    // Update add-on in Supabase
     const updateData = {};
-    if (type !== undefined) updateData.type = type;
-    if (size !== undefined) updateData.size = parseInt(size);
-    if (params !== undefined) updateData.params = params;
-    if (fee !== undefined) updateData.fee = parseFloat(fee);
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (price !== undefined) updateData.price = parseFloat(price);
+    if (param_key !== undefined) updateData.param_key = param_key;
+    if (param_value !== undefined) updateData.param_value = param_value;
     if (active !== undefined) updateData.active = active;
 
-    const { data: plan, error } = await supabase
-      .from('plans')
+    const { data: addon, error } = await supabase
+      .from('addons')
       .update(updateData)
       .eq('id', id)
       .select()
       .single();
 
     if (error) {
-      console.error('Error updating plan:', error);
+      console.error('Error updating add-on:', error);
       return NextResponse.json(
-        { error: 'Failed to update plan', message: error.message },
+        { error: 'Failed to update add-on', message: error.message },
         { status: 500 }
       );
     }
@@ -160,13 +154,13 @@ export async function PUT(request) {
 
     return NextResponse.json({
       success: true,
-      plan: plan
+      addon: addon
     });
 
   } catch (error) {
-    console.error('Plans PUT API error:', error);
+    console.error('Add-ons PUT API error:', error);
     return NextResponse.json(
-      { error: 'Failed to update plan', message: error.message },
+      { error: 'Failed to update add-on', message: error.message },
       { status: 500 }
     );
   }
@@ -179,23 +173,23 @@ export async function DELETE(request) {
 
     if (!id) {
       return NextResponse.json(
-        { error: 'Plan ID is required' },
+        { error: 'Add-on ID is required' },
         { status: 400 }
       );
     }
 
     // Soft delete by setting active to false
-    const { data: plan, error } = await supabase
-      .from('plans')
+    const { data: addon, error } = await supabase
+      .from('addons')
       .update({ active: false })
       .eq('id', id)
       .select()
       .single();
 
     if (error) {
-      console.error('Error deactivating plan:', error);
+      console.error('Error deactivating add-on:', error);
       return NextResponse.json(
-        { error: 'Failed to deactivate plan', message: error.message },
+        { error: 'Failed to deactivate add-on', message: error.message },
         { status: 500 }
       );
     }
@@ -205,13 +199,13 @@ export async function DELETE(request) {
 
     return NextResponse.json({
       success: true,
-      plan: plan
+      addon: addon
     });
 
   } catch (error) {
-    console.error('Plans DELETE API error:', error);
+    console.error('Add-ons DELETE API error:', error);
     return NextResponse.json(
-      { error: 'Failed to deactivate plan', message: error.message },
+      { error: 'Failed to deactivate add-on', message: error.message },
       { status: 500 }
     );
   }

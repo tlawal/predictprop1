@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS yields (
 CREATE TABLE IF NOT EXISTS plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   type TEXT NOT NULL CHECK (type IN ('1-step', '2-step')),
+  size INTEGER NOT NULL,
   description TEXT NOT NULL,
   params JSONB NOT NULL DEFAULT '{
     "roi": 10,
@@ -128,6 +129,7 @@ CREATE INDEX IF NOT EXISTS idx_trades_resolved ON trades(resolved);
 CREATE INDEX IF NOT EXISTS idx_yields_lp_id ON yields(lp_id);
 CREATE INDEX IF NOT EXISTS idx_plans_active ON plans(active);
 CREATE INDEX IF NOT EXISTS idx_plans_type ON plans(type);
+CREATE INDEX IF NOT EXISTS idx_plans_size ON plans(size);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_plan_id ON orders(plan_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
@@ -154,6 +156,9 @@ ALTER TABLE competition_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE risk_thresholds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE risk_alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE risk_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payouts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE addons ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users table
 CREATE POLICY "Users can view their own profile" ON users
@@ -296,6 +301,30 @@ CREATE POLICY "Admins can view all risk events" ON risk_events
 CREATE POLICY "System can create risk events" ON risk_events
   FOR INSERT WITH CHECK (true);
 
+-- RLS Policies for payments table
+CREATE POLICY "Users can view their own payments" ON payments
+  FOR SELECT USING (user_id::text = auth.uid()::text);
+
+CREATE POLICY "Admins can view all payments" ON payments
+  FOR SELECT USING (auth.jwt() ->> 'role' = 'admin');
+
+CREATE POLICY "Admins can update payments" ON payments
+  FOR UPDATE USING (auth.jwt() ->> 'role' = 'admin');
+
+-- RLS Policies for payouts table
+CREATE POLICY "Users can view their own payouts" ON payouts
+  FOR SELECT USING (user_id::text = auth.uid()::text);
+
+CREATE POLICY "Admins can manage all payouts" ON payouts
+  FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
+
+-- RLS Policies for addons table (public read for active, admin write)
+CREATE POLICY "Anyone can view active addons" ON addons
+  FOR SELECT USING (active = true);
+
+CREATE POLICY "Admins can manage addons" ON addons
+  FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
+
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -336,10 +365,19 @@ CREATE TRIGGER update_competitions_updated_at BEFORE UPDATE ON competitions
 CREATE TRIGGER update_risk_alerts_updated_at BEFORE UPDATE ON risk_alerts
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_payouts_updated_at BEFORE UPDATE ON payouts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_addons_updated_at BEFORE UPDATE ON addons
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- Insert default plans
-INSERT INTO plans (type, description, params, fee) VALUES
-  ('1-step', 'Single phase challenge with profit target', '{"roi": 6, "win_rate": 70, "drawdown": 5, "exposure": 15, "min_days": 10}', 99.00),
-  ('2-step', 'Two phase challenge with evaluation and profit phases', '{"roi": 10, "win_rate": 70, "drawdown": 5, "exposure": 15, "min_days": 20}', 149.00)
+INSERT INTO plans (type, size, description, params, fee) VALUES
+  ('1-step', 5000, 'Single phase challenge with profit target', '{"roi": 6, "win_rate": 70, "drawdown": 5, "exposure": 15, "min_days": 10}', 99.00),
+  ('2-step', 10000, 'Two phase challenge with evaluation and profit phases', '{"roi": 10, "win_rate": 70, "drawdown": 5, "exposure": 15, "min_days": 20}', 149.00)
 ON CONFLICT DO NOTHING;
 
 -- Create affiliates table
@@ -428,4 +466,46 @@ CREATE TABLE IF NOT EXISTS risk_events (
   description TEXT NOT NULL,
   value TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create payments table
+CREATE TABLE IF NOT EXISTS payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  stripe_payment_intent_id TEXT,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  amount NUMERIC(10, 2) NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
+  type TEXT NOT NULL CHECK (type IN ('evaluation', 'addon', 'subscription')),
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create payouts table
+CREATE TABLE IF NOT EXISTS payouts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  amount NUMERIC(10, 2) NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  method TEXT NOT NULL CHECK (method IN ('stripe', 'usdc', 'bank_transfer')),
+  stripe_payout_id TEXT,
+  transaction_hash TEXT,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'failed')),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create addons table
+CREATE TABLE IF NOT EXISTS addons (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  price NUMERIC(10, 2) NOT NULL,
+  param_key TEXT NOT NULL,
+  param_value JSONB,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

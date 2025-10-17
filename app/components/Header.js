@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useTheme } from '../ThemeContext';
 import { usePrivy } from '@privy-io/react-auth';
 import styles from '../styles/Header.module.css';

@@ -166,7 +166,7 @@ const ChallengePlansTable = () => {
             </div>
 
             <div className={styles.planFooter}>
-              <Link href={`/traders?size=${formatAccountSize(plan.size)}&step=${getStepNumber(evaluationType)}`}>
+              <Link href={`/purchase-new-evaluation?size=${formatAccountSize(plan.size)}&step=${evaluationType}`}>
                 <button className={styles.planButton}>
                   Select Plan
                 </button>
