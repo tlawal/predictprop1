@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-import { useAuth, useUser } from '@clerk/nextjs';
+import { useAuth, useUser, useClerk } from '@clerk/nextjs';
 import { Tab } from '@headlessui/react';
 import useSWR from 'swr';
 import { supabase } from '../../lib/supabase';
@@ -20,6 +20,7 @@ function AdminPageContent() {
   const router = useRouter();
   const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
+  const { signOut } = useClerk();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -94,7 +95,7 @@ function AdminPageContent() {
               </p>
             </div>
             <button
-              onClick={logout}
+              onClick={() => signOut()}
               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
             >
               Logout
@@ -1215,9 +1216,18 @@ function PlanForm({ initialData, onSubmit, onCancel }) {
 
 // Add-Ons Panel Component
 function AddOnsPanel({ adminId }) {
-  const { data: addonsData, mutate } = useSWR('/api/addons?includeInactive=true', fetcher);
+  const { data: addonsData, mutate, error: addonsError, isLoading: addonsLoading } = useSWR('/api/addons?includeInactive=true', fetcher);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingAddon, setEditingAddon] = useState(null);
+
+  // Debug logging
+  console.log('🔧 AddOnsPanel Debug:', {
+    addonsData,
+    addonsError,
+    addonsLoading,
+    addonCount: addonsData?.addons?.length || 0,
+    apiUrl: '/api/addons?includeInactive=true'
+  });
 
   const createAddon = async (addonData) => {
     try {
@@ -1243,11 +1253,14 @@ function AddOnsPanel({ adminId }) {
 
   const updateAddon = async (addonId, addonData) => {
     try {
+      console.log('Updating addon:', addonId, addonData);
       const response = await fetch('/api/addons', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: addonId, ...addonData }),
       });
+
+      console.log('Update response:', response.status, response.statusText);
 
       if (response.ok) {
         mutate(); // Refresh data
@@ -1255,6 +1268,7 @@ function AddOnsPanel({ adminId }) {
         toast.success('Add-on updated successfully');
       } else {
         const error = await response.json();
+        console.error('Update error response:', error);
         toast.error(error.error || 'Failed to update add-on');
       }
     } catch (error) {
@@ -1267,15 +1281,19 @@ function AddOnsPanel({ adminId }) {
     if (!confirm('Are you sure you want to deactivate this add-on?')) return;
 
     try {
+      console.log('Deleting addon:', addonId);
       const response = await fetch(`/api/addons?id=${addonId}`, {
         method: 'DELETE',
       });
+
+      console.log('Delete response:', response.status, response.statusText);
 
       if (response.ok) {
         mutate(); // Refresh data
         toast.success('Add-on deactivated successfully');
       } else {
         const error = await response.json();
+        console.error('Delete error response:', error);
         toast.error(error.error || 'Failed to deactivate add-on');
       }
     } catch (error) {

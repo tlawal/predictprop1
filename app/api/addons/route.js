@@ -156,8 +156,7 @@ export async function PUT(request) {
       .from('addons')
       .update(updateData)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       // If the table doesn't exist yet, return a helpful error
@@ -176,12 +175,20 @@ export async function PUT(request) {
       );
     }
 
+    // Check if any rows were actually updated
+    if (!addon || addon.length === 0) {
+      return NextResponse.json(
+        { error: 'Add-on not found', message: 'No add-on with the specified ID exists' },
+        { status: 404 }
+      );
+    }
+
     // Clear cache
     cache.clear();
 
     return NextResponse.json({
       success: true,
-      addon: addon
+      addon: addon[0] // Return the first (and should be only) updated addon
     });
 
   } catch (error) {
@@ -210,8 +217,7 @@ export async function DELETE(request) {
       .from('addons')
       .update({ active: false })
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       // If the table doesn't exist yet, return a helpful error
@@ -230,12 +236,20 @@ export async function DELETE(request) {
       );
     }
 
+    // Check if any rows were actually updated
+    if (!addon || addon.length === 0) {
+      return NextResponse.json(
+        { error: 'Add-on not found', message: 'No add-on with the specified ID exists' },
+        { status: 404 }
+      );
+    }
+
     // Clear cache
     cache.clear();
 
     return NextResponse.json({
       success: true,
-      addon: addon
+      addon: addon[0] // Return the first (and should be only) updated addon
     });
 
   } catch (error) {
