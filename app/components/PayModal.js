@@ -6,15 +6,10 @@ import { Fragment } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { ethers } from 'ethers';
 import toast from 'react-hot-toast';
-import USDCPaymentProcessor from '../../lib/usdc-payment';
 
 // Initialize Stripe (replace with your publishable key)
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder');
-
-// Initialize USDC Payment Processor
-const usdcProcessor = new USDCPaymentProcessor('polygon');
 
 const PaymentMethod = ({ method, selected, onChange, plan }) => {
   const isSelected = selected === method.id;

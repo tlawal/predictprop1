@@ -4,7 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTheme } from '../ThemeContext';
-import { SignInButton, UserButton, useAuth, useUser } from '@clerk/nextjs';
+import { SignInButton, useAuth, useUser, useClerk } from '@clerk/nextjs';
+import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/react';
 import styles from '../styles/Header.module.css';
 
 export default function Header() {
@@ -75,14 +76,7 @@ export default function Header() {
                     Loading...
                   </button>
                 ) : isSignedIn ? (
-                  <UserButton
-                    appearance={{
-                      elements: {
-                        avatarBox: styles.userAvatar,
-                        userButtonPopoverCard: styles.userMenu
-                      }
-                    }}
-                  />
+                  <UserDropdown />
                 ) : (
                   <SignInButton mode="modal">
                     <button className={styles.connectOrb}>
@@ -102,14 +96,7 @@ export default function Header() {
                 <span>Loading...</span>
               </button>
             ) : isSignedIn ? (
-              <UserButton
-                appearance={{
-                  elements: {
-                    avatarBox: styles.mobileUserAvatar,
-                    userButtonPopoverCard: styles.mobileUserMenu
-                  }
-                }}
-              />
+              <UserDropdown />
             ) : (
               <SignInButton mode="modal">
                 <button className={styles.mobileConnectOrb}>
@@ -180,5 +167,68 @@ export default function Header() {
       )}
 
     </>
+  );
+}
+
+// Custom User Dropdown Component
+function UserDropdown() {
+  const { user } = useUser();
+  const { signOut } = useClerk();
+
+  return (
+    <Menu as="div" className="relative">
+      <MenuButton className={`${styles.connectOrb} flex items-center space-x-2`}>
+        <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs font-medium text-white">
+          {user?.firstName?.[0] || user?.primaryEmailAddress?.emailAddress?.[0] || 'U'}
+        </div>
+        <span className="hidden sm:block text-sm">
+          {user?.firstName || user?.primaryEmailAddress?.emailAddress}
+        </span>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </MenuButton>
+
+      <MenuItems className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <p className="text-sm font-medium text-gray-900 dark:text-white">
+            {user?.firstName} {user?.lastName}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+            {user?.primaryEmailAddress?.emailAddress}
+          </p>
+        </div>
+
+        <div className="py-1">
+          <MenuItem>
+            {({ active }) => (
+              <Link
+                href="/traders/settings"
+                className={`${
+                  active ? 'bg-gray-100 dark:bg-gray-700' : ''
+                } block px-4 py-2 text-sm text-gray-700 dark:text-gray-300`}
+              >
+                ⚙️ Settings
+              </Link>
+            )}
+          </MenuItem>
+        </div>
+
+        <div className="border-t border-gray-200 dark:border-gray-700 py-1">
+          <MenuItem>
+            {({ active }) => (
+              <button
+                onClick={() => signOut()}
+                className={`${
+                  active ? 'bg-gray-100 dark:bg-gray-700' : ''
+                } block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400`}
+              >
+                🚪 Logout
+              </button>
+            )}
+          </MenuItem>
+        </div>
+      </MenuItems>
+    </Menu>
   );
 }

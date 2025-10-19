@@ -10,7 +10,7 @@ import { usePathname } from 'next/navigation';
 
 function LayoutContent({ children }) {
   const pathname = usePathname();
-  const hideHeader = pathname === '/traders';
+  const hideHeader = pathname.startsWith('/traders');
 
   return (
     <ThemeProvider>
