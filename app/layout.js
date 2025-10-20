@@ -4,12 +4,16 @@ import './globals.css';
 export const metadata = {
   title: 'PolyProp',
   description: 'Decentralized Prop Trading Platform',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
+  icons: {
+    icon: '/PPfavicon.jpg',
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }) {

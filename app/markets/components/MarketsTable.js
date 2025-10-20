@@ -20,9 +20,6 @@ import Countdown from 'react-countdown';
 import useOddsStore from '../../../lib/stores/oddsStore';
 import polymarketWebSocket from '../../../lib/websocket';
 
-// Stable empty array reference for Zustand selectors
-const EMPTY_ARRAY = [];
-
 // Custom hook for managing watch state
 const useWatchState = () => {
   const [watchedMarkets, setWatchedMarkets] = useState(new Set());
@@ -76,55 +73,6 @@ const useWatchState = () => {
   return { watchedMarkets, toggleWatch };
 };
 
-// Custom hook to get price history without selector issues
-const usePriceHistory = (tokenId) => {
-  const [priceHistory, setPriceHistory] = useState(EMPTY_ARRAY);
-
-  useEffect(() => {
-    // Get initial value
-    setPriceHistory(useOddsStore.getState().priceHistory.get(tokenId) || EMPTY_ARRAY);
-
-    // Subscribe to changes
-    const unsubscribe = useOddsStore.subscribe((state) => {
-      const newHistory = state.priceHistory.get(tokenId) || EMPTY_ARRAY;
-      setPriceHistory(newHistory);
-    });
-
-    return unsubscribe;
-  }, [tokenId]);
-
-  return priceHistory;
-};
-
-
-// High Edge Detection Component
-const HighEdgeChip = ({ market }) => {
-  const priceHistory = usePriceHistory(market.id);
-  const volume1wk = market.volume1wk || market.volume || 0;
-
-  // Calculate price change from recent history
-  let wsPriceChange = 0;
-  if (priceHistory.length > 1) {
-    const lastPrice = priceHistory[priceHistory.length - 2].yesPrice;
-    const currentPrice = priceHistory[priceHistory.length - 1].yesPrice;
-    wsPriceChange = (currentPrice - lastPrice) / lastPrice;
-  }
-
-  const hasHighChange = Math.abs(wsPriceChange) > 0.05; // 5% change
-  const hasLowLiquidity = volume1wk < 5000; // Less than $5k weekly volume
-
-  if (!hasHighChange || !hasLowLiquidity) return null;
-
-  return (
-    <span
-      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-900/50 text-red-300"
-      title="Possible mispricing—low liquidity opportunity"
-    >
-      High Edge
-    </span>
-  );
-};
-
 // Countdown Renderer for end dates
 const CountdownRenderer = ({ days, hours, minutes, seconds, completed }) => {
   if (completed) {
@@ -162,11 +110,6 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  const [wsPriceChanges, setWsPriceChanges] = useState(new Map()); // Track WS price changes
-
-  // Get price history from Zustand store
-  const getPriceHistory = useOddsStore(state => state.getPriceHistory);
-
   // Watch state management
   const { watchedMarkets, toggleWatch } = useWatchState();
 
@@ -191,8 +134,13 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
     setMarketsState(propMarkets || []);
   }, [propMarkets]);
 
-  // Use local markets state
-  const markets = marketsState;
+  // Use local markets state and ensure tokenId present for downstream consumers
+  const markets = useMemo(() => (
+    (marketsState || []).map((market) => ({
+      ...market,
+      tokenId: market.tokenId || market.id
+    }))
+  ), [marketsState]);
   const isLoading = propIsLoading;
 
   // Sorting state from Zustand
@@ -275,50 +223,30 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
   };
 
   // Listen for WebSocket price updates
-  useEffect(() => {
-    const handlePriceUpdate = (event) => {
-      const { tokenId, yesPrice } = event.detail;
-
-      // Calculate price change for High Edge detection
-      const currentHistory = getPriceHistory(tokenId);
-      if (currentHistory.length > 1) {
-        const lastPrice = currentHistory[currentHistory.length - 2].yesPrice;
-        const change = (yesPrice - lastPrice) / lastPrice;
-
-        setWsPriceChanges(prev => new Map(prev).set(tokenId, change));
-      }
-    };
-
-    window.addEventListener('polymarket:price_update', handlePriceUpdate);
-
-    return () => {
-      window.removeEventListener('polymarket:price_update', handlePriceUpdate);
-    };
-  }, [getPriceHistory]);
-
   // SWR polling for midpoint data of visible markets (every 5 minutes)
   const visibleMarkets = markets.slice(0, 20); // Only poll first 20 visible markets
-  const midpointUrls = visibleMarkets.map(market =>
-    `/api/midpoint/${market.id}?timestamp=${Date.now()}`
-  );
+  const visibleTokenIds = visibleMarkets
+    .map(market => market.tokenId || market.id)
+    .filter(Boolean);
 
-  // Poll midpoint data for all visible markets
   useSWR(
-    visibleMarkets.length > 0 ? midpointUrls : null,
-    async (urls) => {
-      if (!urls || urls.length === 0) return null;
-
-      const promises = urls.map(url => fetch(url).then(res => res.json()).catch(() => null));
-      const results = await Promise.all(promises);
+    visibleTokenIds.length > 0 ? ['midpoints', visibleTokenIds] : null,
+    async ([, tokenIds]) => {
+      const query = `/api/midpoint?ids=${encodeURIComponent(tokenIds.join(','))}`;
+      const response = await fetch(query);
+      if (!response.ok) {
+        throw new Error('Failed to fetch midpoints');
+      }
+      const midpointData = await response.json();
 
       // Update Zustand store with midpoint data
       const updates = {};
-      results.forEach((result, index) => {
-        if (result && visibleMarkets[index]) {
-          const market = visibleMarkets[index];
-          updates[market.id] = {
-            yesPrice: result.midpoint || market.yesOdds,
-            noPrice: result.midpoint ? (1 - result.midpoint) : market.noOdds
+      tokenIds.forEach(tokenId => {
+        const result = midpointData[tokenId];
+        if (result) {
+          updates[tokenId] = {
+            yesPrice: result.yesPrice,
+            noPrice: result.noPrice
           };
         }
       });
@@ -328,7 +256,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
         store.updateMultipleMarketOdds(updates);
       }
 
-      return results;
+      return midpointData;
     },
     {
       refreshInterval: 300000, // 5 minutes
@@ -336,7 +264,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
       dedupingInterval: 60000, // 1 minute
       revalidateIfStale: true,
       errorRetryCount: 3,
-      errorRetryInterval: 10000,
+      errorRetryInterval: (_, __, ___, ____, { retryCount }) => 1000 * Math.pow(2, retryCount),
       onError: () => showFetchError(midpointErrorToastShown),
       onSuccess: () => resetFetchError(midpointErrorToastShown)
     }
@@ -356,15 +284,18 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
   const startPolling = useCallback(() => {
     const pollInterval = setInterval(async () => {
       try {
-        const visibleTokenIds = markets.slice(0, 20).map(market => market.tokenId).filter(Boolean);
-        if (visibleTokenIds.length > 0) {
-          // Import the service dynamically to avoid circular imports
-          const { default: polymarketService } = await import('../../../lib/services/polymarket');
-          const midpoints = await polymarketService.fetchMultipleMidpoints(visibleTokenIds);
+        const tokenIds = markets.slice(0, 20).map(market => market.tokenId || market.id).filter(Boolean);
+        if (tokenIds.length > 0) {
+          const response = await fetch(`/api/midpoint?ids=${encodeURIComponent(tokenIds.join(','))}`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch midpoints');
+          }
+          const midpoints = await response.json();
 
           setMarketsState(prevMarkets =>
             prevMarkets.map(market => {
-              const midpoint = midpoints[market.tokenId];
+              const tokenId = market.tokenId || market.id;
+              const midpoint = tokenId ? midpoints[tokenId] : null;
               if (midpoint) {
                 return {
                   ...market,
@@ -434,10 +365,11 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: '2-digit'
     });
   };
 
@@ -524,18 +456,30 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
           {/* Markets Table - Desktop */}
           {screenSizeDetermined && isDesktop && (
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl overflow-hidden">
-              {/* Fixed Header */}
-              <div className="bg-slate-700/50">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full">
-                    <thead>
+              <div className="overflow-x-auto">
+                <div className="max-h-[70vh] overflow-y-auto">
+                  <table className="min-w-full table-fixed">
+                    <colgroup>
+                      <col style={{ width: '45%' }} />
+                      <col style={{ width: '100px' }} />
+                      <col style={{ width: '90px' }} />
+                      <col style={{ width: '90px' }} />
+                      <col style={{ width: '110px' }} />
+                      <col style={{ width: '110px' }} />
+                      <col style={{ width: '110px' }} />
+                      <col style={{ width: '120px' }} />
+                      <col style={{ width: '120px' }} />
+                    </colgroup>
+                    <thead className="sticky top-0 z-10 bg-slate-700/60 backdrop-blur-sm">
                       <tr>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-2/5 md:w-1/2 lg:w-3/5">
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">
                           Question
                         </th>
-                        <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300 w-16 md:w-20">Chart</th>
+                        <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300">
+                          Chart
+                        </th>
                         <th
-                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'yesOdds') ? 'bg-blue-900/50' : ''}`}
+                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'yesOdds') ? 'bg-blue-900/50' : ''}`}
                           onClick={(e) => handleSortClick('yesOdds', e)}
                           data-tooltip-id="yes-odds-tooltip"
                           data-tooltip-content="Sort by Yes odds (probability)"
@@ -546,7 +490,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                           </div>
                         </th>
                         <th
-                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'noOdds') ? 'bg-blue-900/50' : ''}`}
+                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'noOdds') ? 'bg-blue-900/50' : ''}`}
                           onClick={(e) => handleSortClick('noOdds', e)}
                           data-tooltip-id="no-odds-tooltip"
                           data-tooltip-content="Sort by No odds (probability)"
@@ -557,7 +501,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                           </div>
                         </th>
                         <th
-                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'volume') ? 'bg-blue-900/50' : ''}`}
+                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'volume') ? 'bg-blue-900/50' : ''}`}
                           onClick={(e) => handleSortClick('volume', e)}
                           data-tooltip-id="volume-tooltip"
                           data-tooltip-content="Sort by total trading volume"
@@ -568,7 +512,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                           </div>
                         </th>
                         <th
-                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'volume24hr') ? 'bg-blue-900/50' : ''}`}
+                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'volume24hr') ? 'bg-blue-900/50' : ''}`}
                           onClick={(e) => handleSortClick('volume24hr', e)}
                           data-tooltip-id="volume24h-tooltip"
                           data-tooltip-content="Sort by 24-hour trading volume"
@@ -579,7 +523,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                           </div>
                         </th>
                         <th
-                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'liquidity') ? 'bg-blue-900/50' : ''}`}
+                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'liquidity') ? 'bg-blue-900/50' : ''}`}
                           onClick={(e) => handleSortClick('liquidity', e)}
                           data-tooltip-id="liquidity-tooltip"
                           data-tooltip-content="Sort by market liquidity"
@@ -589,9 +533,8 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                             {getSortIndicator('liquidity')}
                           </div>
                         </th>
-                        <th className="px-3 py-4 text-center text-sm font-semibold text-gray-300 w-12 md:w-16">Edge</th>
                         <th
-                          className={`px-4 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 md:w-24 ${sortConfig.some(s => s.key === 'endDateIso') ? 'bg-blue-900/50' : ''}`}
+                          className={`px-4 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none ${sortConfig.some(s => s.key === 'endDateIso') ? 'bg-blue-900/50' : ''}`}
                           onClick={(e) => handleSortClick('endDateIso', e)}
                           data-tooltip-id="expires-tooltip"
                           data-tooltip-content="Sort by market expiration date"
@@ -601,33 +544,26 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                             {getSortIndicator('endDateIso')}
                           </div>
                         </th>
-                        <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300 w-16 md:w-20">Actions</th>
+                        <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300">Actions</th>
                       </tr>
                     </thead>
+                    <tbody className="divide-y divide-slate-700">
+                      {sortedMarkets.map((market) => (
+                        <MarketRow
+                          key={market.id}
+                          market={market}
+                          onMarketClick={onMarketClick}
+                          onMarketInsights={onMarketInsights}
+                          onMarketSelectForOrderbook={onMarketSelectForOrderbook}
+                          formatDate={formatDate}
+                          formatVolume={formatVolume}
+                          isWatching={watchedMarkets.has(market.id)}
+                          onToggleWatch={toggleWatch}
+                        />
+                      ))}
+                    </tbody>
                   </table>
                 </div>
-              </div>
-
-              {/* Virtualized Table Body */}
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <tbody className="divide-y divide-slate-700">
-                    {sortedMarkets.map((market) => (
-                      <MarketRow
-                        key={market.id}
-                        market={market}
-                        onMarketClick={onMarketClick}
-                        onMarketInsights={onMarketInsights}
-                        onMarketSelectForOrderbook={onMarketSelectForOrderbook}
-                        formatDate={formatDate}
-                        formatVolume={formatVolume}
-                        sortConfig={sortConfig}
-                        isWatching={watchedMarkets.has(market.id)}
-                        onToggleWatch={toggleWatch}
-                      />
-                    ))}
-                  </tbody>
-                </table>
               </div>
             </div>
           )}
@@ -644,7 +580,6 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
                   onMarketSelectForOrderbook={onMarketSelectForOrderbook}
                   formatDate={formatDate}
                   formatVolume={formatVolume}
-                  wsPriceChanges={wsPriceChanges}
                 />
               ))}
             </div>
@@ -669,10 +604,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
 
           {/* Dynamic tooltips for each market */}
           {sortedMarkets.map((market) => (
-            <React.Fragment key={market.id}>
-              <Tooltip id={`orderbook-${market.id}-tooltip`} place="top" />
-              <Tooltip id={`ai-hint-${market.id}-tooltip`} place="top" />
-            </React.Fragment>
+            <Tooltip key={market.id} id={`orderbook-${market.id}-tooltip`} place="top" />
           ))}
         </React.Fragment>
       )}
@@ -680,205 +612,8 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
   );
 }
 
-// Virtualized market row component for react-window
-const VirtualizedMarketRow = React.memo(({ index, style, data }) => {
-  const {
-    markets,
-    onMarketClick,
-    onMarketInsights,
-    onMarketSelectForOrderbook,
-    formatDate,
-    formatVolume,
-    sortConfig,
-    watchedMarkets,
-    toggleWatch,
-    showFetchError,
-    resetFetchError
-  } = data;
-
-  const market = markets[index];
-  const isWatching = watchedMarkets.has(market.id);
-
-  // Get orderbook data for tooltip
-  const orderbookToastShown = useRef(false);
-  const { data: orderbookData } = useSWR(
-    `/api/orderbook?tokenId=${market.id}`,
-    (url) => fetch(url).then(res => res.json()),
-    {
-      refreshInterval: 60000, // 1 minute
-      revalidateOnFocus: false,
-      revalidateIfStale: true,
-      errorRetryCount: 3,
-      errorRetryInterval: 10000,
-      onError: () => showFetchError(orderbookToastShown),
-      onSuccess: () => resetFetchError(orderbookToastShown)
-    }
-  );
-
-  // Calculate AI hint - potential mispricing detection
-  const priceHistory = usePriceHistory(market.id || market.tokenId);
-  const hasHighEdge = priceHistory.length > 1 &&
-    market.volume1wk < 5000 &&
-    Math.abs(priceHistory[priceHistory.length - 1].yesPrice - priceHistory[priceHistory.length - 2].yesPrice) > 0.05;
-
-  // Create orderbook tooltip content
-  const getOrderbookTooltip = () => {
-    if (!orderbookData) return "Loading orderbook data...";
-
-    const { summary } = orderbookData;
-    return `Bid: $${summary.bestBid?.toFixed(4) || 'N/A'} Ask: $${summary.bestAsk?.toFixed(4) || 'N/A'} Spread: ${orderbookData.spread?.percentage?.toFixed(2) || 'N/A'}%`;
-  };
-
-  return (
-    <tr
-      className="hover:bg-slate-700/30 transition-all duration-300 cursor-pointer"
-      style={{ height: '50px' }}
-      onClick={() => onMarketClick(market)}
-    >
-            {/* Question Column */}
-            <td className="px-6 py-4">
-              <div className="flex items-center gap-3">
-                <Image
-                  src={market.icon}
-                  alt={market.question}
-                  width={32}
-                  height={32}
-                  className="rounded-full object-cover flex-shrink-0"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                  }}
-                />
-                <div className="font-semibold text-white text-sm leading-tight min-w-0 flex-1">
-                  {market.question}
-                </div>
-              </div>
-            </td>
-
-            {/* Chart Column */}
-            <td className="px-6 py-4 text-center">
-              <ProbabilitySparkline tokenId={market.id} yesPrice={market.yesOdds} />
-            </td>
-
-            {/* Yes Odds Column */}
-            <td className="px-6 py-4 text-right">
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-300 ease-in-out ${
-                  market.yesOdds > 0.5 ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-300'
-                } ${market.lastUpdate ? 'animate-pulse' : ''}`}
-                data-tooltip-id={`orderbook-${market.id}-tooltip`}
-                data-tooltip-content={getOrderbookTooltip()}
-              >
-                {(market.yesOdds * 100).toFixed(0)}%
-              </span>
-            </td>
-
-            {/* No Odds Column */}
-            <td className="px-6 py-4 text-right">
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-300 ease-in-out ${
-                  market.noOdds > 0.5 ? 'bg-red-900 text-red-300' : 'bg-gray-700 text-gray-300'
-                } ${market.lastUpdate ? 'animate-pulse' : ''}`}
-                data-tooltip-id={`orderbook-${market.id}-tooltip`}
-                data-tooltip-content={getOrderbookTooltip()}
-              >
-                {(market.noOdds * 100).toFixed(0)}%
-              </span>
-            </td>
-
-            {/* Total Volume Column */}
-            <td className="px-6 py-4 text-right">
-              <span className="text-sm text-gray-300">
-                {formatVolume(market.volume || 0)}
-              </span>
-            </td>
-
-            {/* 24hr Volume Column */}
-            <td className="px-6 py-4 text-right">
-              <span className="text-sm text-gray-300">
-                {formatVolume(market.volume24hr || 0)}
-              </span>
-            </td>
-
-            {/* Liquidity Column */}
-            <td className="px-6 py-4 text-right">
-              <span className={`text-sm ${market.liquidity < 10000 ? 'text-red-400 font-semibold' : 'text-gray-300'}`}>
-                ${(market.liquidity / 1000).toFixed(0)}k
-              </span>
-            </td>
-
-            {/* AI Hint Column */}
-            <td className="px-6 py-4 text-center">
-              {hasHighEdge && (
-                <span
-                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-900 text-yellow-200 border border-yellow-600"
-                  data-tooltip-id={`ai-hint-${market.id}-tooltip`}
-                  data-tooltip-content="Potential mispricing detected: High price movement with low volume. Consider checking for edge."
-                >
-                  🤖 Edge
-                </span>
-              )}
-            </td>
-
-            {/* Expires Column */}
-            <td className="px-6 py-4 text-left">
-              <span className="text-sm text-gray-300">
-                {market.endDateIso ? `Closes ${market.endDateIso}` : formatDate(market.endDate)}
-              </span>
-            </td>
-
-            {/* Actions Column */}
-            <td className="px-6 py-4 text-center">
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleWatch(market.id, market.question);
-                  }}
-                  className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
-                    isWatching
-                      ? 'bg-yellow-600 hover:bg-yellow-700 text-yellow-100'
-                      : 'bg-slate-700 hover:bg-slate-600 text-gray-300'
-                  }`}
-                  title={isWatching ? 'Unwatch Market' : 'Watch Market'}
-                >
-                  <StarIcon className={`w-4 h-4 ${isWatching ? 'fill-current' : ''}`} />
-                </button>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMarketInsights(market);
-                  }}
-                  className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
-                  title="View Insights"
-                >
-                  <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </button>
-
-                <a
-                  href={market.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
-                  onClick={(e) => e.stopPropagation()}
-                  title="View on Polymarket"
-                >
-                  <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </a>
-              </div>
-            </td>
-          </tr>
-  );
-});
-
-VirtualizedMarketRow.displayName = 'VirtualizedMarketRow';
-
 // Enhanced market row component for desktop
-function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, formatDate, formatVolume, sortConfig, isWatching, onToggleWatch }) {
+function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, formatDate, formatVolume, isWatching, onToggleWatch }) {
   // Get orderbook data for tooltip
   const { data: orderbookData } = useSWR(
     `/api/orderbook?tokenId=${market.id}`,
@@ -888,12 +623,6 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
       revalidateOnFocus: false,
     }
   );
-
-  // Calculate AI hint - potential mispricing detection
-  const priceHistory = usePriceHistory(market.id || market.tokenId);
-  const hasHighEdge = priceHistory.length > 1 &&
-    market.volume1wk < 5000 &&
-    Math.abs(priceHistory[priceHistory.length - 1].yesPrice - priceHistory[priceHistory.length - 2].yesPrice) > 0.05;
 
   // Create orderbook tooltip content
   const getOrderbookTooltip = () => {
@@ -929,7 +658,13 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
 
       {/* Chart Column */}
       <td className="px-6 py-4 text-center">
-        <ProbabilitySparkline tokenId={market.id} yesPrice={market.yesOdds} />
+        <div className="flex items-center justify-center h-10 w-full">
+          {market.tokenId ? (
+            <ProbabilitySparkline tokenId={market.tokenId} yesPrice={market.yesOdds} />
+          ) : (
+            <div className="h-10 w-full bg-slate-700/60 rounded" />
+          )}
+        </div>
       </td>
 
       {/* Yes Odds Column */}
@@ -975,27 +710,14 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
       {/* Liquidity Column */}
       <td className="px-6 py-4 text-right">
         <span className={`text-sm ${market.liquidity < 10000 ? 'text-red-400 font-semibold' : 'text-gray-300'}`}>
-          ${(market.liquidity / 1000).toFixed(0)}k
+          ${(market.liquidity / 1000).toFixed(1)}k
         </span>
-      </td>
-
-      {/* AI Hint Column */}
-      <td className="px-6 py-4 text-center">
-        {hasHighEdge && (
-          <span
-            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-900 text-yellow-200 border border-yellow-600"
-            data-tooltip-id={`ai-hint-${market.id}-tooltip`}
-            data-tooltip-content="Potential mispricing detected: High price movement with low volume. Consider checking for edge."
-          >
-            🤖 Edge
-          </span>
-        )}
       </td>
 
       {/* Expires Column */}
       <td className="px-6 py-4 text-left">
         <span className="text-sm text-gray-300">
-          {market.endDateIso ? `Closes ${market.endDateIso}` : formatDate(market.endDate)}
+          {formatDate(market.endDate || market.endDateIso)}
         </span>
       </td>
 
@@ -1267,7 +989,7 @@ const VirtualizedMarketCard = React.memo(({ index, style, data }) => {
                   </div>
                   <div className="flex justify-between">
                     <span>Closes:</span>
-                    <span>{market.endDateIso || formatDate(market.endDate)}</span>
+                    <span>{formatDate(market.endDate || market.endDateIso)}</span>
                   </div>
                 </div>
 
@@ -1288,7 +1010,7 @@ const VirtualizedMarketCard = React.memo(({ index, style, data }) => {
 VirtualizedMarketCard.displayName = 'VirtualizedMarketCard';
 
 // Mobile card component
-function MarketCard({ market, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, formatDate, formatVolume, wsPriceChanges }) {
+function MarketCard({ market, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, formatDate, formatVolume }) {
   return (
     <Disclosure>
       {({ open }) => (
@@ -1493,7 +1215,7 @@ function MarketCard({ market, onMarketClick, onMarketInsights, onMarketSelectFor
                 </div>
                 <div className="flex justify-between">
                   <span>Closes:</span>
-                  <span>{market.endDateIso || formatDate(market.endDate)}</span>
+                  <span>{formatDate(market.endDate || market.endDateIso)}</span>
                 </div>
               </div>
 

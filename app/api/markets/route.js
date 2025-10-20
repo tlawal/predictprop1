@@ -1,9 +1,57 @@
 import { NextResponse } from 'next/server';
 import polymarketService from '../../../lib/services/polymarket';
+import { fetchWithBackoff } from '../../../lib/utils/fetchWithBackoff.js';
 
-// Simple in-memory cache (in production, use Redis)
-const cache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const METADATA_TTL_SECONDS = 1800; // 30 minutes
+const memoryCache = new Map();
+
+function getMemoryCache(key) {
+  const entry = memoryCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    memoryCache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function setMemoryCache(key, value, ttlSeconds) {
+  memoryCache.set(key, {
+    value,
+    expiresAt: Date.now() + ttlSeconds * 1000
+  });
+}
+
+function buildCacheKey(params) {
+  return `markets:${JSON.stringify(params)}`;
+}
+
+async function getCachedValue(key) {
+  if (global.redisClient) {
+    try {
+      const cached = await global.redisClient.get(key);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (error) {
+      console.warn('Redis read failed:', error.message);
+    }
+  }
+
+  return getMemoryCache(key);
+}
+
+async function setCachedValue(key, value, ttlSeconds) {
+  if (global.redisClient) {
+    try {
+      await global.redisClient.setex(key, ttlSeconds, JSON.stringify(value));
+    } catch (error) {
+      console.warn('Redis write failed:', error.message);
+    }
+  }
+
+  setMemoryCache(key, value, ttlSeconds);
+}
 
 export async function GET(request) {
   try {
@@ -40,17 +88,41 @@ export async function GET(request) {
     const createdBefore = searchParams.get('createdBefore');
     const expiresBefore = searchParams.get('expiresBefore');
 
-    // Build cache key (simplified for advanced filters)
-    const cacheKey = `markets:${q}:${category}:${active}:${closed}:${order}:${limit}:${offset}:${JSON.stringify({
-      minLiquidity, maxLiquidity, minVolume, maxVolume, minVolume24hr, maxVolume24hr,
-      minSpread, maxSpread, minProbability, maxProbability, categories, tags, status,
-      featured, restricted, creator, createdAfter, createdBefore, expiresBefore
-    })}`;
+    const cacheKey = buildCacheKey({
+      q,
+      category,
+      active,
+      closed,
+      order,
+      limit,
+      offset,
+      minLiquidity,
+      maxLiquidity,
+      minVolume,
+      maxVolume,
+      minVolume24hr,
+      maxVolume24hr,
+      minSpread,
+      maxSpread,
+      minProbability,
+      maxProbability,
+      categories,
+      tags,
+      status,
+      featured,
+      restricted,
+      creator,
+      createdAfter,
+      createdBefore,
+      expiresBefore,
+      ticker: isTicker,
+      created_after,
+      time_filter
+    });
 
-    // Check cache first
-    const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return NextResponse.json(cached.data);
+    const cachedResult = await getCachedValue(cacheKey);
+    if (cachedResult) {
+      return NextResponse.json(cachedResult);
     }
 
     // Build parameters for Polymarket service
@@ -72,7 +144,7 @@ export async function GET(request) {
     if (isTicker) {
       // For ticker mode, fetch directly from Gamma API events endpoint
       console.log('Fetching ticker data from Gamma API events endpoint');
-      const response = await fetch('https://gamma-api.polymarket.com/events?featured=true&closed=false&limit=40', {
+      const response = await fetchWithBackoff('https://gamma-api.polymarket.com/events?featured=true&closed=false&limit=40', {
         headers: {
           'Accept': 'application/json',
           'User-Agent': 'PolyProp/1.0'
@@ -112,16 +184,16 @@ export async function GET(request) {
       };
 
       // Cache the result
-      cache.set(cacheKey, {
-        data,
-        timestamp: Date.now()
-      });
+      await setCachedValue(cacheKey, data, METADATA_TTL_SECONDS);
 
       return NextResponse.json(data);
     }
 
     // Fetch from Polymarket service for regular requests
-    const data = await polymarketService.fetchMarkets(params);
+    const data = await polymarketService.fetchMarkets({
+      ...params,
+      fetcher: fetchWithBackoff
+    });
 
     // Apply advanced server-side filtering
     let markets = data.markets || [];
@@ -261,18 +333,7 @@ export async function GET(request) {
       });
     }
 
-    // Cache the result
-    cache.set(cacheKey, {
-      data,
-      timestamp: Date.now()
-    });
-
-    // Clean up old cache entries
-    if (cache.size > 100) {
-      const entries = Array.from(cache.entries());
-      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-      entries.slice(0, 20).forEach(([key]) => cache.delete(key));
-    }
+    await setCachedValue(cacheKey, data, METADATA_TTL_SECONDS);
 
     return NextResponse.json(data);
 
