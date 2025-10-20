@@ -25,6 +25,9 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 
 // Utility functions
 const formatCurrency = (value) => {
@@ -132,8 +135,8 @@ function SearchableMultiSelect({ label, options, selected, onChange, placeholder
   );
 }
 
-// Range Slider Component
-function RangeSlider({ label, min, max, value, onChange, step = 1, formatValue = (v) => v, tooltip }) {
+// Range Slider Component linked to react-hook-form
+function RangeSlider({ label, min, max, value, onChange, step = 1, formatValue = (v) => v, tooltip, error }) {
   const [localValue, setLocalValue] = useState(value);
 
   useEffect(() => {
@@ -146,9 +149,9 @@ function RangeSlider({ label, min, max, value, onChange, step = 1, formatValue =
   };
 
   return (
-    <div className="w-full">
-      <div className="flex items-center gap-2 mb-2">
-        <label className="block text-sm font-medium text-gray-300">
+    <div className="flex flex-col gap-2 w-full">
+      <div className="flex items-center gap-2">
+        <label className="text-sm font-medium text-gray-200">
           {label}: {formatValue(localValue[0])} - {formatValue(localValue[1])}
         </label>
         {tooltip && (
@@ -160,35 +163,47 @@ function RangeSlider({ label, min, max, value, onChange, step = 1, formatValue =
         )}
       </div>
 
-      <div className="px-2">
+      <div className="w-full">
         <Slider
-          className="slider"
+          className="slider w-full h-2"
           value={localValue}
           onChange={handleChange}
           min={min}
           max={max}
           step={step}
-          renderTrack={(props, state) => (
-            <div
-              {...props}
-              className={`h-1 rounded ${
-                state.index === 1 ? 'bg-teal-500' : 'bg-slate-600'
-              }`}
-            />
-          )}
-          renderThumb={(props, state) => (
-            <div
-              {...props}
-              className="w-4 h-4 bg-teal-500 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 focus:ring-offset-slate-800"
-            />
-          )}
+          renderTrack={(props, state) => {
+            const { key, ...rest } = props;
+            return (
+              <div
+                key={key}
+                {...rest}
+                className={`h-2 rounded-full ${
+                  state.index === 1 ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-700'
+                }`}
+              />
+            );
+          }}
+          renderThumb={(props) => {
+            const { key, ...rest } = props;
+            return (
+              <div
+                key={key}
+                {...rest}
+                className="w-5 h-5 bg-blue-500 border-2 border-white dark:border-slate-900 rounded-full shadow focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+              />
+            );
+          }}
         />
       </div>
 
-      <div className="flex justify-between text-xs text-gray-500 mt-1">
+      <div className="flex items-center justify-between text-xs text-gray-500">
         <span>{formatValue(min)}</span>
         <span>{formatValue(max)}</span>
       </div>
+
+      {error && (
+        <span className="text-xs text-red-400">{error}</span>
+      )}
     </div>
   );
 }
@@ -431,38 +446,127 @@ export default function FiltersComponent({
     );
   }, [markets]);
 
+  const validationSchema = useMemo(() => yup.object({
+    probabilityMin: yup.number().min(0, 'Minimum probability must be >= 0').max(100, 'Maximum 100').required(),
+    probabilityMax: yup.number().min(yup.ref('probabilityMin'), 'Max must be >= min').max(100, 'Maximum 100').required(),
+    volumeMin: yup.number().min(0, 'Must be positive').required(),
+    volumeMax: yup.number().min(yup.ref('volumeMin'), 'Max must be >= min').required(),
+    volume24hrMin: yup.number().min(0, 'Must be positive').required(),
+    volume24hrMax: yup.number().min(yup.ref('volume24hrMin'), 'Max must be >= min').required(),
+    liquidityMin: yup.number().min(0, 'Must be positive').required(),
+    liquidityMax: yup.number().min(yup.ref('liquidityMin'), 'Max must be >= min').required(),
+    spreadMax: yup.number().min(0, 'Must be positive').max(20, 'Maximum 20').required(),
+  }), []);
+
+  const DEFAULT_FORM_VALUES = useMemo(() => ({
+    probabilityMin: filters.probabilityMin ?? 0,
+    probabilityMax: filters.probabilityMax ?? 100,
+    volumeMin: filters.volumeMin ?? 0,
+    volumeMax: filters.volumeMax ?? 10000000,
+    volume24hrMin: filters.volume24hrMin ?? 0,
+    volume24hrMax: filters.volume24hrMax ?? 10000000,
+    liquidityMin: filters.liquidityMin ?? 0,
+    liquidityMax: filters.liquidityMax ?? 10000000,
+    spreadMax: filters.spreadMax ?? 20,
+  }), [filters]);
+
+  const { handleSubmit, getValues, setValue, trigger, formState, watch, reset } = useForm({
+    resolver: yupResolver(validationSchema),
+    mode: 'onChange',
+    defaultValues: DEFAULT_FORM_VALUES
+  });
+
   useEffect(() => {
     setLocalFilters(filters);
-  }, [filters]);
+    reset({
+      probabilityMin: filters.probabilityMin ?? 0,
+      probabilityMax: filters.probabilityMax ?? 100,
+      volumeMin: filters.volumeMin ?? 0,
+      volumeMax: filters.volumeMax ?? 10000000,
+      volume24hrMin: filters.volume24hrMin ?? 0,
+      volume24hrMax: filters.volume24hrMax ?? 10000000,
+      liquidityMin: filters.liquidityMin ?? 0,
+      liquidityMax: filters.liquidityMax ?? 10000000,
+      spreadMax: filters.spreadMax ?? 20,
+    }, { keepDefaultValues: true });
+  }, [filters, reset]);
 
-  // Auto-apply filters on change (debounced)
+  useEffect(() => {
+    trigger();
+  }, [trigger]);
+
+  const probabilityMin = watch('probabilityMin');
+  const probabilityMax = watch('probabilityMax');
+  const volumeMin = watch('volumeMin');
+  const volumeMax = watch('volumeMax');
+  const volume24hrMin = watch('volume24hrMin');
+  const volume24hrMax = watch('volume24hrMax');
+  const liquidityMin = watch('liquidityMin');
+  const liquidityMax = watch('liquidityMax');
+  const spreadMax = watch('spreadMax');
+
   const [applyTimeout, setApplyTimeout] = useState(null);
-  const handleFilterChange = (key, value) => {
-    const newFilters = { ...localFilters, [key]: value };
+
+  const handleFilterChange = (keyOrObject, value) => {
+    const updates =
+      typeof keyOrObject === 'object'
+        ? keyOrObject
+        : { [keyOrObject]: value };
+
+    const newFilters = { ...localFilters, ...updates };
     setLocalFilters(newFilters);
 
-    // Clear existing timeout
     if (applyTimeout) clearTimeout(applyTimeout);
 
-    // Set new timeout for auto-apply
     const timeout = setTimeout(() => {
-    onFiltersChange(newFilters);
-    }, 300); // 300ms debounce
+      onFiltersChange(newFilters);
+    }, 300);
 
     setApplyTimeout(timeout);
   };
 
-  const handleApplyFilters = () => {
-    onFiltersChange(localFilters);
-    if (isMobile) onClose();
+  const syncFromForm = () => {
+    const values = getValues();
+    const merged = {
+      ...localFilters,
+      probabilityMin: values.probabilityMin,
+      probabilityMax: values.probabilityMax,
+      volumeMin: values.volumeMin,
+      volumeMax: values.volumeMax,
+      volume24hrMin: values.volume24hrMin,
+      volume24hrMax: values.volume24hrMax,
+      liquidityMin: values.liquidityMin,
+      liquidityMax: values.liquidityMax,
+      spreadMax: values.spreadMax,
+    };
+    setLocalFilters(merged);
+    return merged;
   };
 
+  const handleApplyFilters = handleSubmit(() => {
+    if (applyTimeout) {
+      clearTimeout(applyTimeout);
+      setApplyTimeout(null);
+    }
+    const merged = syncFromForm();
+    onFiltersChange(merged);
+    if (isMobile) onClose();
+  }, (errors) => {
+    Object.values(errors).forEach((err) => {
+      if (err?.message) toast.error(err.message);
+    });
+  });
+
   const handleClearFilters = () => {
+    if (applyTimeout) {
+      clearTimeout(applyTimeout);
+      setApplyTimeout(null);
+    }
     const clearedFilters = {
       // Basic filters
       categories: [],
       tags: [],
-      status: [],
+      status: ['open'],
       featured: false,
       restricted: false,
 
@@ -477,6 +581,7 @@ export default function FiltersComponent({
       liquidityMax: 10000000,
       spreadMax: 20,
       createdAfter: null,
+      createdBefore: null,
       expiresBefore: null,
       creator: '',
 
@@ -484,6 +589,17 @@ export default function FiltersComponent({
       dateRange: [null, null]
     };
     setLocalFilters(clearedFilters);
+    reset({
+      probabilityMin: 0,
+      probabilityMax: 100,
+      volumeMin: 0,
+      volumeMax: 10000000,
+      volume24hrMin: 0,
+      volume24hrMax: 10000000,
+      liquidityMin: 0,
+      liquidityMax: 10000000,
+      spreadMax: 20,
+    }, { keepDefaultValues: true });
     onFiltersChange(clearedFilters);
     toast.success('All filters cleared');
   };
@@ -501,6 +617,99 @@ export default function FiltersComponent({
       [section]: !prev[section]
     }));
   };
+
+  const previewResultCount = useMemo(() => {
+    if (!markets || markets.length === 0) return 0;
+
+    return markets.filter((market) => {
+      // Categories
+      if (localFilters.categories?.length) {
+        const marketCategories = [
+          ...(market.categories || []),
+          ...(market.tags || []),
+          market.category
+        ].filter(Boolean).map((item) => item.toLowerCase());
+
+        const hasCategory = localFilters.categories.some((category) =>
+          marketCategories.some((marketCategory) =>
+            marketCategory.includes(category.toLowerCase())
+          )
+        );
+        if (!hasCategory) return false;
+      }
+
+      // Tags
+      if (localFilters.tags?.length) {
+        const marketTags = (market.tags || []).map((tag) => tag.toLowerCase());
+        const hasTag = localFilters.tags.some((tag) =>
+          marketTags.some((marketTag) => marketTag.includes(tag.toLowerCase()))
+        );
+        if (!hasTag) return false;
+      }
+
+      // Status
+      if (localFilters.status?.length) {
+        const marketStatus = market.closed ? 'closed' : 'open';
+        if (!localFilters.status.includes(marketStatus)) return false;
+      }
+
+      if (localFilters.featured && !market.featured) return false;
+      if (localFilters.restricted && !market.restricted) return false;
+
+      if (localFilters.creator) {
+        const creator = market.creator || '';
+        if (!creator.toLowerCase().includes(localFilters.creator.toLowerCase())) return false;
+      }
+
+      const probability = (market.yesOdds || market.outcomePrices?.[0] || 0) * 100;
+      if (probability < (localFilters.probabilityMin ?? 0)) return false;
+      if (probability > (localFilters.probabilityMax ?? 100)) return false;
+
+      const volume = Number(market.volume || 0);
+      if (volume < (localFilters.volumeMin ?? 0)) return false;
+      if (volume > (localFilters.volumeMax ?? 10000000)) return false;
+
+      const volume24hr = Number(market.volume24hr || market.volume || 0);
+      if (volume24hr < (localFilters.volume24hrMin ?? 0)) return false;
+      if (volume24hr > (localFilters.volume24hrMax ?? 10000000)) return false;
+
+      const liquidity = Number(market.liquidity || market.openInterest || 0);
+      if (liquidity < (localFilters.liquidityMin ?? 0)) return false;
+      if (liquidity > (localFilters.liquidityMax ?? 10000000)) return false;
+
+      if (localFilters.spreadMax !== undefined && localFilters.spreadMax !== null) {
+        const prices = market.outcomePrices || [];
+        if (prices.length >= 2) {
+          const spread = Math.abs(prices[0] - prices[1]) * 100;
+          if (spread > localFilters.spreadMax) return false;
+        }
+      }
+
+      if (localFilters.createdAfter) {
+        const createdDate = new Date(market.createdAt || market.timestamp);
+        if (createdDate < localFilters.createdAfter) return false;
+      }
+
+      if (localFilters.createdBefore) {
+        const createdDate = new Date(market.createdAt || market.timestamp);
+        if (createdDate > localFilters.createdBefore) return false;
+      }
+
+      if (localFilters.expiresBefore) {
+        const endDate = market.endDate ? new Date(market.endDate) : null;
+        if (!endDate || endDate > localFilters.expiresBefore) return false;
+      }
+
+      if (localFilters.dateRange && (localFilters.dateRange[0] || localFilters.dateRange[1])) {
+        const [start, end] = localFilters.dateRange;
+        const endDate = new Date(market.endDate || market.createdAt || market.timestamp);
+        if (start && endDate < start) return false;
+        if (end && endDate > end) return false;
+      }
+
+      return true;
+    }).length;
+  }, [markets, localFilters]);
 
   // Count active filters
   const activeFilterCount = useMemo(() => {
@@ -676,14 +885,24 @@ export default function FiltersComponent({
               label="Probability"
               min={0}
               max={100}
-              value={[localFilters.probabilityMin || 0, localFilters.probabilityMax || 100]}
+              value={[probabilityMin ?? 0, probabilityMax ?? 100]}
               onChange={([min, max]) => {
-                handleFilterChange('probabilityMin', min);
-                handleFilterChange('probabilityMax', max);
+                if (min > max) {
+                  toast.error('Min prob must be <= max');
+                  setValue('probabilityMin', 0, { shouldValidate: true });
+                  setValue('probabilityMax', 100, { shouldValidate: true });
+                  handleFilterChange({ probabilityMin: 0, probabilityMax: 100 });
+                  return;
+                }
+                setValue('probabilityMin', min, { shouldValidate: true });
+                setValue('probabilityMax', max, { shouldValidate: true });
+                trigger(['probabilityMin', 'probabilityMax']);
+                handleFilterChange({ probabilityMin: min, probabilityMax: max });
               }}
               step={1}
               formatValue={(v) => `${v}%`}
               tooltip="Filter by Yes probability range. Markets near 50% often have better odds."
+              error={formState.errors.probabilityMin?.message || formState.errors.probabilityMax?.message}
             />
 
             {/* Volume Range */}
@@ -691,14 +910,24 @@ export default function FiltersComponent({
               label="Total Volume"
               min={0}
               max={10000000}
-              value={[localFilters.volumeMin || 0, localFilters.volumeMax || 10000000]}
+              value={[volumeMin ?? 0, volumeMax ?? 10000000]}
               onChange={([min, max]) => {
-                handleFilterChange('volumeMin', min);
-                handleFilterChange('volumeMax', max);
+                if (min > max) {
+                  toast.error('Volume minimum must be <= maximum');
+                  setValue('volumeMin', 0, { shouldValidate: true });
+                  setValue('volumeMax', 10000000, { shouldValidate: true });
+                  handleFilterChange({ volumeMin: 0, volumeMax: 10000000 });
+                  return;
+                }
+                setValue('volumeMin', min, { shouldValidate: true });
+                setValue('volumeMax', max, { shouldValidate: true });
+                trigger(['volumeMin', 'volumeMax']);
+                handleFilterChange({ volumeMin: min, volumeMax: max });
               }}
               step={1000}
               formatValue={formatCurrency}
               tooltip="Filter by total trading volume across market lifetime"
+              error={formState.errors.volumeMin?.message || formState.errors.volumeMax?.message}
             />
 
             {/* 24h Volume Range */}
@@ -706,14 +935,24 @@ export default function FiltersComponent({
               label="24h Volume"
               min={0}
               max={10000000}
-              value={[localFilters.volume24hrMin || 0, localFilters.volume24hrMax || 10000000]}
+              value={[volume24hrMin ?? 0, volume24hrMax ?? 10000000]}
               onChange={([min, max]) => {
-                handleFilterChange('volume24hrMin', min);
-                handleFilterChange('volume24hrMax', max);
+                if (min > max) {
+                  toast.error('24h volume minimum must be <= maximum');
+                  setValue('volume24hrMin', 0, { shouldValidate: true });
+                  setValue('volume24hrMax', 10000000, { shouldValidate: true });
+                  handleFilterChange({ volume24hrMin: 0, volume24hrMax: 10000000 });
+                  return;
+                }
+                setValue('volume24hrMin', min, { shouldValidate: true });
+                setValue('volume24hrMax', max, { shouldValidate: true });
+                trigger(['volume24hrMin', 'volume24hrMax']);
+                handleFilterChange({ volume24hrMin: min, volume24hrMax: max });
               }}
               step={1000}
               formatValue={formatCurrency}
               tooltip="Filter by trading volume in the last 24 hours"
+              error={formState.errors.volume24hrMin?.message || formState.errors.volume24hrMax?.message}
             />
 
             {/* Liquidity Range */}
@@ -721,14 +960,24 @@ export default function FiltersComponent({
               label="Liquidity"
               min={0}
               max={10000000}
-              value={[localFilters.liquidityMin || 0, localFilters.liquidityMax || 10000000]}
+              value={[liquidityMin ?? 0, liquidityMax ?? 10000000]}
               onChange={([min, max]) => {
-                handleFilterChange('liquidityMin', min);
-                handleFilterChange('liquidityMax', max);
+                if (min > max) {
+                  toast.error('Liquidity minimum must be <= maximum');
+                  setValue('liquidityMin', 0, { shouldValidate: true });
+                  setValue('liquidityMax', 10000000, { shouldValidate: true });
+                  handleFilterChange({ liquidityMin: 0, liquidityMax: 10000000 });
+                  return;
+                }
+                setValue('liquidityMin', min, { shouldValidate: true });
+                setValue('liquidityMax', max, { shouldValidate: true });
+                trigger(['liquidityMin', 'liquidityMax']);
+                handleFilterChange({ liquidityMin: min, liquidityMax: max });
               }}
               step={1000}
               formatValue={formatCurrency}
               tooltip="Filter by available liquidity. Higher liquidity means better tradability."
+              error={formState.errors.liquidityMin?.message || formState.errors.liquidityMax?.message}
             />
 
             {/* Spread Range */}
@@ -736,11 +985,16 @@ export default function FiltersComponent({
               label="Max Spread"
               min={0}
               max={20}
-              value={[0, localFilters.spreadMax || 20]}
-              onChange={([min, max]) => handleFilterChange('spreadMax', max)}
+              value={[0, spreadMax ?? 20]}
+              onChange={([, max]) => {
+                setValue('spreadMax', max, { shouldValidate: true });
+                trigger('spreadMax');
+                handleFilterChange('spreadMax', max);
+              }}
               step={0.1}
               formatValue={(v) => `${v.toFixed(1)}%`}
               tooltip="Maximum bid-ask spread. Lower spreads indicate better market efficiency."
+              error={formState.errors.spreadMax?.message}
             />
 
             {/* Date Range */}
@@ -749,8 +1003,7 @@ export default function FiltersComponent({
               startDate={localFilters.createdAfter}
               endDate={localFilters.createdBefore}
               onChange={([start, end]) => {
-                handleFilterChange('createdAfter', start);
-                handleFilterChange('createdBefore', end);
+                handleFilterChange({ createdAfter: start, createdBefore: end });
               }}
               tooltip="Filter markets created within a specific date range"
             />
@@ -760,7 +1013,7 @@ export default function FiltersComponent({
               label="Expires Before"
               startDate={null}
               endDate={localFilters.expiresBefore}
-              onChange={([start, end]) => handleFilterChange('expiresBefore', end)}
+              onChange={([, end]) => handleFilterChange({ expiresBefore: end })}
               tooltip="Only show markets that expire before this date"
             />
 
@@ -799,8 +1052,9 @@ export default function FiltersComponent({
           <button
             onClick={handleApplyFilters}
             className="flex-1 px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-medium transition-colors"
+            disabled={!formState.isValid}
           >
-          Apply Filters ({resultCount} results)
+            Apply Filters ({previewResultCount} results)
           </button>
           <button
             onClick={handleClearFilters}

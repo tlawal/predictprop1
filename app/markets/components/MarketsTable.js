@@ -905,9 +905,8 @@ const VirtualizedMarketCard = React.memo(({ index, style, data }) => {
                     </svg>
                   </div>
 
-                  {/* Badges Row */}
+                  {/* Category */}
                   <div className="flex items-center gap-2 mb-3">
-                    <HighEdgeChip market={market} />
                     <span className="text-xs text-gray-400">{market.category}</span>
                   </div>
 
@@ -1131,9 +1130,8 @@ function MarketCard({ market, onMarketClick, onMarketInsights, onMarketSelectFor
                   </svg>
                 </div>
 
-                {/* Badges Row */}
+                {/* Category */}
                 <div className="flex items-center gap-2 mb-3">
-                  <HighEdgeChip market={market} />
                   <span className="text-xs text-gray-400">{market.category}</span>
                 </div>
 

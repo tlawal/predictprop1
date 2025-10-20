@@ -58,18 +58,21 @@ export default function OrderModal({ market, isOpen, onClose }) {
       }
     };
 
+    let scrollLockedNode = null;
+
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown);
-      if (modalRef.current) {
-        disableBodyScroll(modalRef.current);
+      scrollLockedNode = modalRef.current;
+      if (scrollLockedNode) {
+        disableBodyScroll(scrollLockedNode);
       }
       document.body.classList.add('overflow-hidden');
     }
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      if (modalRef.current) {
-        enableBodyScroll(modalRef.current);
+      if (scrollLockedNode) {
+        enableBodyScroll(scrollLockedNode);
       }
       document.body.classList.remove('overflow-hidden');
     };

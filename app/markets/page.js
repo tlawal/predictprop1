@@ -17,7 +17,7 @@ import FiltersComponent from './components/FiltersComponent';
 
 // Live Markets Marquee Component
 function LiveMarketsMarquee({ trendingData }) {
-  const trendingMarkets = trendingData?.markets || [];
+  const trendingMarkets = useMemo(() => trendingData?.markets || [], [trendingData]);
   const [isPaused, setIsPaused] = useState(false);
 
   const marqueeItems = useMemo(() => {
@@ -272,6 +272,7 @@ function MarketsPageContent() {
 
   // Pre-indexed Fuse instance for better performance
   const [fuseIndex, setFuseIndex] = useState(null);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
 
   // Pre-index markets when SWR data loads
   useEffect(() => {
@@ -290,7 +291,7 @@ function MarketsPageContent() {
   }, [marketsData]);
 
   // Simplified client-side filtering function (most filtering now done server-side)
-  const filterMarkets = (markets) => {
+  const filterMarkets = useCallback((markets) => {
     if (!markets) return [];
 
     let filtered = markets;
@@ -334,7 +335,7 @@ function MarketsPageContent() {
     }
 
     return filtered;
-  };
+  }, [debouncedSearch, filters, fuseIndex]);
 
   // Removed old oddsStore usage - now handled by MarketsTable component
 
@@ -366,9 +367,6 @@ function MarketsPageContent() {
     }));
   };
 
-  // Debounced search
-  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
@@ -381,7 +379,7 @@ function MarketsPageContent() {
   const filteredMarkets = useMemo(() => {
     if (!marketsData?.markets) return [];
     return filterMarkets(marketsData.markets);
-  }, [marketsData, filters, debouncedSearch, filterMarkets]);
+  }, [marketsData, filterMarkets]);
 
   // Fetch trending markets for the trending section
   const { data: trendingData } = useSWR(
