@@ -140,6 +140,26 @@ const CountdownRenderer = ({ days, hours, minutes, seconds, completed }) => {
 };
 
 export default function MarketsTable({ markets: propMarkets, searchQuery, sortOrder, onMarketClick, onMarketInsights, onMarketSelectForOrderbook, tableRef, isLoading: propIsLoading, onSearchChange, searchInputRef, onToggleFilters }) {
+  // Check screen size for conditional rendering
+  const [isMobile, setIsMobile] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [screenSizeDetermined, setScreenSizeDetermined] = useState(false);
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      setIsDesktop(!mobile);
+      setScreenSizeDetermined(true);
+    };
+
+    // Check immediately
+    checkScreenSize();
+
+    // Also listen for resize events
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   const [wsPriceChanges, setWsPriceChanges] = useState(new Map()); // Track WS price changes
 
@@ -480,7 +500,8 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
           </div>
 
       {/* Markets Table - Desktop */}
-      <div className="hidden md:block bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl overflow-hidden">
+      {screenSizeDetermined && isDesktop && (
+        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl overflow-hidden">
         {/* Fixed Header */}
         <div className="bg-slate-700/50">
           <div className="overflow-x-auto">
@@ -597,9 +618,11 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
           </AutoSizer>
         </div>
       </div>
+      )}
 
       {/* Markets Cards - Mobile */}
-      <div className="lg:hidden">
+      {screenSizeDetermined && isMobile && (
+        <div>
         <AutoSizer disableHeight>
           {({ width }) => (
             <List
@@ -623,6 +646,14 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
           )}
         </AutoSizer>
       </div>
+      )}
+
+      {/* Loading state while determining screen size */}
+      {!screenSizeDetermined && (
+        <div className="flex items-center justify-center py-8">
+          <div className="text-white text-sm">Loading markets...</div>
+        </div>
+      )}
 
       {/* Tooltips */}
       <Tooltip id="question-tooltip" place="top" />

@@ -2,58 +2,16 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
-    const body = await request.json();
-    const { apiKey } = body;
-
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'API key is required' },
-        { status: 400 }
-      );
-    }
-
-    // Check if we should use real authentication
-    const useRealData = process.env.NEXT_PUBLIC_USE_REAL_DATA === 'true';
-    
-    if (useRealData) {
-      // Real Polymarket authentication
-      try {
-        const response = await fetch('https://gamma-api.polymarket.com/auth', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`Polymarket auth failed: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return NextResponse.json({
-          token: data.token || apiKey,
-          expires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
-        });
-      } catch (error) {
-        console.error('Real auth failed, falling back to mock:', error);
-        // Fall through to mock authentication
-      }
-    }
-
-    // Mock authentication for development
-    const mockToken = `auth_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
+    // Stub API for API key generation
     return NextResponse.json({
-      token: mockToken,
-      expires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+      success: true,
+      apiKey: 'pk_test_' + Math.random().toString(36).substring(2),
+      message: 'API key generated successfully'
     });
-
   } catch (error) {
-    console.error('Auth API error:', error);
-    
+    console.error('API key generation error:', error);
     return NextResponse.json(
-      { error: 'Authentication failed' },
+      { error: 'Failed to generate API key', message: error.message },
       { status: 500 }
     );
   }
