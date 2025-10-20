@@ -9,7 +9,6 @@ import { Dialog, Transition } from '@headlessui/react';
 import toast, { Toaster } from 'react-hot-toast';
 import Fuse from 'fuse.js';
 import Image from 'next/image';
-import Marquee from 'react-marquee-slider';
 import MarketsTable from './components/MarketsTable';
 import OrderModal from './components/OrderModal';
 import FiltersComponent from './components/FiltersComponent';
@@ -19,33 +18,38 @@ import FiltersComponent from './components/FiltersComponent';
 // Live Markets Marquee Component
 function LiveMarketsMarquee({ trendingData }) {
   const trendingMarkets = trendingData?.markets || [];
+  const [isPaused, setIsPaused] = useState(false);
+
+  const marqueeItems = useMemo(() => {
+    return trendingMarkets.flatMap((market, index) => (
+      [
+        { market, key: `primary-${market.id}-${index}` },
+        { market, key: `duplicate-${market.id}-${index}` }
+      ]
+    ));
+  }, [trendingMarkets]);
 
   if (!trendingMarkets.length) return null;
 
   return (
     <div className="relative w-full overflow-x-hidden bg-slate-800/50 backdrop-blur-sm rounded-lg border border-slate-700 mt-4">
       {/* Continuous horizontal marquee for all screens - single line only */}
-      <div className="h-6 w-full overflow-x-hidden flex items-center">
-        <Marquee
-          velocity={15} // Even slower for mobile readability
-          direction="rtl" // Right-to-left scrolling for proper left-to-right text flow
-          scatterRandomly={false}
-          resetAfterTries={200}
-          pauseOnHover={true}
-          onInit={() => {}}
-          onFinish={() => {}}
-        >
-          {trendingMarkets.map((market, index) => {
-            const yesPrice = Math.round(market.yesOdds * 100);
+      <div
+        className="h-6 w-full overflow-hidden"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+      >
+        <div className={`marquee-track ${isPaused ? 'paused' : ''}`}>
+          {marqueeItems.map(({ market, key }) => {
+            const yesPrice = Math.round((market.yesOdds || 0) * 100);
             const volume24hr = market.volume24hr || 0;
             const volumeDisplay = volume24hr >= 1000 ? `${(volume24hr / 1000).toFixed(0)}k` : volume24hr.toFixed(0);
 
-            // Show full question text for scrolling
             const fullQuestion = market.question;
 
             return (
               <div
-                key={market.id}
+                key={key}
                 className="inline-flex flex-row flex-nowrap items-center gap-2 sm:gap-4 px-3 whitespace-nowrap"
               >
                 <span className="text-teal-400 font-semibold text-xs whitespace-nowrap">
@@ -61,8 +65,30 @@ function LiveMarketsMarquee({ trendingData }) {
               </div>
             );
           })}
-        </Marquee>
+        </div>
       </div>
+      <style jsx>{`
+        .marquee-track {
+          display: inline-flex;
+          align-items: center;
+          min-width: 200%;
+          transform: translate3d(0, 0, 0);
+          animation: marquee-scroll 30s linear infinite;
+        }
+
+        .marquee-track.paused {
+          animation-play-state: paused;
+        }
+
+        @keyframes marquee-scroll {
+          0% {
+            transform: translate3d(0, 0, 0);
+          }
+          100% {
+            transform: translate3d(-50%, 0, 0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

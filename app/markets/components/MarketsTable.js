@@ -7,8 +7,6 @@ import { Disclosure } from '@headlessui/react';
 import { Tooltip } from 'react-tooltip';
 import { ChevronUpIcon, ChevronDownIcon, StarIcon } from '@heroicons/react/24/outline';
 import dynamic from 'next/dynamic';
-import { FixedSizeList as List } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
 import toast from 'react-hot-toast';
 
 import LoadingSkeleton from './LoadingSkeleton';
@@ -612,36 +610,24 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
 
               {/* Virtualized Table Body */}
               <div className="overflow-x-auto">
-                <AutoSizer disableHeight>
-                  {({ width }) => (
-                    <table className="min-w-full">
-                      <tbody className="divide-y divide-slate-700">
-                        <List
-                          height={Math.min(sortedMarkets.length * 50, 600)}
-                          itemCount={sortedMarkets.length}
-                          itemSize={50}
-                          overscanCount={10}
-                          width={width}
-                          itemData={{
-                            markets: sortedMarkets,
-                            onMarketClick,
-                            onMarketInsights,
-                            onMarketSelectForOrderbook,
-                            formatDate,
-                            formatVolume,
-                            sortConfig,
-                            watchedMarkets,
-                            toggleWatch,
-                            showFetchError,
-                            resetFetchError
-                          }}
-                        >
-                          {VirtualizedMarketRow}
-                        </List>
-                      </tbody>
-                    </table>
-                  )}
-                </AutoSizer>
+                <table className="min-w-full">
+                  <tbody className="divide-y divide-slate-700">
+                    {sortedMarkets.map((market) => (
+                      <MarketRow
+                        key={market.id}
+                        market={market}
+                        onMarketClick={onMarketClick}
+                        onMarketInsights={onMarketInsights}
+                        onMarketSelectForOrderbook={onMarketSelectForOrderbook}
+                        formatDate={formatDate}
+                        formatVolume={formatVolume}
+                        sortConfig={sortConfig}
+                        isWatching={watchedMarkets.has(market.id)}
+                        onToggleWatch={toggleWatch}
+                      />
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
