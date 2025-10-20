@@ -79,6 +79,23 @@ function MarketsPageContent() {
   const [selectedMarket, setSelectedMarket] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
+  const showFetchError = useCallback((flagRef) => {
+    if (!flagRef.current) {
+      toast.error('Failed to load—try refresh');
+      flagRef.current = true;
+    }
+  }, []);
+
+  const resetFetchError = useCallback((flagRef) => {
+    if (flagRef.current) {
+      flagRef.current = false;
+    }
+  }, []);
+
+  const marketsErrorToastShown = useRef(false);
+  const trendingErrorToastShown = useRef(false);
+  const recommendationsErrorToastShown = useRef(false);
+
   // Advanced filters state with comprehensive URL syncing
   const [filters, setFilters] = useState(() => {
     // Try to load from URL filters parameter (JSON format)
@@ -207,15 +224,18 @@ function MarketsPageContent() {
   }, [filters]);
 
   // Fetch markets with server-side filtering
-  const { data: allMarketsData, isLoading: marketsLoading } = useSWR(
+  const { data: allMarketsData, isLoading: marketsLoading, error: marketsError } = useSWR(
     buildApiUrl,
     (url) => fetch(url).then(res => res.json()),
     {
       refreshInterval: 300000, // 5 minutes
       revalidateOnFocus: false,
       dedupingInterval: 60000,
-      errorRetryCount: 2,
+      revalidateIfStale: true,
+      errorRetryCount: 3,
       errorRetryInterval: 10000,
+      onError: () => showFetchError(marketsErrorToastShown),
+      onSuccess: () => resetFetchError(marketsErrorToastShown)
     }
   );
 
@@ -345,8 +365,11 @@ function MarketsPageContent() {
       refreshInterval: 300000, // 5 minutes
       revalidateOnFocus: false,
       dedupingInterval: 60000,
-      errorRetryCount: 2,
+      revalidateIfStale: true,
+      errorRetryCount: 3,
       errorRetryInterval: 10000,
+      onError: () => showFetchError(trendingErrorToastShown),
+      onSuccess: () => resetFetchError(trendingErrorToastShown)
     }
   );
 
@@ -358,6 +381,11 @@ function MarketsPageContent() {
       refreshInterval: 600000, // 10 minutes
       revalidateOnFocus: false,
       dedupingInterval: 300000, // 5 minutes
+      revalidateIfStale: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 15000,
+      onError: () => showFetchError(recommendationsErrorToastShown),
+      onSuccess: () => resetFetchError(recommendationsErrorToastShown)
     }
   );
 

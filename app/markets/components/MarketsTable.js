@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import useSWR from 'swr';
 import { Disclosure } from '@headlessui/react';
@@ -9,6 +9,9 @@ import { ChevronUpIcon, ChevronDownIcon, StarIcon } from '@heroicons/react/24/ou
 import dynamic from 'next/dynamic';
 import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
+import toast from 'react-hot-toast';
+
+import LoadingSkeleton from './LoadingSkeleton';
 
 // Dynamic import for Chart.js components to avoid SSR issues
 const ProbabilitySparkline = dynamic(() => import('./ProbabilitySparkline'), {
@@ -169,8 +172,29 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
   // Watch state management
   const { watchedMarkets, toggleWatch } = useWatchState();
 
-  // Use prop markets or fallback to empty array
-  const markets = propMarkets || [];
+  const showFetchError = useCallback((flagRef) => {
+    if (!flagRef.current) {
+      toast.error('Failed to load—try refresh');
+      flagRef.current = true;
+    }
+  }, []);
+
+  const resetFetchError = useCallback((flagRef) => {
+    if (flagRef.current) {
+      flagRef.current = false;
+    }
+  }, []);
+
+  const midpointErrorToastShown = useRef(false);
+
+  const [marketsState, setMarketsState] = useState(propMarkets || []);
+
+  useEffect(() => {
+    setMarketsState(propMarkets || []);
+  }, [propMarkets]);
+
+  // Use local markets state
+  const markets = marketsState;
   const isLoading = propIsLoading;
 
   // Sorting state from Zustand
@@ -312,6 +336,11 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
       refreshInterval: 300000, // 5 minutes
       revalidateOnFocus: false,
       dedupingInterval: 60000, // 1 minute
+      revalidateIfStale: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 10000,
+      onError: () => showFetchError(midpointErrorToastShown),
+      onSuccess: () => resetFetchError(midpointErrorToastShown)
     }
   );
 
@@ -335,7 +364,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
           const { default: polymarketService } = await import('../../../lib/services/polymarket');
           const midpoints = await polymarketService.fetchMultipleMidpoints(visibleTokenIds);
 
-          setAllMarkets(prevMarkets =>
+          setMarketsState(prevMarkets =>
             prevMarkets.map(market => {
               const midpoint = midpoints[market.tokenId];
               if (midpoint) {
@@ -372,13 +401,13 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
     const handlePriceUpdate = (event) => {
       const { tokenId, yesPrice, noPrice } = event.detail;
 
-      setAllMarkets(prevMarkets =>
+      setMarketsState(prevMarkets =>
         prevMarkets.map(market => {
           if (market.tokenId === tokenId) {
             return {
               ...market,
               yesOdds: yesPrice,
-              noOdds: noOdds,
+              noOdds: noPrice,
               lastUpdate: Date.now()
             };
           }
@@ -424,22 +453,8 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
     return `$${volume.toFixed(0)}`;
   };
 
-  if (isLoading) {
-    return (
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 text-center">
-        <div className="text-gray-400 text-lg">Loading markets...</div>
-      </div>
-    );
-  }
-
-  if (markets.length === 0) {
-    return (
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 text-center">
-        <div className="text-gray-400 text-lg">No markets found</div>
-        <div className="text-gray-500 text-sm mt-2">Try adjusting your filters</div>
-      </div>
-    );
-  }
+  const showSkeleton = isLoading && markets.length === 0;
+  const noMarkets = !isLoading && markets.length === 0;
 
   return (
     <div className="space-y-6">
@@ -477,7 +492,16 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
 
       </div>
 
-      {/* Markets Count */}
+      {showSkeleton ? (
+        <LoadingSkeleton count={8} />
+      ) : noMarkets ? (
+        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 text-center">
+          <div className="text-gray-400 text-lg">No markets found</div>
+          <div className="text-gray-500 text-sm mt-2">Try adjusting your filters</div>
+        </div>
+      ) : (
+        <React.Fragment>
+          {/* Markets Count */}
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-400">
               Real-time market data from Polymarket
@@ -499,180 +523,173 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
             </div>
           </div>
 
-      {/* Markets Table - Desktop */}
-      {screenSizeDetermined && isDesktop && (
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl overflow-hidden">
-        {/* Fixed Header */}
-        <div className="bg-slate-700/50">
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-2/5 md:w-1/2 lg:w-3/5">
-                    Question
-                  </th>
-                  <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300 w-16 md:w-20">Chart</th>
-                  <th
-                    className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'yesOdds') ? 'bg-blue-900/50' : ''}`}
-                    onClick={(e) => handleSortClick('yesOdds', e)}
-                    data-tooltip-id="yes-odds-tooltip"
-                    data-tooltip-content="Sort by Yes odds (probability)"
-                  >
-                    <div className="flex items-center justify-center">
-                      Yes Odds
-                      {getSortIndicator('yesOdds')}
-                    </div>
-                  </th>
-                  <th
-                    className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'noOdds') ? 'bg-blue-900/50' : ''}`}
-                    onClick={(e) => handleSortClick('noOdds', e)}
-                    data-tooltip-id="no-odds-tooltip"
-                    data-tooltip-content="Sort by No odds (probability)"
-                  >
-                    <div className="flex items-center justify-center">
-                      No Odds
-                      {getSortIndicator('noOdds')}
-                    </div>
-                  </th>
-                  <th
-                    className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'volume') ? 'bg-blue-900/50' : ''}`}
-                    onClick={(e) => handleSortClick('volume', e)}
-                    data-tooltip-id="volume-tooltip"
-                    data-tooltip-content="Sort by total trading volume"
-                  >
-                    <div className="flex items-center justify-center">
-                      Total Volume
-                      {getSortIndicator('volume')}
-                    </div>
-                  </th>
-                  <th
-                    className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'volume24hr') ? 'bg-blue-900/50' : ''}`}
-                    onClick={(e) => handleSortClick('volume24hr', e)}
-                    data-tooltip-id="volume24h-tooltip"
-                    data-tooltip-content="Sort by 24-hour trading volume"
-                  >
-                    <div className="flex items-center justify-center">
-                      24hr Volume
-                      {getSortIndicator('volume24hr')}
-                    </div>
-                  </th>
-                  <th
-                    className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'liquidity') ? 'bg-blue-900/50' : ''}`}
-                    onClick={(e) => handleSortClick('liquidity', e)}
-                    data-tooltip-id="liquidity-tooltip"
-                    data-tooltip-content="Sort by market liquidity"
-                  >
-                    <div className="flex items-center justify-center">
-                      Liquidity
-                      {getSortIndicator('liquidity')}
-                    </div>
-                  </th>
-                  <th className="px-3 py-4 text-center text-sm font-semibold text-gray-300 w-12 md:w-16">Edge</th>
-                  <th
-                    className={`px-4 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 md:w-24 ${sortConfig.some(s => s.key === 'endDateIso') ? 'bg-blue-900/50' : ''}`}
-                    onClick={(e) => handleSortClick('endDateIso', e)}
-                    data-tooltip-id="expires-tooltip"
-                    data-tooltip-content="Sort by market expiration date"
-                  >
-                    <div className="flex items-center justify-center">
-                      Expires
-                      {getSortIndicator('endDateIso')}
-                    </div>
-                  </th>
-                  <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300 w-16 md:w-20">Actions</th>
-                </tr>
-              </thead>
-            </table>
-          </div>
-        </div>
+          {/* Markets Table - Desktop */}
+          {screenSizeDetermined && isDesktop && (
+            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl overflow-hidden">
+              {/* Fixed Header */}
+              <div className="bg-slate-700/50">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 w-2/5 md:w-1/2 lg:w-3/5">
+                          Question
+                        </th>
+                        <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300 w-16 md:w-20">Chart</th>
+                        <th
+                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'yesOdds') ? 'bg-blue-900/50' : ''}`}
+                          onClick={(e) => handleSortClick('yesOdds', e)}
+                          data-tooltip-id="yes-odds-tooltip"
+                          data-tooltip-content="Sort by Yes odds (probability)"
+                        >
+                          <div className="flex items-center justify-center">
+                            Yes Odds
+                            {getSortIndicator('yesOdds')}
+                          </div>
+                        </th>
+                        <th
+                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'noOdds') ? 'bg-blue-900/50' : ''}`}
+                          onClick={(e) => handleSortClick('noOdds', e)}
+                          data-tooltip-id="no-odds-tooltip"
+                          data-tooltip-content="Sort by No odds (probability)"
+                        >
+                          <div className="flex items-center justify-center">
+                            No Odds
+                            {getSortIndicator('noOdds')}
+                          </div>
+                        </th>
+                        <th
+                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'volume') ? 'bg-blue-900/50' : ''}`}
+                          onClick={(e) => handleSortClick('volume', e)}
+                          data-tooltip-id="volume-tooltip"
+                          data-tooltip-content="Sort by total trading volume"
+                        >
+                          <div className="flex items-center justify-center">
+                            Total Volume
+                            {getSortIndicator('volume')}
+                          </div>
+                        </th>
+                        <th
+                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'volume24hr') ? 'bg-blue-900/50' : ''}`}
+                          onClick={(e) => handleSortClick('volume24hr', e)}
+                          data-tooltip-id="volume24h-tooltip"
+                          data-tooltip-content="Sort by 24-hour trading volume"
+                        >
+                          <div className="flex items-center justify-center">
+                            24hr Volume
+                            {getSortIndicator('volume24hr')}
+                          </div>
+                        </th>
+                        <th
+                          className={`px-3 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-16 md:w-20 ${sortConfig.some(s => s.key === 'liquidity') ? 'bg-blue-900/50' : ''}`}
+                          onClick={(e) => handleSortClick('liquidity', e)}
+                          data-tooltip-id="liquidity-tooltip"
+                          data-tooltip-content="Sort by market liquidity"
+                        >
+                          <div className="flex items-center justify-center">
+                            Liquidity
+                            {getSortIndicator('liquidity')}
+                          </div>
+                        </th>
+                        <th className="px-3 py-4 text-center text-sm font-semibold text-gray-300 w-12 md:w-16">Edge</th>
+                        <th
+                          className={`px-4 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-600/30 transition-colors select-none w-20 md:w-24 ${sortConfig.some(s => s.key === 'endDateIso') ? 'bg-blue-900/50' : ''}`}
+                          onClick={(e) => handleSortClick('endDateIso', e)}
+                          data-tooltip-id="expires-tooltip"
+                          data-tooltip-content="Sort by market expiration date"
+                        >
+                          <div className="flex items-center justify-center">
+                            Expires
+                            {getSortIndicator('endDateIso')}
+                          </div>
+                        </th>
+                        <th className="px-4 py-4 text-center text-sm font-semibold text-gray-300 w-16 md:w-20">Actions</th>
+                      </tr>
+                    </thead>
+                  </table>
+                </div>
+              </div>
 
-        {/* Virtualized Table Body */}
-        <div className="overflow-x-auto">
-          <AutoSizer disableHeight>
-            {({ width }) => (
-              <table className="min-w-full">
-                <tbody className="divide-y divide-slate-700">
-                  <List
-                    height={Math.min(sortedMarkets.length * 50, 600)} // Max height of 600px, 50px per row
-                    itemCount={sortedMarkets.length}
-                    itemSize={50} // Height per row
-                    overscanCount={10} // Render 10 extra items outside visible area
-                    width={width}
-                    itemData={{
-                      markets: sortedMarkets,
-                      onMarketClick,
-                      onMarketInsights,
-                      onMarketSelectForOrderbook,
-                      formatDate,
-                      formatVolume,
-                      sortConfig,
-                      watchedMarkets,
-                      toggleWatch
-                    }}
-                  >
-                    {VirtualizedMarketRow}
-                  </List>
-                </tbody>
-              </table>
-            )}
-          </AutoSizer>
-        </div>
-      </div>
-      )}
-
-      {/* Markets Cards - Mobile */}
-      {screenSizeDetermined && isMobile && (
-        <div>
-        <AutoSizer disableHeight>
-          {({ width }) => (
-            <List
-              height={Math.min(sortedMarkets.length * 120, 600)} // Max height of 600px, ~120px per card
-              itemCount={sortedMarkets.length}
-              itemSize={120} // Height per card
-              overscanCount={5} // Render 5 extra cards outside visible area
-              width={width}
-              itemData={{
-                markets: sortedMarkets,
-                onMarketClick,
-                onMarketInsights,
-                onMarketSelectForOrderbook,
-                formatDate,
-                formatVolume,
-                wsPriceChanges
-              }}
-            >
-              {VirtualizedMarketCard}
-            </List>
+              {/* Virtualized Table Body */}
+              <div className="overflow-x-auto">
+                <AutoSizer disableHeight>
+                  {({ width }) => (
+                    <table className="min-w-full">
+                      <tbody className="divide-y divide-slate-700">
+                        <List
+                          height={Math.min(sortedMarkets.length * 50, 600)}
+                          itemCount={sortedMarkets.length}
+                          itemSize={50}
+                          overscanCount={10}
+                          width={width}
+                          itemData={{
+                            markets: sortedMarkets,
+                            onMarketClick,
+                            onMarketInsights,
+                            onMarketSelectForOrderbook,
+                            formatDate,
+                            formatVolume,
+                            sortConfig,
+                            watchedMarkets,
+                            toggleWatch,
+                            showFetchError,
+                            resetFetchError
+                          }}
+                        >
+                          {VirtualizedMarketRow}
+                        </List>
+                      </tbody>
+                    </table>
+                  )}
+                </AutoSizer>
+              </div>
+            </div>
           )}
-        </AutoSizer>
-      </div>
-      )}
 
-      {/* Loading state while determining screen size */}
-      {!screenSizeDetermined && (
-        <div className="flex items-center justify-center py-8">
-          <div className="text-white text-sm">Loading markets...</div>
-        </div>
-      )}
+          {/* Markets Cards - Mobile */}
+          {screenSizeDetermined && isMobile && (
+            <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[70vh] pr-1">
+              {sortedMarkets.map((market) => (
+                <MarketCard
+                  key={market.id}
+                  market={market}
+                  onMarketClick={onMarketClick}
+                  onMarketInsights={onMarketInsights}
+                  onMarketSelectForOrderbook={onMarketSelectForOrderbook}
+                  formatDate={formatDate}
+                  formatVolume={formatVolume}
+                  wsPriceChanges={wsPriceChanges}
+                />
+              ))}
+            </div>
+          )}
 
-      {/* Tooltips */}
-      <Tooltip id="question-tooltip" place="top" />
-      <Tooltip id="yes-odds-tooltip" place="top" />
-      <Tooltip id="no-odds-tooltip" place="top" />
-      <Tooltip id="volume-tooltip" place="top" />
-      <Tooltip id="volume24h-tooltip" place="top" />
-      <Tooltip id="liquidity-tooltip" place="top" />
-      <Tooltip id="volume1w-tooltip" place="top" />
-      <Tooltip id="expires-tooltip" place="top" />
+          {/* Loading state while determining screen size */}
+          {!screenSizeDetermined && (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-white text-sm">Loading markets...</div>
+            </div>
+          )}
 
-      {/* Dynamic tooltips for each market */}
-      {sortedMarkets.map((market) => (
-        <React.Fragment key={market.id}>
-          <Tooltip id={`orderbook-${market.id}-tooltip`} place="top" />
-          <Tooltip id={`ai-hint-${market.id}-tooltip`} place="top" />
+          {/* Tooltips */}
+          <Tooltip id="question-tooltip" place="top" />
+          <Tooltip id="yes-odds-tooltip" place="top" />
+          <Tooltip id="no-odds-tooltip" place="top" />
+          <Tooltip id="volume-tooltip" place="top" />
+          <Tooltip id="volume24h-tooltip" place="top" />
+          <Tooltip id="liquidity-tooltip" place="top" />
+          <Tooltip id="volume1w-tooltip" place="top" />
+          <Tooltip id="expires-tooltip" place="top" />
+
+          {/* Dynamic tooltips for each market */}
+          {sortedMarkets.map((market) => (
+            <React.Fragment key={market.id}>
+              <Tooltip id={`orderbook-${market.id}-tooltip`} place="top" />
+              <Tooltip id={`ai-hint-${market.id}-tooltip`} place="top" />
+            </React.Fragment>
+          ))}
         </React.Fragment>
-      ))}
-
+      )}
     </div>
   );
 }
@@ -688,19 +705,27 @@ const VirtualizedMarketRow = React.memo(({ index, style, data }) => {
     formatVolume,
     sortConfig,
     watchedMarkets,
-    toggleWatch
+    toggleWatch,
+    showFetchError,
+    resetFetchError
   } = data;
 
   const market = markets[index];
   const isWatching = watchedMarkets.has(market.id);
 
   // Get orderbook data for tooltip
+  const orderbookToastShown = useRef(false);
   const { data: orderbookData } = useSWR(
     `/api/orderbook?tokenId=${market.id}`,
     (url) => fetch(url).then(res => res.json()),
     {
       refreshInterval: 60000, // 1 minute
       revalidateOnFocus: false,
+      revalidateIfStale: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 10000,
+      onError: () => showFetchError(orderbookToastShown),
+      onSuccess: () => resetFetchError(orderbookToastShown)
     }
   );
 
@@ -1055,9 +1080,9 @@ const VirtualizedMarketCard = React.memo(({ index, style, data }) => {
     <div style={style} className="px-1">
       <Disclosure>
         {({ open }) => (
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-lg overflow-hidden">
-            {/* Action Buttons - Outside Disclosure */}
-            <div className="flex items-center justify-end gap-2 p-4 pb-0">
+          <div className="flex flex-col gap-4 rounded-2xl border border-slate-700 bg-slate-800/70 p-4 shadow-md">
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1281,9 +1306,9 @@ function MarketCard({ market, onMarketClick, onMarketInsights, onMarketSelectFor
   return (
     <Disclosure>
       {({ open }) => (
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-lg overflow-hidden">
-          {/* Action Buttons - Outside Disclosure */}
-          <div className="flex items-center justify-end gap-2 p-4 pb-0">
+        <div className="flex flex-col gap-4 rounded-2xl border border-slate-700 bg-slate-800/70 p-4 shadow-md">
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-2">
             <button
               onClick={(e) => {
                 e.stopPropagation();
