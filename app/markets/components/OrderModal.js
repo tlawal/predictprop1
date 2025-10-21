@@ -4,8 +4,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import Draggable from 'react-draggable';
 import FocusLock from 'react-focus-lock';
-import { Bars3Icon } from '@heroicons/react/24/outline';
+import { Bars3Icon, InformationCircleIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { disableBodyScroll, enableBodyScroll, clearAllBodyScrollLocks } from 'body-scroll-lock';
+import useSWR from 'swr';
 
 export default function OrderModal({ market, isOpen, onClose }) {
   const [side, setSide] = useState('yes');
@@ -16,6 +17,7 @@ export default function OrderModal({ market, isOpen, onClose }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isWatching, setIsWatching] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [view, setView] = useState('trade');
   const modalRef = useRef(null);
   const nodeRef = useRef(null);
 
@@ -39,6 +41,7 @@ export default function OrderModal({ market, isOpen, onClose }) {
       setOrderType('market');
       setLimitPrice('');
       setIsWatching(false);
+      setView('trade');
     }
   }, [isOpen]);
 
@@ -85,6 +88,19 @@ export default function OrderModal({ market, isOpen, onClose }) {
 
   const currentPrice = side === 'yes' ? market.yesOdds : market.noOdds;
   const totalCost = parseFloat(amount) || 0;
+  const marketSlug = market.slug || (market.url ? market.url.split('/').filter(Boolean).pop() : null);
+
+  const shouldFetchDetails = view === 'rules' && marketSlug;
+  const { data: marketDetails, isLoading: marketDetailsLoading, error: marketDetailsError } = useSWR(
+    shouldFetchDetails ? `/api/market-details/${marketSlug}` : null,
+    async (url) => {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Failed to load market details');
+      }
+      return response.json();
+    }
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -122,6 +138,510 @@ export default function OrderModal({ market, isOpen, onClose }) {
       setIsSubmitting(false);
     }
   };
+
+  const renderRulesContent = (variant = 'desktop') => {
+    const containerClasses = variant === 'desktop'
+      ? 'max-h-[70vh] overflow-y-auto'
+      : 'flex-1 overflow-y-auto';
+    const wrapperClasses = 'p-6 pt-14 space-y-6';
+    const sectionTitleClasses = 'text-sm font-semibold text-white uppercase tracking-wide';
+    const bodyTextClasses = 'text-sm leading-relaxed text-gray-300';
+    const descriptionSource = (typeof marketDetails?.description === 'string' && marketDetails.description.trim().length > 0)
+      ? marketDetails.description
+      : market.description;
+    const descriptionContent = descriptionSource?.trim() || 'No description provided for this event.';
+
+    const resolutionItems = [];
+    if (typeof marketDetails?.resolutionCriteria === 'string' && marketDetails.resolutionCriteria.trim().length > 0) {
+      resolutionItems.push(marketDetails.resolutionCriteria.trim());
+    }
+    if (market.resolutionSource) resolutionItems.push(market.resolutionSource);
+    if (market.umaResolutionStatus) resolutionItems.push(market.umaResolutionStatus);
+    const uniqueResolutionItems = [...new Set(resolutionItems.filter(Boolean))];
+    const resolutionContent = uniqueResolutionItems.length > 0
+      ? uniqueResolutionItems.join(' • ')
+      : 'No resolution criteria were provided.';
+
+    const sourceUrl = marketDetails?.sourceUrl
+      || marketDetails?.source
+      || market.url
+      || (marketSlug ? `https://polymarket.com/event/${marketSlug}` : null);
+
+    let rulesBody;
+    if (!shouldFetchDetails && !marketDetailsLoading && !marketDetailsError) {
+      rulesBody = (
+        <p className={bodyTextClasses}>
+          Detailed market rules could not be fetched for this market. Visit the source link for the latest clarifications.
+        </p>
+      );
+    } else if (marketDetailsLoading) {
+      rulesBody = (
+        <p className={bodyTextClasses}>Loading market rules…</p>
+      );
+    } else if (marketDetailsError) {
+      rulesBody = (
+        <p className="text-sm text-red-400">
+          Unable to load market rules. {marketDetailsError.message || 'Please try again later.'}
+        </p>
+      );
+    } else if (marketDetails?.rulesText) {
+      const rulesParagraphs = marketDetails.rulesText
+        .split(/\n+/)
+        .map(paragraph => paragraph.trim())
+        .filter(Boolean);
+
+      rulesBody = (
+        <div className="space-y-3">
+          {rulesParagraphs.length > 0 ? (
+            rulesParagraphs.map((paragraph, index) => (
+              <p key={index} className={bodyTextClasses}>
+                {paragraph}
+              </p>
+            ))
+          ) : (
+            <p className={bodyTextClasses}>
+              No additional market rules were published for this event.
+            </p>
+          )}
+        </div>
+      );
+    } else {
+      rulesBody = (
+        <p className={bodyTextClasses}>
+          No additional market rules were published for this event.
+        </p>
+      );
+    }
+
+    return (
+      <div className={containerClasses}>
+        <div className={`${wrapperClasses} prose prose-invert max-w-none`}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-white">{market.question}</h3>
+              <p className="text-xs text-gray-400 mt-1">
+                Updated {new Date().toLocaleDateString()}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleWatchMarket}
+              disabled={isWatching}
+              className={`no-drag px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                isWatching
+                  ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 cursor-default'
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white'
+              }`}
+              aria-label={isWatching ? 'Already watching this market' : 'Watch this market'}
+            >
+              {isWatching ? 'Watching' : 'Watch Market'}
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h4 className={sectionTitleClasses}>Event Description</h4>
+              <p className={bodyTextClasses}>{descriptionContent}</p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className={sectionTitleClasses}>Resolution Criteria</h4>
+              <p className={bodyTextClasses}>{resolutionContent}</p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className={sectionTitleClasses}>Market Rules</h4>
+              {rulesBody}
+              {sourceUrl && (
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium text-blue-400 hover:text-blue-300"
+                >
+                  View on Polymarket →
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderDesktopTradeContent = () => (
+    <>
+      <div className="p-6 border-b border-gray-700 bg-gray-800/50">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-white text-sm">Market</h3>
+          <button
+            onClick={handleWatchMarket}
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+              isWatching
+                ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                : 'bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white'
+            }`}
+            aria-label={isWatching ? 'Already watching this market' : 'Watch this market'}
+          >
+            {isWatching ? 'Watching' : 'Watch Market'}
+          </button>
+        </div>
+        <p className="text-gray-300 text-sm leading-relaxed">{market.question}</p>
+        <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
+          <span>Closes {new Date(market.endDate).toLocaleDateString()}</span>
+          <span>Vol: ${(market.volume / 1000).toFixed(0)}k</span>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <div>
+          <label className="block text-sm font-semibold text-white mb-3">Side</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setSide('yes')}
+              className={`no-drag p-4 rounded-lg border-2 transition-all duration-200 ${
+                side === 'yes'
+                  ? 'bg-gradient-to-br from-green-500 to-green-600 border-green-500 text-white shadow-lg shadow-green-500/25'
+                  : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
+              }`}
+              aria-pressed={side === 'yes'}
+            >
+              <div className="text-center">
+                <div className="font-semibold text-lg">YES</div>
+                <div className={`text-xs mt-1 ${side === 'yes' ? 'text-green-100' : 'text-gray-400'}`}>
+                  {(market.yesOdds * 100).toFixed(0)}%
+                </div>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSide('no')}
+              className={`no-drag p-4 rounded-lg border-2 transition-all duration-200 ${
+                side === 'no'
+                  ? 'bg-gradient-to-br from-red-500 to-red-600 border-red-500 text-white shadow-lg shadow-red-500/25'
+                  : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
+              }`}
+              aria-pressed={side === 'no'}
+            >
+              <div className="text-center">
+                <div className="font-semibold text-lg">NO</div>
+                <div className={`text-xs mt-1 ${side === 'no' ? 'text-red-100' : 'text-gray-400'}`}>
+                  {(market.noOdds * 100).toFixed(0)}%
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="amount" className="block text-sm font-semibold text-white mb-2">
+            Amount (USDC)
+          </label>
+          <div className="relative">
+            <input
+              id="amount"
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              min="0"
+              max={balance}
+              step="0.01"
+              className={`no-drag w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                amountError ? 'border-red-500 focus:ring-red-500' : 'border-gray-600'
+              }`}
+              required
+              aria-invalid={!!amountError}
+              aria-describedby={amountError ? 'amount-error' : 'amount-help'}
+            />
+            <button
+              type="button"
+              onClick={handleMaxAmount}
+              className="no-drag absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors"
+              aria-label="Use maximum available balance"
+            >
+              MAX
+            </button>
+          </div>
+          {amountError && (
+            <p id="amount-error" className="text-red-600 text-xs mt-1" role="alert">
+              {amountError}
+            </p>
+          )}
+          <div className="flex justify-between text-xs text-gray-400 mt-1">
+            <span>Balance: ${balance.toLocaleString()}</span>
+            <span>Est. Cost: ${totalCost.toFixed(2)}</span>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-white mb-3">Order Type</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setOrderType('market')}
+              className={`no-drag p-3 rounded-lg border-2 transition-all duration-200 ${
+                orderType === 'market'
+                  ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                  : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
+              }`}
+              aria-pressed={orderType === 'market'}
+              aria-label="Market order - execute immediately at current price"
+            >
+              <div className="text-center">
+                <div className="font-semibold">Market</div>
+                <div className={`text-xs mt-1 ${orderType === 'market' ? 'text-emerald-100' : 'text-gray-400'}`}>
+                  Instant
+                </div>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrderType('limit')}
+              className={`no-drag p-3 rounded-lg border-2 transition-all duration-200 ${
+                orderType === 'limit'
+                  ? 'bg-gradient-to-br from-amber-500 to-orange-500 border-amber-500 text-white shadow-lg shadow-amber-500/25'
+                  : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover-border-gray-500'
+              }`}
+              aria-pressed={orderType === 'limit'}
+              aria-label="Limit order - execute at specified price or better"
+            >
+              <div className="text-center">
+                <div className="font-semibold">Limit</div>
+                <div className={`text-xs mt-1 ${orderType === 'limit' ? 'text-amber-100' : 'text-gray-400'}`}>
+                  Target Price
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {orderType === 'limit' && (
+          <div>
+            <label htmlFor="limit-price" className="block text-sm font-semibold text-white mb-2">
+              Limit Price
+            </label>
+            <input
+              id="limit-price"
+              type="number"
+              value={limitPrice}
+              onChange={(e) => setLimitPrice(e.target.value)}
+              placeholder="0.00"
+              min="0"
+              max="1"
+              step="0.01"
+              className="no-drag w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              aria-label="Limit price for order execution"
+            />
+          </div>
+        )}
+
+        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+          <div className="text-sm font-semibold text-white mb-3">Order Summary</div>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Amount:</span>
+              <span className="text-white font-medium">${parseFloat(amount || 0).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between border-t border-gray-600 pt-2 mt-2">
+              <span className="text-white font-semibold">Total Cost:</span>
+              <span className="text-white font-semibold">${totalCost.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={!amount || parseFloat(amount) <= 0 || !!amountError || isSubmitting}
+          className="no-drag w-full py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
+        >
+          {isSubmitting ? 'Placing Bet...' : 'Place Virtual Bet'}
+        </button>
+      </form>
+    </>
+  );
+
+  const renderMobileTradeContent = () => (
+    <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-white text-sm">Market</h3>
+          <button
+            type="button"
+            onClick={handleWatchMarket}
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+              isWatching
+                ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                : 'bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white'
+            }`}
+            aria-label={isWatching ? 'Already watching this market' : 'Watch'}
+          >
+            {isWatching ? 'Watching' : 'Watch'}
+          </button>
+        </div>
+        <p className="text-gray-300 text-sm leading-relaxed">{market.question}</p>
+        <div className="flex items-center gap-4 text-xs text-gray-400">
+          <span>Closes {new Date(market.endDate).toLocaleDateString()}</span>
+          <span>Vol: ${(market.volume / 1000).toFixed(0)}k</span>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-semibold text-white mb-3">Side</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setSide('yes')}
+              className={`no-drag p-3 rounded-lg border-2 transition-all duration-200 ${
+                side === 'yes'
+                  ? 'bg-gradient-to-br from-green-500 to-green-600 border-green-500 text-white shadow-lg shadow-green-500/25'
+                  : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
+              }`}
+            >
+              <div className="text-center">
+                <div className="font-semibold">YES</div>
+                <div className={`text-xs mt-1 ${side === 'yes' ? 'text-green-100' : 'text-gray-400'}`}>
+                  {(market.yesOdds * 100).toFixed(0)}%
+                </div>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSide('no')}
+              className={`no-drag p-3 rounded-lg border-2 transition-all duration-200 ${
+                side === 'no'
+                  ? 'bg-gradient-to-br from-red-500 to-red-600 border-red-500 text-white shadow-lg shadow-red-500/25'
+                  : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
+              }`}
+            >
+              <div className="text-center">
+                <div className="font-semibold">NO</div>
+                <div className={`text-xs mt-1 ${side === 'no' ? 'text-red-100' : 'text-gray-400'}`}>
+                  {(market.noOdds * 100).toFixed(0)}%
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="mobile-amount" className="block text-sm font-semibold text-white mb-2">
+            Amount (USDC)
+          </label>
+          <div className="relative">
+            <input
+              id="mobile-amount"
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              min="0"
+              max={balance}
+              step="0.01"
+              className={`no-drag w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                amountError ? 'border-red-500 focus:ring-red-500' : 'border-gray-600'
+              }`}
+              required
+            />
+            <button
+              type="button"
+              onClick={handleMaxAmount}
+              className="no-drag absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded"
+            >
+              MAX
+            </button>
+          </div>
+          {amountError && (
+            <p className="text-red-600 text-xs mt-1">{amountError}</p>
+          )}
+          <div className="flex justify-between text-xs text-gray-400 mt-1">
+            <span>Balance: ${balance.toLocaleString()}</span>
+            <span>Available: ${(balance - totalCost).toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-white mb-3">Order Type</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setOrderType('market')}
+              className={`no-drag p-3 rounded-lg border-2 transition-all duration-200 ${
+                orderType === 'market'
+                  ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                  : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
+              }`}
+            >
+              <div className="text-center">
+                <div className="font-semibold">Market</div>
+                <div className={`text-xs mt-1 ${orderType === 'market' ? 'text-emerald-100' : 'text-gray-400'}`}>
+                  Instant
+                </div>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrderType('limit')}
+              className={`no-drag p-3 rounded-lg border-2 transition-all duration-200 ${
+                orderType === 'limit'
+                  ? 'bg-gradient-to-br from-amber-500 to-orange-500 border-amber-500 text-white shadow-lg shadow-amber-500/25'
+                  : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover-border-gray-500'
+              }`}
+            >
+              <div className="text-center">
+                <div className="font-semibold">Limit</div>
+                <div className={`text-xs mt-1 ${orderType === 'limit' ? 'text-amber-100' : 'text-gray-400'}`}>
+                  Target
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {orderType === 'limit' && (
+          <div>
+            <label htmlFor="mobile-limit-price" className="block text-sm font-semibold text-white mb-2">
+              Limit Price
+            </label>
+            <input
+              id="mobile-limit-price"
+              type="number"
+              value={limitPrice}
+              onChange={(e) => setLimitPrice(e.target.value)}
+              placeholder="0.00"
+              min="0"
+              max="1"
+              step="0.01"
+              className="no-drag w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            />
+          </div>
+        )}
+
+        <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-400">Amount:</span>
+            <span className="text-white font-medium">${parseFloat(amount || 0).toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between border-t border-gray-600 pt-2 mt-2">
+            <span className="text-white font-semibold">Total Cost:</span>
+            <span className="text-white font-semibold">${totalCost.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        disabled={!amount || parseFloat(amount) <= 0 || !!amountError || isSubmitting}
+        className="no-drag w-full py-4 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white font-semibold rounded-lg"
+      >
+        {isSubmitting ? 'Placing Bet...' : 'Place Virtual Bet'}
+      </button>
+    </form>
+  );
 
   const handleMaxAmount = () => {
     setAmount(balance.toString());
@@ -198,11 +718,11 @@ export default function OrderModal({ market, isOpen, onClose }) {
               style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
             >
               {/* Draggable Header */}
-              <div className="drag-handle flex items-center justify-between p-6 border-b border-gray-700 bg-gray-800 rounded-t-xl select-none">
+              <div className="drag-handle relative flex items-center justify-between p-6 border-b border-gray-700 bg-gray-800 rounded-t-xl select-none pl-12 pr-12">
                 <div className="flex items-center gap-3">
-                  <Bars3Icon className="w-5 h-5 text-gray-400" aria-hidden="true" />
+                  {view === 'trade' && <Bars3Icon className="w-5 h-5 text-gray-400" aria-hidden="true" />}
                   <h2 id="modal-title" className="text-xl font-bold text-white">
-                    Place Virtual Bet
+                    {view === 'rules' ? 'Market Rules' : 'Place Virtual Bet'}
                   </h2>
                 </div>
                 <button
@@ -214,207 +734,30 @@ export default function OrderModal({ market, isOpen, onClose }) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
+                {view === 'trade' ? (
+                  <button
+                    type="button"
+                    onClick={() => setView('rules')}
+                    className="no-drag absolute top-4 right-4 text-blue-500 hover:text-blue-300 transition-colors"
+                    aria-label="View market rules"
+                  >
+                    <InformationCircleIcon className="w-6 h-6" aria-hidden="true" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setView('trade')}
+                    className="no-drag absolute top-4 left-4 text-gray-300 hover:text-white transition-colors"
+                    aria-label="Back to trading view"
+                  >
+                    <ArrowLeftIcon className="w-6 h-6" aria-hidden="true" />
+                  </button>
+                )}
               </div>
 
               {/* Scrollable Content */}
               <div className="max-h-[70vh] overflow-y-auto">
-                {/* Market Info */}
-                <div className="p-6 border-b border-gray-700 bg-gray-800/50">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-white text-sm">Market</h3>
-                    <button
-                      onClick={handleWatchMarket}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                        isWatching
-                          ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                          : 'bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white'
-                      }`}
-                      aria-label={isWatching ? 'Already watching this market' : 'Watch this market'}
-                    >
-                      {isWatching ? 'Watching' : 'Watch Market'}
-                    </button>
-                  </div>
-                  <p className="text-gray-300 text-sm leading-relaxed">{market.question}</p>
-                  <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
-                    <span>Closes {new Date(market.endDate).toLocaleDateString()}</span>
-                    <span>Vol: ${(market.volume / 1000).toFixed(0)}k</span>
-                  </div>
-                </div>
-
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                  {/* Side Selection */}
-                  <div>
-                    <label className="block text-sm font-semibold text-white mb-3">Side</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setSide('yes')}
-                        className={`no-drag p-4 rounded-lg border-2 transition-all duration-200 ${
-                          side === 'yes'
-                            ? 'bg-gradient-to-br from-green-500 to-green-600 border-green-500 text-white shadow-lg shadow-green-500/25'
-                            : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
-                        }`}
-                        aria-pressed={side === 'yes'}
-                      >
-                        <div className="text-center">
-                          <div className="font-semibold text-lg">YES</div>
-                          <div className={`text-xs mt-1 ${side === 'yes' ? 'text-green-100' : 'text-gray-400'}`}>
-                            {(market.yesOdds * 100).toFixed(0)}%
-                          </div>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSide('no')}
-                        className={`no-drag p-4 rounded-lg border-2 transition-all duration-200 ${
-                          side === 'no'
-                            ? 'bg-gradient-to-br from-red-500 to-red-600 border-red-500 text-white shadow-lg shadow-red-500/25'
-                            : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
-                        }`}
-                        aria-pressed={side === 'no'}
-                      >
-                        <div className="text-center">
-                          <div className="font-semibold text-lg">NO</div>
-                          <div className={`text-xs mt-1 ${side === 'no' ? 'text-red-100' : 'text-gray-400'}`}>
-                            {(market.noOdds * 100).toFixed(0)}%
-                          </div>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Amount */}
-                  <div>
-                    <label htmlFor="amount" className="block text-sm font-semibold text-white mb-2">
-                      Amount (USDC)
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="amount"
-                        type="number"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        placeholder="0.00"
-                        min="0"
-                        max={balance}
-                        step="0.01"
-                        className={`no-drag w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                          amountError ? 'border-red-500 focus:ring-red-500' : 'border-gray-600'
-                        }`}
-                        required
-                        aria-invalid={!!amountError}
-                        aria-describedby={amountError ? "amount-error" : "amount-help"}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleMaxAmount}
-                        className="no-drag absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors"
-                        aria-label="Use maximum available balance"
-                      >
-                        MAX
-                      </button>
-                    </div>
-                    {amountError && (
-                      <p id="amount-error" className="text-red-600 text-xs mt-1" role="alert">
-                        {amountError}
-                      </p>
-                    )}
-                    <div className="flex justify-between text-xs text-gray-400 mt-1">
-                      <span>Balance: ${balance.toLocaleString()}</span>
-                      <span>Est. Cost: ${totalCost.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  {/* Order Type */}
-                  <div>
-                    <label className="block text-sm font-semibold text-white mb-3">Order Type</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setOrderType('market')}
-                        className={`no-drag p-3 rounded-lg border-2 transition-all duration-200 ${
-                          orderType === 'market'
-                            ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/25'
-                            : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
-                        }`}
-                        aria-pressed={orderType === 'market'}
-                        aria-label="Market order - execute immediately at current price"
-                      >
-                        <div className="text-center">
-                          <div className="font-semibold">Market</div>
-                          <div className={`text-xs mt-1 ${orderType === 'market' ? 'text-emerald-100' : 'text-gray-400'}`}>
-                            Instant
-                          </div>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOrderType('limit')}
-                        className={`no-drag p-3 rounded-lg border-2 transition-all duration-200 ${
-                          orderType === 'limit'
-                            ? 'bg-gradient-to-br from-amber-500 to-orange-500 border-amber-500 text-white shadow-lg shadow-amber-500/25'
-                            : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
-                        }`}
-                        aria-pressed={orderType === 'limit'}
-                        aria-label="Limit order - execute at specified price or better"
-                      >
-                        <div className="text-center">
-                          <div className="font-semibold">Limit</div>
-                          <div className={`text-xs mt-1 ${orderType === 'limit' ? 'text-amber-100' : 'text-gray-400'}`}>
-                            Target Price
-                          </div>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Limit Price (if limit order) */}
-                  {orderType === 'limit' && (
-                    <div>
-                      <label htmlFor="limit-price" className="block text-sm font-semibold text-white mb-2">
-                        Limit Price
-                      </label>
-                      <input
-                        id="limit-price"
-                        type="number"
-                        value={limitPrice}
-                        onChange={(e) => setLimitPrice(e.target.value)}
-                        placeholder="0.00"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        className="no-drag w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                        aria-label="Limit price for order execution"
-                      />
-                    </div>
-                  )}
-
-                  {/* Order Summary */}
-                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                    <div className="text-sm font-semibold text-white mb-3">Order Summary</div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Amount:</span>
-                        <span className="text-white font-medium">${parseFloat(amount || 0).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between border-t border-gray-600 pt-2 mt-2">
-                        <span className="text-white font-semibold">Total Cost:</span>
-                        <span className="text-white font-semibold">${totalCost.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={!amount || parseFloat(amount) <= 0 || !!amountError || isSubmitting}
-                    className="no-drag w-full py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
-                  >
-                    {isSubmitting ? 'Placing Bet...' : 'Place Virtual Bet'}
-                  </button>
-                </form>
+                {view === 'rules' ? renderRulesContent('desktop') : renderDesktopTradeContent()}
               </div>
             </div>
           </Draggable>
@@ -425,190 +768,31 @@ export default function OrderModal({ market, isOpen, onClose }) {
       <div className="md:hidden">
         <div className="fixed inset-x-0 bottom-0 z-[1050] bg-gray-800 rounded-t-xl shadow-2xl max-h-[80vh] overflow-hidden">
           <div className="flex flex-col h-full">
-            {/* Mobile Header */}
-            <div className="flex items-center justify-center p-4 border-b border-gray-700 bg-gray-800 rounded-t-xl">
+            <div className="relative flex items-center justify-center p-4 border-b border-gray-700 bg-gray-800 rounded-t-xl">
               <div className="w-12 h-1 bg-gray-600 rounded-full"></div>
+              {view === 'trade' ? (
+                <button
+                  type="button"
+                  onClick={() => setView('rules')}
+                  className="no-drag absolute top-4 right-4 text-blue-500 hover:text-blue-300"
+                  aria-label="View market rules"
+                >
+                  <InformationCircleIcon className="w-6 h-6" aria-hidden="true" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setView('trade')}
+                  className="no-drag absolute top-4 left-4 text-gray-300 hover:text-white"
+                  aria-label="Back to trading view"
+                >
+                  <ArrowLeftIcon className="w-6 h-6" aria-hidden="true" />
+                </button>
+              )}
             </div>
 
-            {/* Mobile Content */}
             <div className="flex-1 overflow-y-auto">
-              <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-white text-sm">Market</h3>
-                    <button
-                      type="button"
-                      onClick={handleWatchMarket}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                        isWatching
-                          ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                          : 'bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white'
-                      }`}
-                      aria-label={isWatching ? 'Already watching this market' : 'Watch'}
-                    >
-                      {isWatching ? 'Watching' : 'Watch'}
-                    </button>
-                  </div>
-                  <p className="text-gray-300 text-sm leading-relaxed">{market.question}</p>
-                  <div className="flex items-center gap-4 text-xs text-gray-400">
-                    <span>Closes {new Date(market.endDate).toLocaleDateString()}</span>
-                    <span>Vol: ${(market.volume / 1000).toFixed(0)}k</span>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-white mb-3">Side</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setSide('yes')}
-                        className={`no-drag p-3 rounded-lg border-2 transition-all duration-200 ${
-                          side === 'yes'
-                            ? 'bg-gradient-to-br from-green-500 to-green-600 border-green-500 text-white shadow-lg shadow-green-500/25'
-                            : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
-                        }`}
-                      >
-                        <div className="text-center">
-                          <div className="font-semibold">YES</div>
-                          <div className={`text-xs mt-1 ${side === 'yes' ? 'text-green-100' : 'text-gray-400'}`}>
-                            {(market.yesOdds * 100).toFixed(0)}%
-                          </div>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSide('no')}
-                        className={`no-drag p-3 rounded-lg border-2 transition-all duration-200 ${
-                          side === 'no'
-                            ? 'bg-gradient-to-br from-red-500 to-red-600 border-red-500 text-white shadow-lg shadow-red-500/25'
-                            : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
-                        }`}
-                      >
-                        <div className="text-center">
-                          <div className="font-semibold">NO</div>
-                          <div className={`text-xs mt-1 ${side === 'no' ? 'text-red-100' : 'text-gray-400'}`}>
-                            {(market.noOdds * 100).toFixed(0)}%
-                          </div>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="mobile-amount" className="block text-sm font-semibold text-white mb-2">
-                      Amount (USDC)
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="mobile-amount"
-                        type="number"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        placeholder="0.00"
-                        min="0"
-                        max={balance}
-                        step="0.01"
-                        className={`no-drag w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                          amountError ? 'border-red-500 focus:ring-red-500' : 'border-gray-600'
-                        }`}
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={handleMaxAmount}
-                        className="no-drag absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded"
-                      >
-                        MAX
-                      </button>
-                    </div>
-                    {amountError && (
-                      <p className="text-red-600 text-xs mt-1">{amountError}</p>
-                    )}
-                    <div className="flex justify-between text-xs text-gray-400 mt-1">
-                      <span>Balance: ${balance.toLocaleString()}</span>
-                      <span>Available: ${(balance - totalCost).toLocaleString()}</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-white mb-3">Order Type</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setOrderType('market')}
-                        className={`no-drag p-3 rounded-lg border-2 transition-all duration-200 ${
-                          orderType === 'market'
-                            ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/25'
-                            : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
-                        }`}
-                      >
-                        <div className="text-center">
-                          <div className="font-semibold">Market</div>
-                          <div className={`text-xs mt-1 ${orderType === 'market' ? 'text-emerald-100' : 'text-gray-400'}`}>
-                            Instant
-                          </div>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOrderType('limit')}
-                        className={`no-drag p-3 rounded-lg border-2 transition-all duration-200 ${
-                          orderType === 'limit'
-                            ? 'bg-gradient-to-br from-amber-500 to-orange-500 border-amber-500 text-white shadow-lg shadow-amber-500/25'
-                            : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
-                        }`}
-                      >
-                        <div className="text-center">
-                          <div className="font-semibold">Limit</div>
-                          <div className={`text-xs mt-1 ${orderType === 'limit' ? 'text-amber-100' : 'text-gray-400'}`}>
-                            Target
-                          </div>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  {orderType === 'limit' && (
-                    <div>
-                      <label htmlFor="mobile-limit-price" className="block text-sm font-semibold text-white mb-2">
-                        Limit Price
-                      </label>
-                      <input
-                        id="mobile-limit-price"
-                        type="number"
-                        value={limitPrice}
-                        onChange={(e) => setLimitPrice(e.target.value)}
-                        placeholder="0.00"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        className="no-drag w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                      />
-                    </div>
-                  )}
-
-                  <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Amount:</span>
-                      <span className="text-white font-medium">${parseFloat(amount || 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between border-t border-gray-600 pt-2 mt-2">
-                      <span className="text-white font-semibold">Total Cost:</span>
-                      <span className="text-white font-semibold">${totalCost.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={!amount || parseFloat(amount) <= 0 || !!amountError || isSubmitting}
-                  className="no-drag w-full py-4 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white font-semibold rounded-lg"
-                >
-                  {isSubmitting ? 'Placing Bet...' : 'Place Virtual Bet'}
-                </button>
-              </form>
+              {view === 'rules' ? renderRulesContent('mobile') : renderMobileTradeContent()}
             </div>
           </div>
         </div>
