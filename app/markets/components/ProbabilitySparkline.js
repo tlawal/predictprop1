@@ -49,6 +49,8 @@ const usePriceHistory = (tokenId) => {
 };
 
 const ProbabilitySparkline = ({ tokenId, yesPrice }) => {
+  const priceHistory = usePriceHistory(tokenId);
+
   if (!tokenId) {
     return (
       <div className="flex items-center justify-center h-10 w-full rounded bg-slate-700/50 text-[10px] text-gray-400 uppercase tracking-wide">
@@ -56,8 +58,6 @@ const ProbabilitySparkline = ({ tokenId, yesPrice }) => {
       </div>
     );
   }
-
-  const priceHistory = usePriceHistory(tokenId);
 
   if (!priceHistory.length) {
     return (
