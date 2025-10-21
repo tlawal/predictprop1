@@ -84,13 +84,8 @@ export default function OrderModal({ market, isOpen, onClose }) {
     };
   }, []);
 
-  if (!isOpen || !market) return null;
-
-  const currentPrice = side === 'yes' ? market.yesOdds : market.noOdds;
-  const totalCost = parseFloat(amount) || 0;
-  const marketSlug = market.slug || (market.url ? market.url.split('/').filter(Boolean).pop() : null);
-
-  const shouldFetchDetails = view === 'rules' && marketSlug;
+  const marketSlug = market?.slug || (market?.url ? market.url.split('/').filter(Boolean).pop() : null);
+  const shouldFetchDetails = isOpen && !!market && view === 'rules' && marketSlug;
   const { data: marketDetails, isLoading: marketDetailsLoading, error: marketDetailsError } = useSWR(
     shouldFetchDetails ? `/api/market-details/${marketSlug}` : null,
     async (url) => {
@@ -101,6 +96,11 @@ export default function OrderModal({ market, isOpen, onClose }) {
       return response.json();
     }
   );
+
+  if (!isOpen || !market) return null;
+
+  const currentPrice = side === 'yes' ? market.yesOdds : market.noOdds;
+  const totalCost = parseFloat(amount) || 0;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
