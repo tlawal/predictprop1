@@ -667,16 +667,18 @@ function MarketRow({ market, onMarketClick, onMarketInsights, onMarketSelectForO
       {/* Question Column */}
       <td className="px-6 py-4">
         <div className="flex items-center gap-3">
-          <Image
-            src={market.icon}
-            alt={market.question}
-            width={32}
-            height={32}
-            className="rounded-full object-cover flex-shrink-0"
-            onError={(e) => {
-              e.target.style.display = 'none';
-            }}
-          />
+          <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl bg-slate-700/60">
+            <Image
+              src={market.icon}
+              alt={market.question}
+              fill
+              sizes="48px"
+              className="object-cover"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+          </div>
           <div className="font-semibold text-white text-sm leading-tight min-w-0 flex-1">
             {market.question}
           </div>
