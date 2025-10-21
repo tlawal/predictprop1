@@ -149,7 +149,7 @@ function RangeSlider({ label, min, max, value, onChange, step = 1, formatValue =
   };
 
   return (
-    <div className="flex flex-col gap-2 w-full">
+    <div className="flex flex-col gap-3 w-full">
       <div className="flex items-center gap-2">
         <label className="text-sm font-medium text-gray-200">
           {label}: {formatValue(localValue[0])} - {formatValue(localValue[1])}
@@ -163,40 +163,51 @@ function RangeSlider({ label, min, max, value, onChange, step = 1, formatValue =
         )}
       </div>
 
-      <div className="w-full">
+      <div className="w-full py-1">
         <Slider
-          className="slider w-full h-2"
+          className="slider w-full h-3"
           value={localValue}
           onChange={handleChange}
           min={min}
           max={max}
           step={step}
           renderTrack={(props, state) => {
-            const { key, ...rest } = props;
+            const { key, style, ...rest } = props;
             return (
               <div
                 key={key}
                 {...rest}
-                className={`h-2 rounded-full ${
-                  state.index === 1 ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-700'
+                style={{
+                  ...style,
+                  top: '50%',
+                  transform: 'translateY(-50%)'
+                }}
+                className={`h-1.5 rounded-full transition-colors duration-200 ${
+                  state.index === 1
+                    ? 'bg-gradient-to-r from-teal-400 via-blue-500 to-indigo-500 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]'
+                    : 'bg-slate-600/50'
                 }`}
               />
             );
           }}
           renderThumb={(props) => {
-            const { key, ...rest } = props;
+            const { key, style, ...rest } = props;
             return (
               <div
                 key={key}
                 {...rest}
-                className="w-5 h-5 bg-blue-500 border-2 border-white dark:border-slate-900 rounded-full shadow focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900"
-              />
+                style={style}
+                className="group relative flex h-5 w-5 -mt-1 items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+              >
+                <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.9),rgba(255,255,255,0.1)_70%,transparent)] shadow-[0_4px_12px_rgba(16,185,129,0.25)]" />
+                <span className="relative h-3.5 w-3.5 rounded-full bg-slate-900/90 border border-white/20 group-hover:border-white/50 transition-colors" />
+              </div>
             );
           }}
         />
       </div>
 
-      <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
         <span>{formatValue(min)}</span>
         <span>{formatValue(max)}</span>
       </div>
