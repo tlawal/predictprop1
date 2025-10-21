@@ -49,14 +49,35 @@ const usePriceHistory = (tokenId) => {
 };
 
 const ProbabilitySparkline = ({ tokenId, yesPrice }) => {
+  if (!tokenId) {
+    return (
+      <div className="flex items-center justify-center h-10 w-full rounded bg-slate-700/50 text-[10px] text-gray-400 uppercase tracking-wide">
+        No data
+      </div>
+    );
+  }
+
   const priceHistory = usePriceHistory(tokenId);
 
+  if (!priceHistory.length) {
+    return (
+      <div className="flex items-center justify-center h-10 w-full rounded bg-slate-700/30 text-[10px] text-gray-400 uppercase tracking-wide">
+        No data
+      </div>
+    );
+  }
+
   // Prepare chart data
+  const values = priceHistory.map(entry => ((entry.yesProb ?? entry.yesPrice) || 0) * 100);
+  if (values.length === 1) {
+    values.push(values[0]);
+  }
+
   const chartData = {
-    labels: priceHistory.map((_, index) => index),
+    labels: values.map((_, index) => index),
     datasets: [
       {
-        data: priceHistory.map(entry => entry.yesPrice * 100), // Convert to percentage
+        data: values,
         borderColor: yesPrice > 0.5 ? '#10b981' : '#ef4444', // Green for >50%, red for <50%
         backgroundColor: 'transparent',
         borderWidth: 1.5,

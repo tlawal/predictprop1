@@ -224,7 +224,7 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
 
   // Listen for WebSocket price updates
   // SWR polling for midpoint data of visible markets (every 5 minutes)
-  const visibleMarkets = markets.slice(0, 20); // Only poll first 20 visible markets
+  const visibleMarkets = sortedMarkets.slice(0, 40); // Poll top 40 sorted markets
   const visibleTokenIds = visibleMarkets
     .map(market => market.tokenId || market.id)
     .filter(Boolean);
@@ -274,6 +274,33 @@ export default function MarketsTable({ markets: propMarkets, searchQuery, sortOr
   const loadMore = useCallback(() => {
     // For now, just show all markets - can implement pagination later if needed
   }, []);
+
+  // Seed initial price history so charts render immediately
+  useEffect(() => {
+    if (!markets.length) return;
+
+    const { getPriceHistory, updateMultipleMarketOdds } = useOddsStore.getState();
+    const initialUpdates = {};
+
+    markets.forEach((market) => {
+      const tokenId = market.tokenId || market.id;
+      if (!tokenId) return;
+
+      const history = getPriceHistory(tokenId);
+      if (history.length === 0) {
+        const yes = typeof market.yesOdds === 'number' ? market.yesOdds : 0.5;
+        const no = typeof market.noOdds === 'number' ? market.noOdds : Math.max(0, 1 - yes);
+        initialUpdates[tokenId] = {
+          yesPrice: yes,
+          noPrice: no
+        };
+      }
+    });
+
+    if (Object.keys(initialUpdates).length > 0) {
+      updateMultipleMarketOdds(initialUpdates);
+    }
+  }, [markets]);
 
   // Use prop markets and loading state
 
