@@ -38,16 +38,14 @@ export default function Header() {
       <header className={styles.header}>
         <div className={styles.container}>
           <div className={styles.logo}>
-            <svg viewBox="0 0 24 24" fill="url(#grad1)">
-              <defs>
-                <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" style={{ stopColor: '#1E3A8A', stopOpacity: 1 }} />
-                  <stop offset="100%" style={{ stopColor: '#2DD4BF', stopOpacity: 1 }} />
-                </linearGradient>
-              </defs>
-              <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.5L20 8v8l-8 4-8-4V8l8-3.5z"/>
-            </svg>
-            PolyProp
+            <Image
+              src="/PPlogo.jpeg"
+              alt="PolyProp logo"
+              width={120}
+              height={120}
+              className={styles.logoImage}
+              priority
+            />
           </div>
 
           {/* Desktop Navigation */}
