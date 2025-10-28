@@ -168,7 +168,7 @@ export default function Home() {
           </h1>
           <p className={styles.heroSubtitle}>
             {t('hero.tagline')} — get funded up to
-            <span className={styles.amountHighlight}> $100,000</span>.
+            <span className={styles.amountHighlight}> $5,000</span>.
           </p>
           <div className={styles.cta}>
             <Link href="/traders">
@@ -479,8 +479,8 @@ export default function Home() {
                     </svg>
                     <div className={styles.stepGlow}></div>
                   </div>
-                  <h3>Keep 80% of profits (20% platform cut)</h3>
-                  <p>Keep up to 80% of profits, paid within 24 hours via USDC.</p>
+                  <h3>Keep 90% of profit</h3>
+                  <p>Keep up to 90% of profits, paid within 24 hours via USDC.</p>
                   <div className={styles.stepMeta}>
                     <span className={styles.stepDuration}>24 hours</span>
                     <span className={styles.stepDifficulty}>Guaranteed</span>
@@ -525,7 +525,7 @@ export default function Home() {
                 </div>
                 <h3 className="font-bold text-xl sm:text-2xl text-white mb-3">Funded Trading</h3>
                 <p className="text-sm sm:text-base lg:text-lg leading-6 sm:leading-7 text-gray-300 flex-1">
-                  Trade with up to $100k, keeping 80% of profits.
+                  Trade with up to $100k, keeping 90% of profits.
                 </p>
                 <div className="mt-4 text-center">
                   <div className="text-2xl font-bold text-blue-400">$100K</div>
