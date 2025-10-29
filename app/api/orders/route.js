@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase';
+import { supabase, supabaseAdmin, isSupabaseConfigured } from '../../../lib/supabase';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -71,12 +71,16 @@ export async function GET(request) {
       user: {
         id: order.user_id,
         email: order.users?.email || 'No email',
-        wallet: order.users?.wallet ? `${order.users.wallet.slice(0, 6)}...${order.users.wallet.slice(-4)}` : 'No wallet'
+        wallet: order.users?.wallet
+          ? `${order.users.wallet.slice(0, 6)}...${order.users.wallet.slice(-4)}`
+          : 'No wallet'
       },
-      affiliate: order.affiliate_id ? {
-        id: order.affiliate_id,
-        name: order.affiliates?.email || 'Unknown'
-      } : null,
+      affiliate: order.affiliate_id
+        ? {
+            id: order.affiliate_id,
+            name: order.affiliates?.email || 'Unknown'
+          }
+        : null,
       addons: order.addons || {},
       amount: order.amount,
       status: order.status,
@@ -103,7 +107,6 @@ export async function GET(request) {
     });
 
     return NextResponse.json(result);
-
   } catch (error) {
     console.error('Orders API error:', error);
     return NextResponse.json(
@@ -116,7 +119,16 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { orderId, planId, userId, addons, amount, affiliateId, paymentMethod } = body;
+    const {
+      orderId,
+      planId,
+      userId,
+      addons,
+      amount,
+      affiliateCode,
+      affiliateId,
+      paymentMethod
+    } = body;
 
     if (!orderId || !planId || !userId || !amount) {
       return NextResponse.json(
@@ -128,8 +140,25 @@ export async function POST(request) {
       );
     }
 
-    // Create order in Supabase
-    const { data: order, error } = await supabase
+    let resolvedAffiliateId = affiliateId || null;
+
+    if (!resolvedAffiliateId && affiliateCode && isSupabaseConfigured && supabaseAdmin) {
+      resolvedAffiliateId = await resolveAffiliateId(affiliateCode);
+    }
+
+    if (resolvedAffiliateId && !(await affiliateExists(resolvedAffiliateId))) {
+      return NextResponse.json(
+        {
+          error: 'Invalid affiliate identifier',
+          details: 'Affiliate not found or not approved'
+        },
+        { status: 400 }
+      );
+    }
+
+    const client = supabaseAdmin || supabase;
+
+    const { data: order, error } = await client
       .from('orders')
       .insert({
         order_id: orderId,
@@ -137,7 +166,7 @@ export async function POST(request) {
         user_id: userId,
         addons: addons || {},
         amount: parseFloat(amount),
-        affiliate_id: affiliateId || null,
+        affiliate_id: resolvedAffiliateId,
         status: 'pending',
         payment_method: paymentMethod || null
       })
@@ -152,14 +181,12 @@ export async function POST(request) {
       );
     }
 
-    // Clear cache
     cache.clear();
 
     return NextResponse.json({
       success: true,
-      order: order
+      order
     });
-
   } catch (error) {
     console.error('Orders POST API error:', error);
     return NextResponse.json(
@@ -181,14 +208,12 @@ export async function PUT(request) {
       );
     }
 
-    // Get current order for logging
     const { data: currentOrder } = await supabase
       .from('orders')
       .select('*')
       .eq('id', id)
       .single();
 
-    // Update order
     const updateData = {};
     if (status) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
@@ -208,12 +233,11 @@ export async function PUT(request) {
       );
     }
 
-    // Log admin action
     if (currentOrder) {
       await supabase
         .from('admin_logs')
         .insert({
-          admin_id: body.adminId, // Should be passed from frontend
+          admin_id: body.adminId,
           action: 'update_order',
           entity_type: 'order',
           entity_id: id,
@@ -223,14 +247,12 @@ export async function PUT(request) {
         });
     }
 
-    // Clear cache
     cache.clear();
 
     return NextResponse.json({
       success: true,
-      order: order
+      order
     });
-
   } catch (error) {
     console.error('Orders PUT API error:', error);
     return NextResponse.json(
@@ -238,4 +260,61 @@ export async function PUT(request) {
       { status: 500 }
     );
   }
+}
+
+async function resolveAffiliateId(identifier) {
+  if (!identifier || !isSupabaseConfigured || !supabaseAdmin) {
+    return null;
+  }
+
+  const normalized = String(identifier).trim();
+
+  const { data: byUuid, error: uuidError } = await supabaseAdmin
+    .from('affiliates')
+    .select('id')
+    .eq('id', normalized)
+    .maybeSingle();
+
+  if (uuidError) {
+    console.error('Affiliate UUID lookup failed:', uuidError);
+  }
+
+  if (byUuid?.id) {
+    return byUuid.id;
+  }
+
+  const { data: byCode, error: codeError } = await supabaseAdmin
+    .from('affiliates')
+    .select('id')
+    .eq('affiliate_id', normalized)
+    .maybeSingle();
+
+  if (codeError) {
+    console.error('Affiliate code lookup failed:', codeError);
+  }
+
+  return byCode?.id || null;
+}
+
+async function affiliateExists(affiliateId) {
+  if (!affiliateId) {
+    return false;
+  }
+
+  if (!isSupabaseConfigured || !supabaseAdmin) {
+    return true;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('affiliates')
+    .select('id, contract_status')
+    .eq('id', affiliateId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Affiliate existence check failed:', error);
+    return false;
+  }
+
+  return !!data && data.contract_status === 'approved';
 }

@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
-import crypto from 'crypto';
+import { supabaseAdmin, isSupabaseConfigured } from '../../../../lib/supabase';
 
-// PRODUCTION: Verify Stripe webhook signatures
-/*
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-*/
+const TIER_CACHE_TTL_MS = 5 * 60 * 1000;
+let cachedTierMap = null;
+let cachedTierMapFetchedAt = 0;
 
 export async function POST(request) {
   try {
@@ -35,7 +32,6 @@ export async function POST(request) {
 
     console.log('Received Stripe webhook:', event.type);
 
-    // Handle different event types
     switch (event.type) {
       case 'payment_intent.succeeded':
         await handlePaymentIntentSucceeded(event.data.object);
@@ -62,7 +58,6 @@ export async function POST(request) {
     }
 
     return NextResponse.json({ received: true });
-
   } catch (error) {
     console.error('Stripe webhook error:', error);
     return NextResponse.json(
@@ -74,7 +69,12 @@ export async function POST(request) {
 
 async function handlePaymentIntentSucceeded(paymentIntent) {
   try {
-    const { planId, userId, type } = paymentIntent.metadata;
+    if (!isSupabaseConfigured || !supabaseAdmin) {
+      console.warn('Supabase not configured, skipping payment success handling');
+      return;
+    }
+
+    const { planId, userId, type, affiliateId: rawAffiliateId } = paymentIntent.metadata || {};
 
     console.log('Processing successful payment:', {
       paymentIntentId: paymentIntent.id,
@@ -84,14 +84,13 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
       amount: paymentIntent.amount
     });
 
-    // Update payment record in database
-    const { data: payment, error: paymentError } = await supabase
+    const { data: payment, error: paymentError } = await supabaseAdmin
       .from('payments')
       .upsert({
         stripe_payment_intent_id: paymentIntent.id,
         user_id: userId,
         plan_id: planId,
-        amount: paymentIntent.amount / 100, // Convert from cents
+        amount: paymentIntent.amount / 100,
         currency: paymentIntent.currency,
         status: 'completed',
         type: type || 'evaluation_fee',
@@ -106,9 +105,8 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
       return;
     }
 
-    // If this is an evaluation fee payment, create the challenge
     if (type === 'evaluation_fee' || !type) {
-      const { data: plan, error: planError } = await supabase
+      const { data: plan, error: planError } = await supabaseAdmin
         .from('plans')
         .select('*')
         .eq('id', planId)
@@ -119,8 +117,7 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
         return;
       }
 
-      // Create challenge
-      const { data: challenge, error: challengeError } = await supabase
+      const { data: challenge, error: challengeError } = await supabaseAdmin
         .from('challenges')
         .insert({
           user_id: userId,
@@ -139,7 +136,6 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
         return;
       }
 
-      // Send welcome email
       try {
         await fetch('/api/email', {
           method: 'POST',
@@ -158,8 +154,15 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
       console.log('Challenge created successfully:', challenge.id);
     }
 
-    // Log successful payment
-    await supabase
+    await processAffiliateEarnings({
+      payment,
+      stripePaymentIntentId: paymentIntent.id,
+      affiliateId: rawAffiliateId,
+      amountCents: paymentIntent.amount,
+      userId
+    });
+
+    await supabaseAdmin
       .from('admin_logs')
       .insert({
         action: 'payment_completed',
@@ -167,7 +170,6 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
         entity_id: payment.id,
         notes: `Payment of $${payment.amount} completed for user ${userId}`
       });
-
   } catch (error) {
     console.error('Error handling payment success:', error);
   }
@@ -175,10 +177,12 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
 
 async function handlePaymentIntentFailed(paymentIntent) {
   try {
+    if (!isSupabaseConfigured || !supabaseAdmin) {
+      return;
+    }
     console.log('Processing failed payment:', paymentIntent.id);
 
-    // Update payment status
-    await supabase
+    await supabaseAdmin
       .from('payments')
       .update({
         status: 'failed',
@@ -187,8 +191,7 @@ async function handlePaymentIntentFailed(paymentIntent) {
       })
       .eq('stripe_payment_intent_id', paymentIntent.id);
 
-    // Send failure notification
-    const { userId } = paymentIntent.metadata;
+    const { userId } = paymentIntent.metadata || {};
     if (userId) {
       try {
         await fetch('/api/email', {
@@ -204,7 +207,6 @@ async function handlePaymentIntentFailed(paymentIntent) {
         console.error('Error sending payment failure email:', emailError);
       }
     }
-
   } catch (error) {
     console.error('Error handling payment failure:', error);
   }
@@ -212,10 +214,12 @@ async function handlePaymentIntentFailed(paymentIntent) {
 
 async function handlePayoutPaid(payout) {
   try {
+    if (!isSupabaseConfigured || !supabaseAdmin) {
+      return;
+    }
     console.log('Processing successful payout:', payout.id);
 
-    // Update payout status
-    await supabase
+    await supabaseAdmin
       .from('payouts')
       .update({
         status: 'completed',
@@ -224,8 +228,7 @@ async function handlePayoutPaid(payout) {
       })
       .eq('stripe_payout_id', payout.id);
 
-    // Send completion notification
-    const { data: payoutRecord } = await supabase
+    const { data: payoutRecord } = await supabaseAdmin
       .from('payouts')
       .select('user_id, amount')
       .eq('stripe_payout_id', payout.id)
@@ -246,7 +249,6 @@ async function handlePayoutPaid(payout) {
         console.error('Error sending payout completion email:', emailError);
       }
     }
-
   } catch (error) {
     console.error('Error handling payout success:', error);
   }
@@ -254,10 +256,12 @@ async function handlePayoutPaid(payout) {
 
 async function handlePayoutFailed(payout) {
   try {
+    if (!isSupabaseConfigured || !supabaseAdmin) {
+      return;
+    }
     console.log('Processing failed payout:', payout.id);
 
-    // Update payout status
-    await supabase
+    await supabaseAdmin
       .from('payouts')
       .update({
         status: 'failed',
@@ -265,7 +269,6 @@ async function handlePayoutFailed(payout) {
         error_message: payout.failure_message
       })
       .eq('stripe_payout_id', payout.id);
-
   } catch (error) {
     console.error('Error handling payout failure:', error);
   }
@@ -273,10 +276,12 @@ async function handlePayoutFailed(payout) {
 
 async function handleChargeDispute(dispute) {
   try {
+    if (!isSupabaseConfigured || !supabaseAdmin) {
+      return;
+    }
     console.log('Processing charge dispute:', dispute.id);
 
-    // Log dispute for admin review
-    await supabase
+    await supabaseAdmin
       .from('admin_logs')
       .insert({
         action: 'charge_dispute',
@@ -285,7 +290,6 @@ async function handleChargeDispute(dispute) {
         notes: `Charge dispute created: ${dispute.reason}. Amount: $${dispute.amount / 100}`
       });
 
-    // Send admin notification
     try {
       await fetch('/api/email', {
         method: 'POST',
@@ -299,8 +303,188 @@ async function handleChargeDispute(dispute) {
     } catch (emailError) {
       console.error('Error sending dispute notification:', emailError);
     }
-
   } catch (error) {
     console.error('Error handling charge dispute:', error);
+  }
+}
+
+async function processAffiliateEarnings({ payment, stripePaymentIntentId, affiliateId, amountCents, userId }) {
+  try {
+    if (!isSupabaseConfigured || !supabaseAdmin || !affiliateId || !payment) {
+      return;
+    }
+
+    const affiliateUuid = await resolveAffiliateId(affiliateId);
+    if (!affiliateUuid) {
+      console.warn('Affiliate not found for code/ID:', affiliateId);
+      return;
+    }
+
+    const { data: affiliate, error: affiliateError } = await supabaseAdmin
+      .from('affiliates')
+      .select('*')
+      .eq('id', affiliateUuid)
+      .single();
+
+    if (affiliateError || !affiliate) {
+      console.error('Unable to load affiliate for commission processing:', affiliateError);
+      return;
+    }
+
+    const commissionAmount = await calculateCommissionAmount({ affiliate, amountCents });
+    if (commissionAmount <= 0) {
+      return;
+    }
+
+    const { data: commission, error: commissionError } = await supabaseAdmin
+      .from('affiliate_commissions')
+      .insert({
+        affiliate_id: affiliate.id,
+        order_id: payment.id,
+        amount: commissionAmount,
+        status: 'pending',
+        manual: false,
+        note: `Commission for payment ${stripePaymentIntentId}`
+      })
+      .select('*')
+      .single();
+
+    if (commissionError) {
+      console.error('Failed to insert affiliate commission:', commissionError);
+      return;
+    }
+
+    const { error: referralError } = await supabaseAdmin
+      .from('affiliate_referrals')
+      .insert({
+        affiliate_id: affiliate.id,
+        referred_user_id: userId,
+        order_id: payment.id,
+        level: 1,
+        commission_id: commission.id,
+        amount: commissionAmount
+      });
+
+    if (referralError && referralError.code !== '23505') {
+      console.error('Failed to insert affiliate referral:', referralError);
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .from('affiliates')
+      .update({ referrals_count: (affiliate.referrals_count || 0) + 1 })
+      .eq('id', affiliate.id);
+
+    if (updateError) {
+      console.error('Failed to update affiliate referral count:', updateError);
+    }
+
+    await maybeUpgradeAffiliateTier(affiliate.id);
+  } catch (error) {
+    console.error('Affiliate earnings processing error:', error);
+  }
+}
+
+async function calculateCommissionAmount({ affiliate, amountCents }) {
+  const amount = Number((amountCents || 0) / 100);
+  if (amount <= 0) {
+    return 0;
+  }
+
+  const tierMap = await loadTierLookup();
+  const tierConfig = tierMap.get(affiliate.current_tier) || tierMap.get(1);
+  const commissionPercent = affiliate.custom_commission?.percent ?? tierConfig?.payout_percent ?? 0;
+
+  return Number(((commissionPercent / 100) * amount).toFixed(2));
+}
+
+async function loadTierLookup() {
+  const now = Date.now();
+  if (cachedTierMap && now - cachedTierMapFetchedAt < TIER_CACHE_TTL_MS) {
+    return cachedTierMap;
+  }
+
+  if (!isSupabaseConfigured || !supabaseAdmin) {
+    return new Map();
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('affiliate_tiers')
+    .select('*')
+    .order('level', { ascending: true });
+
+  if (error) {
+    console.error('Failed to load affiliate tiers:', error);
+    return new Map();
+  }
+
+  cachedTierMap = new Map((data || []).map(tier => [tier.level, tier]));
+  cachedTierMapFetchedAt = now;
+  return cachedTierMap;
+}
+
+async function resolveAffiliateId(codeOrId) {
+  if (!isSupabaseConfigured || !supabaseAdmin || !codeOrId) {
+    return null;
+  }
+
+  const normalized = String(codeOrId).trim();
+
+  const { data: byUuid } = await supabaseAdmin
+    .from('affiliates')
+    .select('id')
+    .eq('id', normalized)
+    .maybeSingle();
+
+  if (byUuid?.id) {
+    return byUuid.id;
+  }
+
+  const { data: byCode } = await supabaseAdmin
+    .from('affiliates')
+    .select('id')
+    .eq('affiliate_id', normalized)
+    .maybeSingle();
+
+  return byCode?.id || null;
+}
+
+async function maybeUpgradeAffiliateTier(affiliateId) {
+  if (!isSupabaseConfigured || !supabaseAdmin) {
+    return;
+  }
+
+  const tierMap = await loadTierLookup();
+  if (!tierMap.size) {
+    return;
+  }
+
+  const tiers = Array.from(tierMap.values()).sort((a, b) => a.level - b.level);
+
+  const { data: affiliate, error } = await supabaseAdmin
+    .from('affiliates')
+    .select('id, current_tier, referrals_count')
+    .eq('id', affiliateId)
+    .single();
+
+  if (error || !affiliate) {
+    console.error('Failed to load affiliate for tier check:', error);
+    return;
+  }
+
+  const nextTier = tiers
+    .filter(tier => tier.level > affiliate.current_tier)
+    .find(tier => affiliate.referrals_count >= tier.referral_threshold);
+
+  if (!nextTier) {
+    return;
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from('affiliates')
+    .update({ current_tier: nextTier.level })
+    .eq('id', affiliateId);
+
+  if (updateError) {
+    console.error('Failed to update affiliate tier:', updateError);
   }
 }
