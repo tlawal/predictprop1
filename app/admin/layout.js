@@ -91,7 +91,7 @@ export default function AdminLayout({ children }) {
         </Dialog>
       </Transition.Root>
 
-      <div className="flex min-h-screen flex-col md:flex-row">
+      <div className="flex min-h-screen flex-col md:flex-row pt-28 md:pt-24">
         <Sidebar className="hidden md:flex" />
 
         <div className="flex flex-1 flex-col">
@@ -103,9 +103,8 @@ export default function AdminLayout({ children }) {
             <span className="sr-only">Open sidebar</span>
             <Bars3Icon className="h-6 w-6" aria-hidden="true" />
           </button>
-
-          <main className="flex-1 bg-transparent pt-22">
-            <div className="w-full">
+          <main className="flex-1 bg-transparent">
+            <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-6 md:px-8 md:pt-8 lg:px-10">
               {children}
             </div>
           </main>
