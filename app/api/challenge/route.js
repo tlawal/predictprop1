@@ -241,11 +241,11 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { userId, planType, balance } = body;
+    const { userId, planId } = body;
 
-    if (!userId || !planType || !balance) {
+    if (!userId || !planId) {
       return NextResponse.json(
-        { error: 'userId, planType, and balance are required' },
+        { error: 'userId and planId are required' },
         { status: 400 }
       );
     }
@@ -265,22 +265,35 @@ export async function POST(request) {
       );
     }
 
-    // Create new challenge
-    const challengeParams = {
-      profit_target: planType === '1-step' ? 10 : planType === '2-step' ? 5 : 1,
-      drawdown_max: 5,
-      exposure_cap: 15
+    const { data: plan, error: planError } = await supabase
+      .from('plans')
+      .select('*')
+      .eq('id', planId)
+      .eq('active', true)
+      .single();
+
+    if (planError || !plan) {
+      return NextResponse.json(
+        { error: 'Plan not found or inactive', message: planError?.message },
+        { status: 404 }
+      );
+    }
+
+    const params = plan.params || {};
+    const balance = params.starting_balance ?? plan.size;
+
+    const baseChallenge = {
+      user_id: userId,
+      plan_id: plan.id,
+      plan_type: plan.type,
+      balance,
+      status: 'active',
+      params: params.metrics || params
     };
 
     const { data: challenge, error } = await supabase
       .from('challenges')
-      .insert({
-        user_id: userId,
-        plan_type: planType,
-        balance: balance,
-        params: challengeParams,
-        status: 'active'
-      })
+      .insert(baseChallenge)
       .select()
       .single();
 

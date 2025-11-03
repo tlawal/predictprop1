@@ -1,118 +1,143 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import styles from '../styles/Home.module.css';
 
 const ChallengePlansTable = () => {
   const [evaluationType, setEvaluationType] = useState('one-phase');
 
-  // Challenge plan data with prediction-specific parameters
-  const challengePlans = {
-    'one-phase': [
-      {
-        size: '$5,000',
-        fee: '$65',
-        profitTarget: '10% Realized ROI on 10 Resolved Markets',
-        dailyLoss: '70% Win Rate Required',
-        drawdown: '<5% Max Drawdown',
-        exposureCap: '$500 Exposure Cap',
-        description: 'Perfect for beginners starting their prediction market journey'
-      },
-      {
-        size: '$10,000',
-        fee: '$200',
-        profitTarget: '10% Realized ROI on 10 Resolved Markets',
-        dailyLoss: '70% Win Rate Required',
-        drawdown: '<5% Max Drawdown',
-        exposureCap: '$1,000 Exposure Cap',
-        description: 'Most popular choice for serious traders',
-        featured: true
-      },
-      {
-        size: '$25,000',
-        fee: '$450',
-        profitTarget: '10% Realized ROI on 10 Resolved Markets',
-        dailyLoss: '70% Win Rate Required',
-        drawdown: '<5% Max Drawdown',
-        exposureCap: '$2,500 Exposure Cap',
-        description: 'For experienced prediction market traders'
-      },
-      {
-        size: '$50,000',
-        fee: '$750',
-        profitTarget: '10% Realized ROI on 10 Resolved Markets',
-        dailyLoss: '70% Win Rate Required',
-        drawdown: '<5% Max Drawdown',
-        exposureCap: '$5,000 Exposure Cap',
-        description: 'Advanced traders ready for larger capital'
-      },
-      {
-        size: '$100,000',
-        fee: '$1,000',
-        profitTarget: '10% Realized ROI on 10 Resolved Markets',
-        dailyLoss: '70% Win Rate Required',
-        drawdown: '<5% Max Drawdown',
-        exposureCap: '$10,000 Exposure Cap',
-        description: 'Elite traders with proven track records'
-      }
-    ],
-    'two-phase': [
-      {
-        size: '$5,000',
-        fee: '$65',
-        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions',
-        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved',
-        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown',
-        exposureCap: 'Phase 1: $300 Cap | Phase 2: $400 Cap',
-        description: 'Two-phase evaluation for careful progression'
-      },
-      {
-        size: '$10,000',
-        fee: '$200',
-        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions',
-        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved',
-        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown',
-        exposureCap: 'Phase 1: $600 Cap | Phase 2: $800 Cap',
-        description: 'Most popular two-phase option',
-        featured: true
-      },
-      {
-        size: '$25,000',
-        fee: '$450',
-        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions',
-        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved',
-        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown',
-        exposureCap: 'Phase 1: $1,500 Cap | Phase 2: $2,000 Cap',
-        description: 'For experienced traders who prefer gradual progression'
-      },
-      {
-        size: '$50,000',
-        fee: '$750',
-        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions',
-        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved',
-        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown',
-        exposureCap: 'Phase 1: $3,000 Cap | Phase 2: $4,000 Cap',
-        description: 'Advanced two-phase evaluation'
-      },
-      {
-        size: '$100,000',
-        fee: '$1,000',
-        profitTarget: 'Phase 1: 6% Projected ROI on 5+ Positions',
-        dailyLoss: 'Phase 2: 8% Realized ROI on 10+ Resolved',
-        drawdown: 'Phase 1: <4% Drawdown | Phase 2: <5% Cluster Drawdown',
-        exposureCap: 'Phase 1: $6,000 Cap | Phase 2: $8,000 Cap',
-        description: 'Elite two-phase evaluation for top traders'
-      }
-    ]
+  const formatCurrency = (value) => {
+    const amount = Number(value);
+    const hasCents = Math.round(amount * 100) % 100 !== 0;
+    return `$${amount.toLocaleString(undefined, hasCents ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { maximumFractionDigits: 0 })}`;
   };
+
+  const formatPercentage = (value) => `${(value * 100).toFixed(0)}%`;
+
+  const basePlans = useMemo(() => ([
+    {
+      size: 100,
+      fee: 10,
+      featured: false,
+      descriptions: {
+        one: 'Entry account to learn discipline with strict risk controls.',
+        two: 'Gradual two-phase build-up for new traders proving consistency.'
+      }
+    },
+    {
+      size: 500,
+      fee: 50,
+      featured: false,
+      descriptions: {
+        one: 'Scale up from micro stakes while keeping risk managed.',
+        two: 'Balanced progression path to reinforce winning habits.'
+      }
+    },
+    {
+      size: 5000,
+      fee: 250,
+      featured: true,
+      descriptions: {
+        one: 'Popular account size for serious traders targeting funding.',
+        two: 'Structured route for experienced traders who like checkpoints.'
+      }
+    },
+    {
+      size: 10000,
+      fee: 400,
+      featured: false,
+      descriptions: {
+        one: 'Advanced capital for confident traders ready to scale.',
+        two: 'Two-phase evaluation supporting larger strategic positions.'
+      }
+    }
+  ]), []);
+
+  const challengePlans = useMemo(() => {
+    const ONE_STEP_ROI = 0.1;
+    const ONE_STEP_DRAWDOWN = 0.05;
+    const ONE_STEP_EXPOSURE = 0.15;
+    const TWO_STEP_PHASE1_ROI = 0.06;
+    const TWO_STEP_PHASE1_DRAWDOWN = 0.04;
+    const TWO_STEP_PHASE1_EXPOSURE = 0.1;
+    const TWO_STEP_PHASE2_ROI = 0.08;
+    const TWO_STEP_PHASE2_DRAWDOWN = 0.05;
+    const TWO_STEP_PHASE2_EXPOSURE = 0.15;
+
+    const onePhase = basePlans.map((plan) => ({
+      size: plan.size,
+      fee: plan.fee,
+      featured: plan.featured,
+      description: plan.descriptions.one,
+      metrics: [
+        {
+          label: 'Profit Target',
+          value: `${formatPercentage(ONE_STEP_ROI)} (${formatCurrency(plan.size * ONE_STEP_ROI)} realized ROI)`
+        },
+        {
+          label: 'Win Rate',
+          value: '70% minimum across the evaluation'
+        },
+        {
+          label: 'Max Drawdown',
+          value: `<${formatPercentage(ONE_STEP_DRAWDOWN)} (${formatCurrency(plan.size * ONE_STEP_DRAWDOWN)} max loss)`
+        },
+        {
+          label: 'Exposure Cap',
+          value: `${formatPercentage(ONE_STEP_EXPOSURE)} (${formatCurrency(plan.size * ONE_STEP_EXPOSURE)} max position)`
+        }
+      ]
+    }));
+
+    const twoPhase = basePlans.map((plan) => ({
+      size: plan.size,
+      fee: plan.fee,
+      featured: plan.featured,
+      description: plan.descriptions.two,
+      metrics: [
+        {
+          label: 'Win Rate',
+          value: '70% minimum each phase'
+        },
+        {
+          label: 'Phase 1 Profit Target',
+          value: `${formatPercentage(TWO_STEP_PHASE1_ROI)} (${formatCurrency(plan.size * TWO_STEP_PHASE1_ROI)} projected ROI)`
+        },
+        {
+          label: 'Phase 1 Max Drawdown',
+          value: `<${formatPercentage(TWO_STEP_PHASE1_DRAWDOWN)} (${formatCurrency(plan.size * TWO_STEP_PHASE1_DRAWDOWN)} max loss)`
+        },
+        {
+          label: 'Phase 1 Exposure Cap',
+          value: `${formatPercentage(TWO_STEP_PHASE1_EXPOSURE)} (${formatCurrency(plan.size * TWO_STEP_PHASE1_EXPOSURE)} max position)`
+        },
+        {
+          label: 'Phase 2 Profit Target',
+          value: `${formatPercentage(TWO_STEP_PHASE2_ROI)} (${formatCurrency(plan.size * TWO_STEP_PHASE2_ROI)} realized ROI)`
+        },
+        {
+          label: 'Phase 2 Max Drawdown',
+          value: `<${formatPercentage(TWO_STEP_PHASE2_DRAWDOWN)} (${formatCurrency(plan.size * TWO_STEP_PHASE2_DRAWDOWN)} max loss)`
+        },
+        {
+          label: 'Phase 2 Exposure Cap',
+          value: `${formatPercentage(TWO_STEP_PHASE2_EXPOSURE)} (${formatCurrency(plan.size * TWO_STEP_PHASE2_EXPOSURE)} max position)`
+        }
+      ]
+    }));
+
+    return {
+      'one-phase': onePhase,
+      'two-phase': twoPhase
+    };
+  }, [basePlans, formatCurrency, formatPercentage]);
 
   const formatAccountSize = (size) => {
+    if (typeof size === 'number') {
+      return size;
+    }
     return size.replace('$', '').replace(',', '');
-  };
-
-  const getStepNumber = (type) => {
-    return type === 'one-phase' ? '1' : '2';
   };
 
   return (
@@ -138,8 +163,8 @@ const ChallengePlansTable = () => {
         {challengePlans[evaluationType].map((plan, index) => (
           <div key={index} className={`${styles.planCard} ${plan.featured ? styles.featured : ''}`}>
             <div className={styles.planHeader}>
-              <h3>{plan.size}</h3>
-              <div className={styles.planPrice}>{plan.fee}</div>
+              <h3>{formatCurrency(plan.size)}</h3>
+              <div className={styles.planPrice}>{formatCurrency(plan.fee)}</div>
             </div>
 
             <div className={styles.planDescription}>
@@ -147,22 +172,12 @@ const ChallengePlansTable = () => {
             </div>
 
             <div className={styles.planFeatures}>
-              <div className={styles.featureItem}>
-                <span className={styles.featureLabel}>Profit Target</span>
-                <span className={styles.featureValue}>{plan.profitTarget}</span>
-              </div>
-              <div className={styles.featureItem}>
-                <span className={styles.featureLabel}>Win Rate</span>
-                <span className={styles.featureValue}>{plan.dailyLoss}</span>
-              </div>
-              <div className={styles.featureItem}>
-                <span className={styles.featureLabel}>Max Drawdown</span>
-                <span className={styles.featureValue}>{plan.drawdown}</span>
-              </div>
-              <div className={styles.featureItem}>
-                <span className={styles.featureLabel}>Exposure Cap</span>
-                <span className={styles.featureValue}>{plan.exposureCap}</span>
-              </div>
+              {plan.metrics.map((metric, metricIndex) => (
+                <div key={metricIndex} className={styles.featureItem}>
+                  <span className={styles.featureLabel}>{metric.label}</span>
+                  <span className={styles.featureValue}>{metric.value}</span>
+                </div>
+              ))}
             </div>
 
             <div className={styles.planFooter}>

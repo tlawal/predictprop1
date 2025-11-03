@@ -1,8 +1,9 @@
 import React from 'react';
 
-const AccountBalanceSelector = ({ plans, selectedPlanId, onPlanSelect }) => {
-  // Group plans by type (1-step, 2-step)
-  const groupedPlans = plans.reduce((acc, plan) => {
+const AccountBalanceSelector = ({ plans, selectedPlanId, onPlanSelect, filterType }) => {
+  const filteredPlans = filterType ? plans.filter(plan => plan.type === filterType) : plans;
+
+  const groupedPlans = filteredPlans.reduce((acc, plan) => {
     if (!acc[plan.type]) {
       acc[plan.type] = [];
     }
@@ -10,7 +11,6 @@ const AccountBalanceSelector = ({ plans, selectedPlanId, onPlanSelect }) => {
     return acc;
   }, {});
 
-  // Sort plans within each group by size
   Object.keys(groupedPlans).forEach(type => {
     groupedPlans[type].sort((a, b) => a.size - b.size);
   });
@@ -37,9 +37,19 @@ const AccountBalanceSelector = ({ plans, selectedPlanId, onPlanSelect }) => {
     }
   };
 
+  const entries = Object.entries(groupedPlans);
+
+  if (!entries.length) {
+    return (
+      <div className="p-4 text-center text-slate-400 border border-slate-700 rounded-lg bg-slate-800/40">
+        No plans available for the selected evaluation type.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {Object.entries(groupedPlans).map(([type, typePlans]) => (
+      {entries.map(([type, typePlans]) => (
         <div key={type} className="space-y-4">
           <div className="text-center">
             <h3 className="text-lg font-semibold text-white">

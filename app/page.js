@@ -438,7 +438,7 @@ export default function Home() {
                     <div className={styles.stepGlow}></div>
                   </div>
                   <h3>Take the Challenge</h3>
-                  <p>Prove your edge in a demo account with live market data from Polymarket and Kalshi.</p>
+                  <p>Prove your edge in a demo account with live market data from Polymarket.</p>
                   <div className={styles.stepMeta}>
                     <span className={styles.stepDuration}>2-30 days</span>
                     <span className={styles.stepDifficulty}>Easy</span>

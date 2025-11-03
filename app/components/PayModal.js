@@ -1,17 +1,92 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, Transition, RadioGroup } from '@headlessui/react';
+import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import toast from 'react-hot-toast';
+import { ethers } from 'ethers';
 
 // Initialize Stripe (replace with your publishable key)
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder');
 
-const PaymentMethod = ({ method, selected, onChange, plan }) => {
+const formatCurrency = (value) => {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return '$0';
+  }
+
+  return `$${amount.toLocaleString(undefined, {
+    minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: amount % 1 === 0 ? 0 : 2
+  })}`;
+};
+
+const formatPercent = (value) => {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return '0%';
+  }
+
+  return `${Math.round(numeric * 100)}%`;
+};
+
+const PlanRulesSummary = ({ plan }) => {
+  const params = plan?.params;
+  if (!params) {
+    return null;
+  }
+
+  const metrics = params.metrics || params;
+
+  if (plan.type === '1-step') {
+    return (
+      <div className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300">
+        <div>
+          Profit Target: {formatPercent(metrics.profit_target?.percent)} ({formatCurrency(metrics.profit_target?.amount)})
+        </div>
+        <div>
+          Max Drawdown: {formatPercent(metrics.drawdown_max?.percent)} ({formatCurrency(metrics.drawdown_max?.amount)})
+        </div>
+        <div>
+          Max Exposure: {formatPercent(metrics.exposure_cap?.percent)} ({formatCurrency(metrics.exposure_cap?.amount)})
+        </div>
+        <div>Minimum Days: {metrics.min_days ?? 0}</div>
+        <div>Win Rate Requirement: {metrics.win_rate ?? 0}%</div>
+      </div>
+    );
+  }
+
+  const phases = metrics.phases || params.phases || {};
+  const phaseEntries = Object.entries(phases).filter(([, value]) => Boolean(value));
+
+  return (
+    <div className="mt-2 space-y-3 text-sm text-slate-600 dark:text-slate-300">
+      {phaseEntries.map(([phaseKey, phase]) => {
+        const label = phaseKey.toLowerCase().includes('phase') ? phaseKey.replace(/phase/i, 'Phase') : `Phase ${phaseKey}`;
+
+        return (
+          <div key={phaseKey} className="rounded-md border border-slate-600/40 dark:border-slate-500/40 p-3">
+            <div className="text-xs font-semibold text-teal-300 uppercase mb-2">
+              {label}
+            </div>
+            <div>Profit Target: {formatPercent(phase?.profit_target?.percent)} ({formatCurrency(phase?.profit_target?.amount)})</div>
+            <div>Max Drawdown: {formatPercent(phase?.drawdown_max?.percent)} ({formatCurrency(phase?.drawdown_max?.amount)})</div>
+            <div>Max Exposure: {formatPercent(phase?.exposure_cap?.percent)} ({formatCurrency(phase?.exposure_cap?.amount)})</div>
+            <div>Minimum Days: {phase?.min_days ?? 0}</div>
+          </div>
+        );
+      })}
+      <div>Win Rate Requirement: {metrics.win_rate ?? params.win_rate ?? 0}%</div>
+    </div>
+  );
+};
+
+const PaymentMethod = ({ method, selected, onChange }) => {
   const isSelected = selected === method.id;
 
   return (
@@ -36,7 +111,7 @@ const PaymentMethod = ({ method, selected, onChange, plan }) => {
               {method.name}
             </h3>
             <span className="text-sm text-slate-500 dark:text-slate-400">
-              {method.fee > 0 ? `+$${method.fee.toFixed(2)}` : 'Free'}
+              {Number(method.fee) > 0 ? `+$${Number(method.fee).toFixed(2)}` : 'Free'}
             </span>
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
@@ -52,6 +127,7 @@ const StripeCheckoutForm = ({ plan, onSuccess, onError }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
+  const { user } = useUser();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -69,8 +145,8 @@ const StripeCheckoutForm = ({ plan, onSuccess, onError }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           planId: plan.id,
-          amount: plan.fee,
-          userId: plan.userId || user.id
+          amount: Number(plan.fee),
+          userId: plan.userId || user?.id
         }),
       });
 
@@ -136,7 +212,7 @@ const StripeCheckoutForm = ({ plan, onSuccess, onError }) => {
         disabled={!stripe || isProcessing}
         className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white py-3 px-4 rounded-lg font-medium transition-colors"
       >
-        {isProcessing ? 'Processing...' : `Pay $${plan.fee.toFixed(2)}`}
+        {isProcessing ? 'Processing...' : `Pay $${Number(plan.fee).toFixed(2)}`}
       </button>
     </form>
   );
@@ -174,10 +250,10 @@ const CryptoPaymentForm = ({ plan, onSuccess, onError }) => {
 
       <div className="text-center">
         <div className="text-2xl font-bold text-slate-900 dark:text-white">
-          ${plan.fee.toFixed(2)} USDC
+          ${Number(plan.fee).toFixed(2)} USDC
         </div>
         <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-          {ethers.utils.formatUnits(ethers.utils.parseUnits(plan.fee.toString(), 6), 6)} USDC
+          {ethers.utils.formatUnits(ethers.utils.parseUnits(Number(plan.fee).toString(), 6), 6)} USDC
         </div>
         {usdcBalance && (
           <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">
@@ -191,7 +267,7 @@ const CryptoPaymentForm = ({ plan, onSuccess, onError }) => {
         disabled={isProcessing}
         className="w-full bg-green-600 hover:bg-green-700 disabled:bg-slate-400 text-white py-3 px-4 rounded-lg font-medium transition-colors"
       >
-        {isProcessing ? 'Processing...' : `Pay with USDC`}
+        {isProcessing ? 'Processing...' : `Pay $${Number(plan.fee).toFixed(2)}`}
       </button>
     </div>
   );
@@ -200,6 +276,7 @@ const CryptoPaymentForm = ({ plan, onSuccess, onError }) => {
 export default function PayModal({ isOpen, onClose, plan, onPaymentSuccess }) {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [paymentError, setPaymentError] = useState(null);
+  const { user } = useUser();
 
   const paymentMethods = [
     {
@@ -230,9 +307,8 @@ export default function PayModal({ isOpen, onClose, plan, onPaymentSuccess }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: plan.userId || user.id,
-          planType: plan.type,
-          balance: plan.params?.starting_balance || 5000, // Default balance
+          userId: plan.userId || user?.id,
+          planId: plan.id,
           payment: {
             ...paymentResult,
             paymentRecordId: paymentResult.paymentRecordId
@@ -254,7 +330,7 @@ export default function PayModal({ isOpen, onClose, plan, onPaymentSuccess }) {
           type: 'challenge_started',
           userId: plan.userId,
           planType: plan.type,
-          amount: plan.fee
+          amount: Number(plan.fee)
         }),
       });
 
@@ -311,15 +387,9 @@ export default function PayModal({ isOpen, onClose, plan, onPaymentSuccess }) {
                     <h4 className="font-semibold text-slate-900 dark:text-white">
                       {plan.description}
                     </h4>
-                    <div className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300">
-                      <div>Profit Target: {plan.params?.roi}%</div>
-                      <div>Win Rate: {plan.params?.win_rate}%</div>
-                      <div>Max Drawdown: {plan.params?.drawdown}%</div>
-                      <div>Max Exposure: {plan.params?.exposure}%</div>
-                      <div>Duration: {plan.params?.min_days} days minimum</div>
-                    </div>
+                    <PlanRulesSummary plan={plan} />
                     <div className="mt-3 text-xl font-bold text-slate-900 dark:text-white">
-                      ${plan.fee.toFixed(2)}
+                      ${Number(plan.fee).toFixed(2)}
                     </div>
                   </div>
                 )}

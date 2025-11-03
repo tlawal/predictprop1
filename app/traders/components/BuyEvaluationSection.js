@@ -1,10 +1,20 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Disclosure, Transition } from '@headlessui/react';
 import { ShoppingCartIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
+
+const formatCurrency = (value) => {
+  const amount = Number(value || 0);
+  return `$${amount.toLocaleString(undefined, {
+    minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: amount % 1 === 0 ? 0 : 2
+  })}`;
+};
+
+const formatPercent = (value) => `${Math.round(Number(value || 0) * 100)}%`;
 
 export default function BuyEvaluationSection({ onClose }) {
   const router = useRouter();
@@ -16,7 +26,10 @@ export default function BuyEvaluationSection({ onClose }) {
     revalidateOnFocus: false
   });
 
-  const plans = plansData?.plans || [];
+  const plans = useMemo(() => {
+    const list = plansData?.plans || [];
+    return [...list].sort((a, b) => (a.type === b.type ? a.size - b.size : a.type.localeCompare(b.type)));
+  }, [plansData?.plans]);
 
   const handlePurchase = (plan) => {
     // Navigate to purchase page with URL parameters
@@ -31,51 +44,94 @@ export default function BuyEvaluationSection({ onClose }) {
   };
 
   const renderPlanCard = (plan) => {
-    const isSelectedType = plan.type === selectedStep;
     const params = plan.params || {};
-
-    if (!isSelectedType) return null;
+    const baseBalance = params.starting_balance || plan.size;
+    const planFee = Number(plan.fee || 0);
+    const winRate = params.win_rate || params.winRate;
 
     return (
       <div
         key={plan.id}
         className="bg-slate-700/50 border border-slate-600 rounded-xl p-4 hover:bg-slate-700/70 transition-colors"
       >
-        {/* Account Size and Fee */}
         <div className="flex justify-between items-start mb-3">
           <div>
-            <h4 className="text-lg font-bold text-white">
-              ${plan.size?.toLocaleString() || params.balance?.toLocaleString() || '5,000'}
-            </h4>
-            <p className="text-slate-400 text-sm">Account Size</p>
+            <h4 className="text-lg font-bold text-white">{formatCurrency(baseBalance)}</h4>
+            <p className="text-slate-400 text-sm">Starting Balance</p>
           </div>
           <div className="text-right">
-            <div className="text-xl font-bold text-teal-400">${plan.fee}</div>
-            <p className="text-slate-400 text-sm">Fee</p>
+            <div className="text-xl font-bold text-teal-400">{formatCurrency(planFee)}</div>
+            <p className="text-slate-400 text-sm">Evaluation Fee</p>
           </div>
         </div>
 
-        {/* Plan Rules */}
-        <div className="space-y-2 mb-4">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-300">Profit Target:</span>
-            <span className="text-green-400 font-medium">{params.roi || params.profit_target || '8'}%</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-300">Max Drawdown:</span>
-            <span className="text-red-400 font-medium">{params.drawdown_max || '5'}%</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-300">Max Exposure:</span>
-            <span className="text-yellow-400 font-medium">{params.exposure_cap || '15'}%</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-300">Min Days:</span>
-            <span className="text-blue-400 font-medium">{params.min_days || '5'}</span>
+        <div className="space-y-2 mb-4 text-sm">
+          {plan.type === '1-step' ? (
+            <>
+              <div className="flex justify-between">
+                <span className="text-slate-300">Profit Target</span>
+                <span className="text-green-400 font-medium">
+                  {formatPercent(params.profit_target?.percent || 0)} ({formatCurrency(params.profit_target?.amount || 0)})
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-300">Max Drawdown</span>
+                <span className="text-red-400 font-medium">
+                  {formatPercent(params.drawdown_max?.percent || 0)} ({formatCurrency(params.drawdown_max?.amount || 0)})
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-300">Max Exposure</span>
+                <span className="text-yellow-400 font-medium">
+                  {formatPercent(params.exposure_cap?.percent || 0)} ({formatCurrency(params.exposure_cap?.amount || 0)})
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-300">Minimum Days</span>
+                <span className="text-blue-400 font-medium">{params.min_days || 0}</span>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3">
+              {['phase1', 'phase2'].map((phaseKey) => {
+                const phase = params.phases?.[phaseKey];
+                if (!phase) return null;
+                const phaseLabel = phaseKey === 'phase1' ? 'Phase 1' : 'Phase 2';
+                return (
+                  <div key={phaseKey} className="border border-slate-600 rounded-lg p-2">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-slate-200 font-semibold text-xs uppercase">{phaseLabel}</span>
+                      <span className="text-slate-400 text-xs">Min Days: {phase.min_days || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-300">Profit Target</span>
+                      <span className="text-green-400 font-medium">
+                        {formatPercent(phase.profit_target?.percent || 0)} ({formatCurrency(phase.profit_target?.amount || 0)})
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs mt-1">
+                      <span className="text-slate-300">Max Drawdown</span>
+                      <span className="text-red-400 font-medium">
+                        {formatPercent(phase.drawdown_max?.percent || 0)} ({formatCurrency(phase.drawdown_max?.amount || 0)})
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs mt-1">
+                      <span className="text-slate-300">Max Exposure</span>
+                      <span className="text-yellow-400 font-medium">
+                        {formatPercent(phase.exposure_cap?.percent || 0)} ({formatCurrency(phase.exposure_cap?.amount || 0)})
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-slate-300">Win Rate Requirement</span>
+            <span className="text-teal-300 font-medium">{winRate || 0}%</span>
           </div>
         </div>
 
-        {/* Purchase Button */}
         <button
           onClick={() => handlePurchase(plan)}
           className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 px-4 rounded-lg font-medium transition-colors text-sm"
@@ -172,7 +228,9 @@ export default function BuyEvaluationSection({ onClose }) {
                       <p className="text-slate-400">No {selectedStep} plans available</p>
                     </div>
                   ) : (
-                    plans.map(plan => renderPlanCard(plan))
+                    plans
+                      .filter(plan => plan.type === selectedStep)
+                      .map((plan) => renderPlanCard(plan))
                   )}
                 </div>
               )}

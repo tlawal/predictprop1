@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
+import { PLAN_DEFINITIONS } from '../../../lib/planConstants';
 
 // Simple in-memory cache
 const cache = new Map();
@@ -37,9 +38,42 @@ export async function GET(request) {
       );
     }
 
+    const resultPlans = (plans || []).map((plan) => {
+      const params = plan.params || {};
+      const startingBalance = params.starting_balance ?? plan.size;
+      const basePlan = PLAN_DEFINITIONS.find((base) => base.id === plan.id);
+
+      const buildMetrics = () => {
+        if (plan.type === '1-step') {
+          return {
+            profit_target: params.profit_target,
+            drawdown_max: params.drawdown_max,
+            exposure_cap: params.exposure_cap,
+            min_days: params.min_days,
+            win_rate: params.win_rate
+          };
+        }
+
+        return {
+          win_rate: params.win_rate,
+          phases: params.phases
+        };
+      };
+
+      return {
+        ...plan,
+        size: startingBalance,
+        description: plan.description || basePlan?.description,
+        params: {
+          ...params,
+          metrics: buildMetrics()
+        }
+      };
+    });
+
     const result = {
-      plans: plans || [],
-      total: plans?.length || 0
+      plans: resultPlans,
+      total: resultPlans.length
     };
 
     // Cache the result

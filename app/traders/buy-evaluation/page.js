@@ -29,11 +29,44 @@ function PlanCard({ plan }) {
         </div>
 
         <div className="space-y-2 mb-6 text-sm text-gray-300">
-          <div>ROI Target: {plan.params?.roi || '8'}%</div>
           <div>Win Rate: {plan.params?.win_rate || '70'}%</div>
-          <div>Drawdown Max: {plan.params?.drawdown_max || '5'}%</div>
-          <div>Exposure Cap: {plan.params?.exposure_cap || '15'}%</div>
-          <div>Min Days: {plan.params?.min_days || '10'}</div>
+          {plan.params?.metrics?.min_days && (
+            <div>Min Trading Days: {plan.params.metrics.min_days}</div>
+          )}
+          {plan.params?.metrics?.profit_target && (
+            <div>Profit Target: {typeof plan.params.metrics.profit_target === 'object' 
+              ? `${plan.params.metrics.profit_target.percent}% ($${plan.params.metrics.profit_target.amount})` 
+              : `${plan.params.metrics.profit_target}%`}
+            </div>
+          )}
+          {plan.params?.metrics?.drawdown_max && (
+            <div>Max Drawdown: {typeof plan.params.metrics.drawdown_max === 'object' 
+              ? `${plan.params.metrics.drawdown_max.percent}% ($${plan.params.metrics.drawdown_max.amount})` 
+              : `${plan.params.metrics.drawdown_max}%`}
+            </div>
+          )}
+          {plan.params?.metrics?.exposure_cap && (
+            <div>Exposure Cap: {typeof plan.params.metrics.exposure_cap === 'object' 
+              ? `${plan.params.metrics.exposure_cap.percent}% ($${plan.params.metrics.exposure_cap.amount})` 
+              : `${plan.params.metrics.exposure_cap}%`}
+            </div>
+          )}
+          {plan.params?.metrics?.phases && (
+            <div className="mt-4">
+              <div className="font-medium mb-1">Challenge Phases:</div>
+              {Object.entries(plan.params.metrics.phases).map(([phase, data]) => (
+                <div key={phase} className="ml-4 mt-2 border-l border-gray-700 pl-3">
+                  <div className="font-medium capitalize">{phase.replace('phase', 'Phase ')}</div>
+                  <div className="text-xs text-gray-400">
+                    <div>Min Days: {data.min_days}</div>
+                    <div>Profit Target: {data.profit_target.percent}% (${data.profit_target.amount})</div>
+                    <div>Max Drawdown: {data.drawdown_max.percent}% (${data.drawdown_max.amount})</div>
+                    <div>Max Exposure: {data.exposure_cap.percent}% (${data.exposure_cap.amount})</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <button

@@ -117,13 +117,17 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
         return;
       }
 
+      const planParams = plan.params || {};
+      const startingBalance = planParams.starting_balance ?? plan.size;
+
       const { data: challenge, error: challengeError } = await supabaseAdmin
         .from('challenges')
         .insert({
           user_id: userId,
+          plan_id: plan.id,
           plan_type: plan.type,
-          balance: plan.params?.starting_balance || 5000,
-          params: plan.params,
+          balance: startingBalance,
+          params: planParams.metrics || planParams,
           status: 'active',
           payment_id: payment.id,
           started_at: new Date().toISOString()

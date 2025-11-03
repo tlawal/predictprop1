@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { useForm, FormProvider } from 'react-hook-form';
@@ -15,6 +15,7 @@ import OrderSummary from './components/OrderSummary';
 import AffiliateExpander from './components/AffiliateExpander';
 import AddOnsSection from './components/AddOnsSection';
 import PayModal from '../components/PayModal';
+import AccountBalanceSelector from './components/AccountBalanceSelector';
 
 // US States for dropdown
 const US_STATES = [
@@ -142,20 +143,6 @@ const billingSchema = yup.object({
     .matches(/^[A-Za-z0-9\s-]+$/, 'Invalid postal/ZIP code format')
 });
 
-// Order configuration
-const PLANS = {
-  '1-step': {
-    name: '1-Step Challenge',
-    balance: 5000,
-    fee: 99
-  },
-  '2-step': {
-    name: '2-Step Challenge',
-    balance: 10000,
-    fee: 149
-  }
-};
-
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
 function PurchaseEvaluationPageContent() {
@@ -165,8 +152,19 @@ function PurchaseEvaluationPageContent() {
 
   // Initialize state - will be updated by useEffect
   const [accountType, setAccountType] = useState('1-step');
-  const [urlParams, setUrlParams] = useState({ size: null, step: null });
+  const [urlParams, setUrlParams] = useState({ size: null, step: null, planId: null });
   const [selectedAddons, setSelectedAddons] = useState([]);
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
+
+  const { data: plansData, error: plansError, isLoading: plansLoading } = useSWR('/api/plans', fetcher, {
+    refreshInterval: 60000,
+    revalidateOnFocus: false
+  });
+
+  const plans = useMemo(() => {
+    const list = plansData?.plans || [];
+    return [...list].sort((a, b) => (a.type === b.type ? a.size - b.size : a.type.localeCompare(b.type)));
+  }, [plansData?.plans]);
 
   // Handle URL parameters with useEffect to avoid SSR issues
   useEffect(() => {
@@ -174,17 +172,51 @@ function PurchaseEvaluationPageContent() {
       const searchParams = new URLSearchParams(window.location.search);
       const size = searchParams.get('size');
       const step = searchParams.get('step');
+      const planId = searchParams.get('planId');
 
-      setUrlParams({ size, step });
+      setUrlParams({ size, step, planId });
 
-      // Update account type based on URL parameter
-      if (step) {
-        setAccountType(step === 'one-phase' ? '1-step' : '2-step');
+      if (step && ['1-step', '2-step'].includes(step)) {
+        setAccountType(step);
+      } else if (step === 'one-phase') {
+        setAccountType('1-step');
+      } else if (step === 'two-phase') {
+        setAccountType('2-step');
       }
     }
   }, []);
 
-  const selectedPlan = PLANS[accountType];
+  useEffect(() => {
+    if (!plans.length) return;
+
+    const fromPlanId = urlParams.planId
+      ? plans.find(plan => plan.id === urlParams.planId)
+      : null;
+
+    if (fromPlanId && fromPlanId.type === accountType) {
+      setSelectedPlanId((prev) => (prev !== fromPlanId.id ? fromPlanId.id : prev));
+      return;
+    }
+
+    const sizeNumber = urlParams.size ? Number(urlParams.size) : null;
+    const fromSize = sizeNumber
+      ? plans.find(plan => plan.size === sizeNumber && plan.type === accountType)
+      : null;
+
+    if (fromSize) {
+      setSelectedPlanId((prev) => (prev !== fromSize.id ? fromSize.id : prev));
+      return;
+    }
+
+    const firstOfType = plans.find(plan => plan.type === accountType);
+    if (firstOfType) {
+      setSelectedPlanId((prev) => (prev !== firstOfType.id ? firstOfType.id : prev));
+    }
+  }, [plans, accountType, urlParams.planId, urlParams.size]);
+
+  const selectedPlan = useMemo(() => {
+    return plans.find(plan => plan.id === selectedPlanId) || null;
+  }, [plans, selectedPlanId]);
 
   const [affiliateCode, setAffiliateCode] = useState('');
   const [affiliateDiscount, setAffiliateDiscount] = useState(0);
@@ -237,7 +269,7 @@ function PurchaseEvaluationPageContent() {
   }, [affiliateData]);
 
   const calculateTotal = () => {
-    const planFee = PLANS[accountType].fee;
+    const planFee = Number(selectedPlan?.fee || 0);
     const addonsFee = selectedAddons.reduce((sum, addon) => sum + addon.price, 0);
     const totalBeforeDiscount = planFee + addonsFee;
     const discount = (planFee * affiliateDiscount) / 100;
@@ -288,6 +320,11 @@ function PurchaseEvaluationPageContent() {
       }
 
       // Open payment modal
+      if (!selectedPlan) {
+        toast.error('Please select a plan before continuing');
+        return;
+      }
+
       setShowPayModal(true);
 
     } catch (error) {
@@ -300,6 +337,22 @@ function PurchaseEvaluationPageContent() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (plansError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-center text-white space-y-4">
+          <p className="text-lg">Failed to load plans.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -319,43 +372,49 @@ function PurchaseEvaluationPageContent() {
           {/* Left Column - Forms */}
           <div className="space-y-8">
             {/* Account Type Selection */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Select Account Type</h2>
-              <div className="space-y-3">
-                <button
-                  onClick={() => setAccountType('1-step')}
-                  className={`w-full p-4 rounded-lg border-2 transition-colors ${
-                    accountType === '1-step'
-                      ? 'border-teal-400 bg-teal-400/10 text-teal-300'
-                      : 'border-slate-600 hover:border-slate-500 text-slate-300'
-                  }`}
-                  disabled={accountType === '1-step'}
-                >
-                  <div className="flex justify-between items-center">
-                    <div className="text-left">
-                      <div className="font-semibold">1-Step Challenge</div>
-                      <div className="text-sm opacity-75">$5,000 Starting Balance</div>
-                    </div>
-                    <div className="text-2xl font-bold">$99</div>
+            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold text-white mb-4">Select Evaluation Type</h2>
+                <div className="flex rounded-lg overflow-hidden border border-slate-700">
+                  <button
+                    onClick={() => setAccountType('1-step')}
+                    className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+                      accountType === '1-step'
+                        ? 'bg-teal-500/20 text-teal-300 border-r border-slate-700'
+                        : 'bg-slate-900/40 text-slate-300 hover:text-white'
+                    }`}
+                    type="button"
+                  >
+                    1-Step
+                  </button>
+                  <button
+                    onClick={() => setAccountType('2-step')}
+                    className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+                      accountType === '2-step'
+                        ? 'bg-teal-500/20 text-teal-300'
+                        : 'bg-slate-900/40 text-slate-300 hover:text-white'
+                    }`}
+                    type="button"
+                  >
+                    2-Step
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">Choose Account Balance</h3>
+                {plansLoading ? (
+                  <div className="py-12 text-center text-slate-400">
+                    Loading plans...
                   </div>
-                </button>
-                <button
-                  onClick={() => setAccountType('2-step')}
-                  className={`w-full p-4 rounded-lg border-2 transition-colors ${
-                    accountType === '2-step'
-                      ? 'border-teal-400 bg-teal-400/10 text-teal-300'
-                      : 'border-slate-600 hover:border-slate-500 text-slate-300'
-                  }`}
-                  disabled={accountType === '2-step'}
-                >
-                  <div className="flex justify-between items-center">
-                    <div className="text-left">
-                      <div className="font-semibold">2-Step Challenge</div>
-                      <div className="text-sm opacity-75">$10,000 Starting Balance</div>
-                    </div>
-                    <div className="text-2xl font-bold">$149</div>
-                  </div>
-                </button>
+                ) : (
+                  <AccountBalanceSelector
+                    plans={plans}
+                    filterType={accountType}
+                    selectedPlanId={selectedPlanId}
+                    onPlanSelect={setSelectedPlanId}
+                  />
+                )}
               </div>
             </div>
 
@@ -446,17 +505,16 @@ function PurchaseEvaluationPageContent() {
             {/* Purchase Button */}
             <button
               onClick={handleSubmit(handlePurchase)}
-              disabled={!isValid || !agreements.rulesAgreement || !agreements.refundPolicy || !agreements.agreeTerms}
+              disabled={!isValid || !agreements.rulesAgreement || !agreements.refundPolicy || !agreements.agreeTerms || !selectedPlan}
               className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white py-4 px-6 rounded-lg font-semibold text-lg transition-colors"
             >
-              Purchase Evaluation - ${calculateTotal().toFixed(2)}
+              {selectedPlan ? `Purchase Evaluation - $${calculateTotal().toFixed(2)}` : 'Select a Plan to Continue'}
             </button>
           </div>
 
           {/* Right Column - Order Summary */}
           <div className="lg:sticky lg:top-24 h-fit">
             <OrderSummary
-              accountType={accountType}
               selectedPlan={selectedPlan}
               affiliateDiscount={affiliateDiscount}
               selectedAddons={selectedAddons}
@@ -471,13 +529,10 @@ function PurchaseEvaluationPageContent() {
             isOpen={showPayModal}
             onClose={() => setShowPayModal(false)}
             plan={{
-              id: accountType,
-              type: accountType,
+              ...selectedPlan,
               fee: calculateTotal(),
-              params: {
-                starting_balance: selectedPlan.balance
-              },
-              userId: user?.id, // This is the Privy DID, will be stored in user_id_text
+              originalFee: selectedPlan.fee,
+              userId: user?.id,
               addons: selectedAddons
             }}
             onSuccess={(result) => {
