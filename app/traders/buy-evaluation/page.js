@@ -5,6 +5,14 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 
+// Helper function to format percentage values (converting from decimal to percentage)
+const formatPercentage = (value) => {
+  if (value == null) return 'N/A';
+  return typeof value === 'number' 
+    ? `${(value * 100).toFixed(0)}%` 
+    : value.endsWith('%') ? value : `${value}%`;
+};
+
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
 function PlanCard({ plan }) {
@@ -58,10 +66,10 @@ function PlanCard({ plan }) {
                 <div key={phase} className="ml-4 mt-2 border-l border-gray-700 pl-3">
                   <div className="font-medium capitalize">{phase.replace('phase', 'Phase ')}</div>
                   <div className="text-xs text-gray-400">
-                    <div>Min Days: {data.min_days}</div>
-                    <div>Profit Target: {data.profit_target.percent}% (${data.profit_target.amount})</div>
-                    <div>Max Drawdown: {data.drawdown_max.percent}% (${data.drawdown_max.amount})</div>
-                    <div>Max Exposure: {data.exposure_cap.percent}% (${data.exposure_cap.amount})</div>
+                    <div>Min Days: {data.min_days || 'N/A'}</div>
+                    <div>Profit Target: {formatPercentage(data.profit_target?.percent)} (${data.profit_target?.amount || '0'})</div>
+                    <div>Max Drawdown: {formatPercentage(data.drawdown_max?.percent)} (${data.drawdown_max?.amount || '0'})</div>
+                    <div>Max Exposure: {formatPercentage(data.exposure_cap?.percent)} (${data.exposure_cap?.amount || '0'})</div>
                   </div>
                 </div>
               ))}
