@@ -35,19 +35,19 @@ function PlanCard({ plan }) {
           )}
           {plan.params?.metrics?.profit_target && (
             <div>Profit Target: {typeof plan.params.metrics.profit_target === 'object' 
-              ? `${plan.params.metrics.profit_target.percent}% ($${plan.params.metrics.profit_target.amount})` 
+              ? `${(plan.params.metrics.profit_target.percent * 100).toFixed(0)}% ($${plan.params.metrics.profit_target.amount})` 
               : `${plan.params.metrics.profit_target}%`}
             </div>
           )}
           {plan.params?.metrics?.drawdown_max && (
             <div>Max Drawdown: {typeof plan.params.metrics.drawdown_max === 'object' 
-              ? `${plan.params.metrics.drawdown_max.percent}% ($${plan.params.metrics.drawdown_max.amount})` 
+              ? `${(plan.params.metrics.drawdown_max.percent * 100).toFixed(0)}% ($${plan.params.metrics.drawdown_max.amount})` 
               : `${plan.params.metrics.drawdown_max}%`}
             </div>
           )}
           {plan.params?.metrics?.exposure_cap && (
             <div>Exposure Cap: {typeof plan.params.metrics.exposure_cap === 'object' 
-              ? `${plan.params.metrics.exposure_cap.percent}% ($${plan.params.metrics.exposure_cap.amount})` 
+              ? `${(plan.params.metrics.exposure_cap.percent * 100).toFixed(0)}% ($${plan.params.metrics.exposure_cap.amount})` 
               : `${plan.params.metrics.exposure_cap}%`}
             </div>
           )}
