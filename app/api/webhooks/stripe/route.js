@@ -341,7 +341,7 @@ async function processAffiliateEarnings({ payment, stripePaymentIntentId, affili
     }
 
     const { data: commission, error: commissionError } = await supabaseAdmin
-      .from('affiliate_commissions')
+      .from('commissions')
       .insert({
         affiliate_id: affiliate.id,
         order_id: payment.id,
@@ -412,7 +412,7 @@ async function loadTierLookup() {
   }
 
   const { data, error } = await supabaseAdmin
-    .from('affiliate_tiers')
+    .from('tiers')
     .select('*')
     .order('level', { ascending: true });
 

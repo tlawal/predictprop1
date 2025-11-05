@@ -108,6 +108,12 @@ The app uses the following tables:
 
 All tables include Row Level Security (RLS) policies for secure access.
 
+### Affiliate System Setup
+- **Run migrations:** Apply `supabase/migrations/20241104170500_affiliates.sql` after the baseline schema so the new `affiliates`, `tiers`, `commissions`, `affiliate_referrals`, and `settings` tables are created with defaults (`npx supabase db push`).
+- **Clerk webhook:** Add a Clerk webhook target pointing to `https://YOUR_DOMAIN/api/webhooks/clerk` so new signups capture `referrer_id` when `?aff=` codes are present.
+- **Client capture:** `app/layout.client.js` stores `?aff=` or `?ref=` query codes in local storage and a cookie; ensure marketing links append the affiliate code (e.g. `https://polyprop.com/?aff=AFFCODE`).
+- **Manual linking:** For existing users, POST to `POST /api/referrals/link` with `{ "code": "AFFCODE" }` while authenticated to associate a referrer if one was not set during signup.
+
 ## Smart Contract Vault System
 
 ### 🔐 **ERC4626 Vault Overview**

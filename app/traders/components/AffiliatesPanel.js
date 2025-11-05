@@ -105,6 +105,8 @@ export default function AffiliatesPanel() {
     );
   }
 
+  const tierRequirements = affiliateData.tierRequirements || {};
+
   return (
     <div className="space-y-6">
       {/* Affiliate Overview */}
@@ -277,7 +279,7 @@ export default function AffiliatesPanel() {
         </h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.entries(affiliateData.tierRequirements).map(([tier, requirements]) => (
+          {Object.entries(tierRequirements).map(([tier, requirements]) => (
             <div
               key={tier}
               className={`p-4 rounded-lg border ${

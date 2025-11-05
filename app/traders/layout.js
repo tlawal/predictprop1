@@ -20,7 +20,7 @@ const navigation = [
 const secondaryNavigation = [
   { name: 'Language', href: '#', icon: '🌍' },
   { name: 'Wallet', href: '#', icon: '👛' },
-  { name: 'Affiliates Portal', href: '#', icon: '🤝' },
+  { name: 'Affiliates Portal', href: '/traders/affiliates', icon: '🤝' }
 ];
 
 export default function TradersLayout({ children }) {

@@ -26,22 +26,7 @@ export async function GET(request) {
           blacklisted,
           notes,
           created_at,
-          updated_at,
-          affiliates:affiliates!affiliates_user_id_fkey (
-            id,
-            affiliate_id,
-            contract_status,
-            current_tier,
-            referrals_count,
-            payout_email,
-            auto_withdraw_email,
-            withdrawal_delay,
-            withdrawal_threshold,
-            promotion_info,
-            custom_commission,
-            custom_url,
-            website
-          )
+          updated_at
         `,
         { count: 'exact' }
       );
@@ -59,18 +44,136 @@ export async function GET(request) {
     const { data, count, error } = await query;
 
     if (error) {
+      if (isSchemaMissingError(error)) {
+        console.warn('Customers GET fallback: affiliates join unavailable, using basic query');
+        return await fallbackCustomersResponse({ userId, limit, offset, search });
+      }
       throw error;
     }
 
+    const users = data || [];
+    const userIds = users.map((record) => record.id);
+
+    const affiliatesByUser = new Map();
+    const uuidToClerkId = new Map();
+    const clerkToRows = new Map();
+
+    if (userIds.length) {
+      try {
+        const { data: affiliateRecords, error: affiliateError } = await supabaseAdmin
+          .from('affiliates')
+          .select(
+            `
+              id,
+              user_id,
+              affiliate_id,
+              contract_status,
+              current_tier,
+              referrals_count,
+              payout_email,
+              auto_withdraw_email,
+              withdrawal_delay,
+              withdrawal_threshold,
+              promotion_info,
+              custom_commission,
+              custom_url,
+              website
+            `
+          )
+          .in('user_id', userIds);
+
+        if (affiliateError) {
+          if (affiliateError.code === '22P02') {
+            console.warn('customers API: initial affiliate hydration failed for clerk IDs, attempting uuid mapping');
+            const clerkIds = userIds.filter((id) => typeof id === 'string' && id.startsWith('user_'));
+            if (clerkIds.length) {
+              const { data: mappingRows, error: mappingError } = await supabaseAdmin
+                .from('users')
+                .select('id, external_id')
+                .in('external_id', clerkIds);
+
+              if (mappingError) {
+                if (mappingError.code !== '22P02') {
+                  throw mappingError;
+                }
+              } else {
+                (mappingRows || []).forEach((row) => {
+                  if (row.external_id) {
+                    clerkToRows.set(row.external_id, row.id);
+                    uuidToClerkId.set(row.id, row.external_id);
+                  }
+                });
+
+                const uuidIds = Array.from(uuidToClerkId.keys());
+                if (uuidIds.length) {
+                  const { data: fallbackRecords, error: fallbackError } = await supabaseAdmin
+                    .from('affiliates')
+                    .select(
+                      `
+                        id,
+                        user_id,
+                        affiliate_id,
+                        contract_status,
+                        current_tier,
+                        referrals_count,
+                        payout_email,
+                        auto_withdraw_email,
+                        withdrawal_delay,
+                        withdrawal_threshold,
+                        promotion_info,
+                        custom_commission,
+                        custom_url,
+                        website
+                      `
+                    )
+                    .in('user_id', uuidIds);
+
+                  if (fallbackError) {
+                    throw fallbackError;
+                  }
+
+                  fallbackRecords.forEach((row) => {
+                    const clerkId = uuidToClerkId.get(row.user_id);
+                    const resolvedId = clerkId || row.user_id;
+                    affiliatesByUser.set(resolvedId, row);
+                  });
+                }
+              }
+            }
+          } else {
+            throw affiliateError;
+          }
+        } else {
+          (affiliateRecords || []).forEach((row) => {
+            affiliatesByUser.set(row.user_id, row);
+          });
+        }
+      } catch (affiliateQueryError) {
+        const error = affiliateQueryError || new Error('Failed to load affiliates');
+        error.stage = 'affiliates';
+        error.statusCode = error.statusCode || 500;
+        throw error;
+      }
+    }
+
     if (userId) {
-      if (!data?.length) {
+      if (!users.length) {
         return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
       }
-      const detail = await buildCustomerDetail(data[0]);
+      const resolvedAffiliateUserId = clerkToRows.get(users[0].id);
+      const detail = await buildCustomerDetail({
+        ...users[0],
+        affiliateRecord: affiliatesByUser.get(users[0].id) || (resolvedAffiliateUserId ? affiliatesByUser.get(resolvedAffiliateUserId) : undefined),
+        resolvedAffiliateUserId
+      });
       return NextResponse.json({ customer: detail });
     }
 
-    const summaries = await buildCustomerSummaries(data || []);
+    const userWithAffiliates = users.map((user) => ({
+      ...user,
+      resolvedAffiliateUserId: clerkToRows.get(user.id)
+    }));
+    const summaries = await buildCustomerSummaries(userWithAffiliates);
     return NextResponse.json({
       customers: summaries,
       total: count || summaries.length,
@@ -176,6 +279,66 @@ function requireAdmin() {
   }
 }
 
+function isSchemaMissingError(error) {
+  if (!error) return false;
+  const code = error.code || error?.details?.code;
+  if (code === '42P01' || code === '42703') {
+    return true;
+  }
+  const message = error.message || '';
+  return message.includes('relation "affiliates"') || message.includes('column') || message.includes('does not exist');
+}
+
+async function fallbackCustomersResponse({ userId, limit, offset, search }) {
+  let query = supabaseAdmin
+    .from('users')
+    .select(
+      `
+        id,
+        email,
+        full_name,
+        customer_number,
+        verified,
+        blacklisted,
+        notes,
+        created_at,
+        updated_at
+      `,
+      { count: 'exact' }
+    );
+
+  if (userId) {
+    query = query.eq('id', userId).limit(1);
+  } else {
+    if (search) {
+      const term = `%${search}%`;
+      query = query.or(`email.ilike.${term},full_name.ilike.${term},customer_number.ilike.${term}`);
+    }
+    query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+  }
+
+  const { data, count, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  if (userId) {
+    if (!data?.length) {
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
+    }
+    const detail = await buildCustomerDetail({ ...data[0], affiliateRecord: null });
+    return NextResponse.json({ customer: detail });
+  }
+
+  const summaries = await buildCustomerSummaries((data || []).map((user) => ({ ...user, affiliateRecord: null })));
+  return NextResponse.json({
+    customers: summaries,
+    total: count || summaries.length,
+    pagination: buildPagination({ count: count || summaries.length, limit, offset })
+  });
+}
+
 function clampLimit(value) {
   const parsed = parseInt(value || `${DEFAULT_LIMIT}`, 10);
   if (Number.isNaN(parsed) || parsed <= 0) return DEFAULT_LIMIT;
@@ -199,7 +362,7 @@ async function buildCustomerSummaries(users) {
   const affiliateKeyByUser = new Map();
 
   users.forEach((user) => {
-    const affiliate = Array.isArray(user.affiliates) ? user.affiliates[0] : null;
+    const affiliate = user.affiliateRecord || null;
     if (affiliate) {
       affiliateIds.push(affiliate.id);
       affiliateKeyByUser.set(user.id, affiliate.id);
@@ -207,23 +370,34 @@ async function buildCustomerSummaries(users) {
   });
 
   const [ordersRes, challengesRes, commissionsRes] = await Promise.all([
-    supabaseAdmin
-      .from('orders')
-      .select('user_id, amount, status')
-      .in('user_id', userIds),
-    supabaseAdmin
-      .from('challenges')
-      .select('user_id')
-      .in('user_id', userIds),
+    userIds.length
+      ? supabaseAdmin
+          .from('orders')
+          .select('user_id, amount, status')
+          .in('user_id', userIds)
+      : Promise.resolve({ data: [] }),
+    userIds.length
+      ? supabaseAdmin
+          .from('challenges')
+          .select('user_id')
+          .in('user_id', userIds)
+      : Promise.resolve({ data: [] }),
     affiliateIds.length
       ? supabaseAdmin
-          .from('affiliate_commissions')
+          .from('commissions')
           .select('affiliate_id, amount, status')
           .in('affiliate_id', affiliateIds)
       : Promise.resolve({ data: [] })
   ]);
 
-  if (ordersRes.error) throw ordersRes.error;
+  if (ordersRes.error) {
+    if (ordersRes.error.code === '22P02') {
+      console.warn('customers API: skipping orders aggregation due to UUID mismatch');
+      ordersRes.data = [];
+    } else {
+      throw ordersRes.error;
+    }
+  }
   if (challengesRes.error) throw challengesRes.error;
   if (commissionsRes.error) throw commissionsRes.error;
 
@@ -250,8 +424,8 @@ async function buildCustomerSummaries(users) {
 
   return users.map((user) => {
     const orders = orderMap.get(user.id) || [];
-    const affiliateId = affiliateKeyByUser.get(user.id);
-    const affiliate = Array.isArray(user.affiliates) ? user.affiliates[0] : null;
+    const affiliateId = affiliateKeyByUser.get(user.id) || affiliateKeyByUser.get(user.resolvedAffiliateUserId);
+    const affiliate = user.affiliateRecord || (user.resolvedAffiliateUserId ? users.find((u) => u.id === user.resolvedAffiliateUserId)?.affiliateRecord : null);
     const commissions = affiliateId ? commissionMap.get(affiliateId) : null;
 
     const revenue = orders
@@ -292,36 +466,63 @@ async function buildCustomerDetail(user) {
   const summary = (await buildCustomerSummaries([user]))[0];
   if (!summary) return null;
 
-  const affiliate = Array.isArray(user.affiliates) ? user.affiliates[0] : null;
+  const affiliate = user.affiliateRecord || null;
 
   if (!affiliate) {
     return summary;
   }
 
-  const [commissionsRes, referralsRes, referredOrdersRes, tiersRes] = await Promise.all([
-    supabaseAdmin
-      .from('affiliate_commissions')
-      .select('id, amount, status, manual, note, created_at, paid_at, order_id')
-      .eq('affiliate_id', affiliate.id)
-      .order('created_at', { ascending: false }),
-    supabaseAdmin
-      .from('affiliate_referrals')
-      .select('id, referred_user_id, amount, level, created_at')
-      .eq('affiliate_id', affiliate.id),
-    supabaseAdmin
-      .from('orders')
-      .select('id, user_id, plan_id, amount, status, created_at')
-      .eq('affiliate_id', affiliate.id),
-    supabaseAdmin
-      .from('affiliate_tiers')
-      .select('*')
-      .order('level', { ascending: true })
-  ]);
+  const commissionsRes = await supabaseAdmin
+    .from('commissions')
+    .select('id, amount, status, manual, note, created_at, order_id')
+    .eq('affiliate_id', affiliate.id)
+    .order('created_at', { ascending: false });
 
-  if (commissionsRes.error) throw commissionsRes.error;
-  if (referralsRes.error) throw referralsRes.error;
-  if (referredOrdersRes.error) throw referredOrdersRes.error;
-  if (tiersRes.error) throw tiersRes.error;
+  if (commissionsRes.error) {
+    if (commissionsRes.error.code === '22P02') {
+      console.warn('customers API: skipping commission history due to UUID mismatch');
+      commissionsRes.data = [];
+    } else {
+      throw commissionsRes.error;
+    }
+  }
+
+  const referralsRes = await supabaseAdmin
+    .from('affiliate_referrals')
+    .select('id, referred_user_id, amount, level, created_at')
+    .eq('affiliate_id', affiliate.id);
+
+  if (referralsRes.error) {
+    if (referralsRes.error.code === '22P02') {
+      console.warn('customers API: skipping referral history due to UUID mismatch');
+      referralsRes.data = [];
+    } else {
+      throw referralsRes.error;
+    }
+  }
+
+  const referredOrdersRes = await supabaseAdmin
+    .from('orders')
+    .select('id, user_id, plan_id, amount, status, created_at')
+    .eq('affiliate_id', affiliate.id);
+
+  if (referredOrdersRes.error) {
+    if (referredOrdersRes.error.code === '22P02') {
+      console.warn('customers API: skipping referred orders due to UUID mismatch');
+      referredOrdersRes.data = [];
+    } else {
+      throw referredOrdersRes.error;
+    }
+  }
+
+  const tiersRes = await supabaseAdmin
+    .from('tiers')
+    .select('*')
+    .order('level', { ascending: true });
+
+  if (tiersRes.error) {
+    throw tiersRes.error;
+  }
 
   const commissions = commissionsRes.data || [];
   const totalCommissions = commissions.reduce((sum, row) => sum + Number(row.amount || 0), 0);

@@ -13,7 +13,7 @@ export async function POST(request) {
     }
 
     const { data, error } = await supabaseAdmin
-      .from('affiliate_commissions')
+      .from('commissions')
       .update({ status: 'paid', paid_at: new Date().toISOString() })
       .eq('id', commissionId)
       .select('id, status, paid_at')

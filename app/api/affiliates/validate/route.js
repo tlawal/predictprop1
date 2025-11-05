@@ -45,24 +45,17 @@ async function validateAffiliateCode(code, options = {}) {
 
   const client = supabaseAdmin || supabase;
 
-  const query = client
+  const baseQuery = client
     .from('affiliates')
-    .select(`
-      id,
-      affiliate_id,
-      custom_name,
-      contract_status,
-      current_tier,
-      tiers:affiliate_tiers!inner(level, payout_percent)
-    `)
+    .select('id, affiliate_id, custom_name, contract_status, current_tier')
     .eq('affiliate_id', code)
     .maybeSingle();
 
   if (options.signal) {
-    query.abortSignal(options.signal);
+    baseQuery.abortSignal(options.signal);
   }
 
-  const { data, error } = await query;
+  const { data, error } = await baseQuery;
 
   if (error) {
     console.error('Affiliate lookup failed:', error);
@@ -77,16 +70,26 @@ async function validateAffiliateCode(code, options = {}) {
     return { valid: false, discount: 0 };
   }
 
-  const tierLabel = data.current_tier || 1;
-  const tier = Array.isArray(data.tiers) ? data.tiers[0] : data.tiers;
-  const discount = tier?.payout_percent ? Number(tier.payout_percent) : 0;
+  const tierLevel = data.current_tier || 1;
+
+  const { data: tierData, error: tierError } = await client
+    .from('tiers')
+    .select('level, payout_percent')
+    .eq('level', tierLevel)
+    .maybeSingle();
+
+  if (tierError) {
+    console.error('Tier lookup failed:', tierError);
+  }
+
+  const discount = tierData?.payout_percent ? Number(tierData.payout_percent) : 0;
 
   return {
     valid: true,
     discount,
     affiliateId: data.id,
     affiliateName: data.custom_name || null,
-    tier: tierLabel
+    tier: tierLevel
   };
 }
 

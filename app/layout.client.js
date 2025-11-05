@@ -1,16 +1,36 @@
 'use client';
 
+import { useEffect } from 'react';
 import { ClerkProvider } from '@clerk/nextjs';
 import { ThemeProvider } from './ThemeContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import { SupabaseAuthProvider } from './components/SupabaseAuthProvider';
 import '../lib/i18n';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 function LayoutContent({ children }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const hideHeader = pathname.startsWith('/traders');
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !searchParams) {
+      return;
+    }
+
+    const code = searchParams.get('aff') || searchParams.get('ref');
+    const normalized = code?.trim();
+
+    if (normalized) {
+      try {
+        localStorage.setItem('affiliateCode', normalized);
+        document.cookie = `affiliate_code=${encodeURIComponent(normalized)}; path=/; max-age=${60 * 60 * 24 * 30}`;
+      } catch (error) {
+        console.warn('Failed to persist affiliate code', error);
+      }
+    }
+  }, [searchParams]);
 
   return (
     <ThemeProvider>

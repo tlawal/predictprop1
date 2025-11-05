@@ -80,7 +80,7 @@ export async function GET(request) {
 
     const [commissionsRes, referralsRes] = await Promise.all([
       supabaseAdmin
-        .from('affiliate_commissions')
+        .from('commissions')
         .select('id, affiliate_id, amount, status, manual, created_at, order_id, note')
         .in('affiliate_id', affiliateIds)
         .order('created_at', { ascending: false }),
@@ -223,7 +223,7 @@ export async function POST(request) {
       );
     }
 
-    const validStatuses = ['pending', 'paid', 'cancelled'];
+    const validStatuses = ['pending', 'earned', 'paid'];
     if (!validStatuses.includes(status)) {
       return NextResponse.json(
         { error: `Invalid status. Allowed values: ${validStatuses.join(', ')}` },
@@ -253,7 +253,7 @@ export async function POST(request) {
     }
 
     const { data: commission, error: insertError } = await supabaseAdmin
-      .from('affiliate_commissions')
+      .from('commissions')
       .insert({
         affiliate_id: affiliateId,
         amount: validatedAmount,
@@ -320,7 +320,7 @@ export async function PATCH(request) {
     }
 
     const { data: commission, error: updateError } = await supabaseAdmin
-      .from('affiliate_commissions')
+      .from('commissions')
       .update(updatePayload)
       .eq('id', commissionId)
       .select('*')

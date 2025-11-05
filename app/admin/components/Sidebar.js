@@ -22,7 +22,8 @@ import {
   EnvelopeIcon,
   PhotoIcon,
   UserPlusIcon,
-  MegaphoneIcon
+  MegaphoneIcon,
+  BanknotesIcon
 } from '@heroicons/react/24/outline';
 
 export const sidebarItems = [
@@ -36,6 +37,7 @@ export const sidebarItems = [
   { name: 'Discount Codes', href: '/admin/discount-codes', icon: TicketIcon },
   { name: 'Customers', href: '/admin/customers', icon: UsersIcon },
   { name: 'Affiliates', href: '/admin/affiliates', icon: UserGroupIcon },
+  { name: 'Affiliate Payouts', href: '/admin/affiliates/payouts', icon: BanknotesIcon },
   { name: 'Prop Accounts', href: '/admin/prop-accounts', icon: BriefcaseIcon },
   { name: 'Risk', href: '/admin/risk', icon: ShieldCheckIcon },
   { name: 'Risk Triggers', href: '/admin/risk-triggers', icon: ExclamationTriangleIcon },
