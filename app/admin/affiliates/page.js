@@ -338,7 +338,18 @@ export default function AffiliatesPage() {
                     onClick={() => handleRowClick(affiliate)}
                   >
                     <td className="px-4 py-3 align-top">
-                      <div className="text-white">{affiliate.customerName || affiliate.email || 'Unnamed'}</div>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (affiliate.userId) {
+                            router.push(`/admin/customers/${affiliate.userId}`);
+                          }
+                        }}
+                        className="text-left text-white hover:underline"
+                      >
+                        {affiliate.customerName || affiliate.email || 'Unnamed'}
+                      </button>
                       <div className="text-xs text-gray-400">{affiliate.email || 'No email'}</div>
                       <div className="text-xs text-gray-500">{affiliate.affiliateCode}</div>
                     </td>
