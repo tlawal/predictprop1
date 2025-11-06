@@ -142,7 +142,6 @@ export default function LPsPage() {
             value={displayYieldData?.apy || '0'}
             subtitle="Annual yield"
             icon="📈"
-            badge={displayYieldData?.aiOptimized && isSignedIn ? 'AI Optimized' : null}
             aiInsight={displayYieldData?.aiInsight}
             onClick={handleStatsCardClick}
           />
