@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { ClerkProvider } from '@clerk/nextjs';
 import { ThemeProvider } from './ThemeContext';
 import Header from './components/Header';
@@ -60,7 +60,9 @@ export default function RootLayoutClient({ children }) {
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
       </head>
       <body>
-        <LayoutContent>{children}</LayoutContent>
+        <Suspense fallback={null}>
+          <LayoutContent>{children}</LayoutContent>
+        </Suspense>
       </body>
     </html>
   );
