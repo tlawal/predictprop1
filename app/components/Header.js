@@ -38,14 +38,10 @@ export default function Header() {
       <header className={styles.header}>
         <div className={styles.container}>
           <div className={styles.logo}>
-            <Image
-              src="/PPlogo.jpeg"
-              alt="PolyProp logo"
-              width={120}
-              height={120}
-              className={styles.logoImage}
-              priority
-            />
+            <Link href="/" className={styles.logoLink} aria-label="PolyProp home">
+              <span className={styles.logoMark}>P</span>
+              <span className={styles.logoWordmark}>PolyProp</span>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}
