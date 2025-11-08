@@ -50,6 +50,7 @@ export default function Header() {
               <li><Link href="/">Home</Link></li>
               <li><Link href="/traders">Traders</Link></li>
               <li><Link href="/lps">LPs</Link></li>
+              <li><Link href="/affiliates">Affiliates</Link></li>
               <li><Link href="/markets">Markets</Link></li>
               <li>
                 <button className={styles.themeToggle} onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>

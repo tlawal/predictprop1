@@ -12,6 +12,8 @@ const getResend = () => {
   return resend;
 };
 
+const OPTIONAL_TYPES_WITHOUT_USER = new Set(['affiliate_application_confirmation']);
+
 export async function POST(request) {
   try {
     let body, type, userId, contractId, email, code, planName, challengeSize;
@@ -32,9 +34,18 @@ export async function POST(request) {
       ({ type, userId, contractId, email, code } = body);
     }
 
-    if (!type || (!userId && !contractId)) {
+    if (!type) {
       return NextResponse.json(
-        { error: 'Missing required fields: type and either userId or contractId' },
+        { error: 'Missing required field: type' },
+        { status: 400 }
+      );
+    }
+
+    const requiresUserOrContract = !OPTIONAL_TYPES_WITHOUT_USER.has(type);
+
+    if (requiresUserOrContract && !userId && !contractId) {
+      return NextResponse.json(
+        { error: 'Missing required fields: userId or contractId' },
         { status: 400 }
       );
     }
