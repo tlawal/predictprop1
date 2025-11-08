@@ -148,7 +148,7 @@ export default function AffiliatesLandingPage() {
             <div>
               <h2 id="benefits-heading" className="text-3xl font-semibold">What you&apos;ll get</h2>
               <p className="mt-3 max-w-2xl text-base text-white/70">
-                A crafted partner experience that feels as premium as the traders you champion. We deliver tooling that mirrors Apple-level polish, so your brand stays impeccable.
+                A crafted partner experience that feels as premium as the traders you champion. We ship partner tooling with the same finish as the rest of PolyProp, keeping your brand experience consistent.
               </p>
             </div>
             <div className="text-sm text-white/60">Tailored onboarding in under 24 hours.</div>

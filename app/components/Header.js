@@ -127,6 +127,13 @@ export default function Header() {
           <span>LPs</span>
         </Link>
 
+        <Link href="/affiliates" className={styles.bottomNavItem}>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm-7 9a7 7 0 0114 0H5z" />
+          </svg>
+          <span>Affiliates</span>
+        </Link>
+
         <button className={styles.bottomNavItem} onClick={toggleMoreMenu}>
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
