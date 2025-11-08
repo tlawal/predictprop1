@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
-import { supabaseAdmin, isSupabaseConfigured } from '../../../../../lib/supabase';
+import { supabaseAdmin, isSupabaseConfigured } from '../../../../lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
