@@ -1375,19 +1375,26 @@
   }
   
   .featureItem {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 12px;
     font-size: 18px;
     color: var(--foreground);
   }
-  
+
   .featureLabel {
     font-weight: 600;
     color: var(--text-color);
+    text-align: left;
   }
-  
+
   .featureValue {
     color: var(--secondary-accent);
+    justify-self: center;
+    text-align: center;
+    width: 100%;
+    white-space: nowrap;
   }
   
   .planFooter {

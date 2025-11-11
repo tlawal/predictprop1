@@ -73,11 +73,11 @@ const ChallengePlansTable = () => {
       metrics: [
         {
           label: 'Profit Target',
-          value: `${formatPercentage(ONE_STEP_ROI)} (${formatCurrency(plan.size * ONE_STEP_ROI)} realized ROI)`
+          value: `${formatPercentage(ONE_STEP_ROI)} (${formatCurrency(plan.size * ONE_STEP_ROI)} ROI)`
         },
         {
           label: 'Accuracy',
-          value: '70% minimum across the evaluation'
+          value: '70% minimum'
         },
         {
           label: 'Exposure Cap',
@@ -94,11 +94,11 @@ const ChallengePlansTable = () => {
       metrics: [
         {
           label: 'Accuracy',
-          value: '70% minimum each phase'
+          value: '70% per phase'
         },
         {
           label: 'Phase 1 Profit Target',
-          value: `${formatPercentage(TWO_STEP_PHASE1_ROI)} (${formatCurrency(plan.size * TWO_STEP_PHASE1_ROI)} projected ROI)`
+          value: `${formatPercentage(TWO_STEP_PHASE1_ROI)} (${formatCurrency(plan.size * TWO_STEP_PHASE1_ROI)} ROI)`
         },
         {
           label: 'Phase 1 Exposure Cap',
@@ -106,7 +106,7 @@ const ChallengePlansTable = () => {
         },
         {
           label: 'Phase 2 Profit Target',
-          value: `${formatPercentage(TWO_STEP_PHASE2_ROI)} (${formatCurrency(plan.size * TWO_STEP_PHASE2_ROI)} realized ROI)`
+          value: `${formatPercentage(TWO_STEP_PHASE2_ROI)} (${formatCurrency(plan.size * TWO_STEP_PHASE2_ROI)} ROI)`
         },
         {
           label: 'Phase 2 Exposure Cap',
