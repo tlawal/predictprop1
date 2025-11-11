@@ -4,11 +4,11 @@ import React from 'react';
 
 export default function LeaderboardPage() {
   const mockLeaderboard = [
-    { rank: 1, name: 'Trader A', pnl: '+$12,450', winRate: '78%', accountSize: '$50K' },
-    { rank: 2, name: 'Trader B', pnl: '+$9,230', winRate: '82%', accountSize: '$25K' },
-    { rank: 3, name: 'Trader C', pnl: '+$8,910', winRate: '75%', accountSize: '$10K' },
-    { rank: 4, name: 'Trader D', pnl: '+$7,650', winRate: '80%', accountSize: '$100K' },
-    { rank: 5, name: 'Trader E', pnl: '+$6,420', winRate: '73%', accountSize: '$50K' },
+    { rank: 1, name: 'Trader A', pnl: '+$12,450', accuracy: '78%', accountSize: '$50K' },
+    { rank: 2, name: 'Trader B', pnl: '+$9,230', accuracy: '82%', accountSize: '$25K' },
+    { rank: 3, name: 'Trader C', pnl: '+$8,910', accuracy: '75%', accountSize: '$10K' },
+    { rank: 4, name: 'Trader D', pnl: '+$7,650', accuracy: '80%', accountSize: '$100K' },
+    { rank: 5, name: 'Trader E', pnl: '+$6,420', accuracy: '73%', accountSize: '$50K' },
   ];
 
   return (
@@ -30,7 +30,7 @@ export default function LeaderboardPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Rank</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Trader</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">P&L</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Win Rate</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Accuracy</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Account Size</th>
               </tr>
             </thead>
@@ -51,7 +51,7 @@ export default function LeaderboardPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-white font-medium">{trader.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-green-400 font-medium">{trader.pnl}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-blue-400">{trader.winRate}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-blue-400">{trader.accuracy}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-300">{trader.accountSize}</td>
                 </tr>
               ))}

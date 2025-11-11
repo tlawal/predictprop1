@@ -7,6 +7,22 @@ export default function LeaderboardTable({ data, isLoading, error, searchQuery }
   const [sortField, setSortField] = useState('pnl');
   const [sortDirection, setSortDirection] = useState('desc');
 
+  const getAccuracyValue = (record) => {
+    if (!record) return 0;
+
+    if (typeof record.accuracy === 'number') {
+      return record.accuracy;
+    }
+
+    const winRate = record.winRate;
+    if (typeof winRate === 'number') {
+      const normalized = winRate <= 1 ? winRate * 100 : winRate;
+      return normalized;
+    }
+
+    return 0;
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -53,9 +69,9 @@ export default function LeaderboardTable({ data, isLoading, error, searchQuery }
       } else if (sortField === 'wins') {
         aValue = parseInt(a.wins || 0);
         bValue = parseInt(b.wins || 0);
-      } else if (sortField === 'winRate') {
-        aValue = parseFloat(a.winRate || 0);
-        bValue = parseFloat(b.winRate || 0);
+      } else if (sortField === 'accuracy') {
+        aValue = getAccuracyValue(a);
+        bValue = getAccuracyValue(b);
       } else if (sortField === 'totalTrades') {
         aValue = parseInt(a.totalTrades || 0);
         bValue = parseInt(b.totalTrades || 0);
@@ -130,9 +146,9 @@ export default function LeaderboardTable({ data, isLoading, error, searchQuery }
                 </th>
                 <th
                   className="px-6 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white"
-                  onClick={() => handleSort('winRate')}
+                  onClick={() => handleSort('accuracy')}
                 >
-                  Win Rate <SortIcon field="winRate" />
+                  Accuracy <SortIcon field="accuracy" />
                 </th>
                 <th
                   className="px-6 py-4 text-center text-sm font-semibold text-gray-300 cursor-pointer hover:text-white"
@@ -184,22 +200,17 @@ export default function LeaderboardTable({ data, isLoading, error, searchQuery }
                     </span>
                   </td>
 
-                  {/* Wins */}
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-sm text-gray-300">{trader.wins || 0}</span>
-                  </td>
-
-                  {/* Win Rate */}
+                  {/* Accuracy */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="flex-1 bg-slate-700 rounded-full h-2">
                         <div
                           className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min((trader.winRate || 0) * 100, 100)}%` }}
+                          style={{ width: `${Math.min(getAccuracyValue(trader), 100)}%` }}
                         ></div>
                       </div>
                       <span className="text-sm text-gray-300 w-12 text-right">
-                        {Math.round((trader.winRate || 0) * 100)}%
+                        {Math.round(getAccuracyValue(trader))}%
                       </span>
                     </div>
                   </td>
@@ -257,8 +268,8 @@ export default function LeaderboardTable({ data, isLoading, error, searchQuery }
               </div>
 
               <div className="text-center">
-                <div className="text-xs text-gray-400 uppercase tracking-wider">Win Rate</div>
-                <div className="text-lg font-semibold text-white">{Math.round((trader.winRate || 0) * 100)}%</div>
+                <div className="text-xs text-gray-400 uppercase tracking-wider">Accuracy</div>
+                <div className="text-lg font-semibold text-white">{Math.round(getAccuracyValue(trader))}%</div>
               </div>
 
               <div className="text-center">
@@ -267,16 +278,16 @@ export default function LeaderboardTable({ data, isLoading, error, searchQuery }
               </div>
             </div>
 
-            {/* Win Rate Progress Bar */}
+            {/* Accuracy Progress Bar */}
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-gray-400">
-                <span>Win Rate Progress</span>
-                <span>{Math.round((trader.winRate || 0) * 100)}%</span>
+                <span>Accuracy Progress</span>
+                <span>{Math.round(getAccuracyValue(trader))}%</span>
               </div>
               <div className="w-full bg-slate-700 rounded-full h-2">
                 <div
                   className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min((trader.winRate || 0) * 100, 100)}%` }}
+                  style={{ width: `${Math.min(getAccuracyValue(trader), 100)}%` }}
                 ></div>
               </div>
             </div>

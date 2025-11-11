@@ -14,8 +14,18 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 export default function ResultsProgress({ challengeData }) {
   if (!challengeData) return null;
 
-  const winRate = challengeData.winRate || 0;
-  const lossRate = 100 - winRate;
+  const legacyWinRate = challengeData.winRate;
+  const accuracyValue = (() => {
+    if (typeof challengeData.accuracy === 'number') {
+      return challengeData.accuracy;
+    }
+    if (typeof legacyWinRate === 'number') {
+      return legacyWinRate <= 1 ? legacyWinRate * 100 : legacyWinRate;
+    }
+    return 0;
+  })();
+  const accuracy = Math.min(Math.max(accuracyValue, 0), 100);
+  const lossRate = 100 - accuracy;
 
   const totalTrades = challengeData.totalMarkets || 0;
   const winningTrades = challengeData.winningTrades || 0;
@@ -25,8 +35,8 @@ export default function ResultsProgress({ challengeData }) {
   const realizedPnL = challengeData.realizedPnL || 0;
   const unrealizedPnL = challengeData.unrealizedPnL || 0;
 
-  // Pie chart data for win rate
-  const winRateData = {
+  // Pie chart data for accuracy
+  const accuracyChartData = {
     labels: ['Winning Trades', 'Losing Trades'],
     datasets: [
       {
@@ -44,7 +54,7 @@ export default function ResultsProgress({ challengeData }) {
     ],
   };
 
-  const winRateOptions = {
+  const accuracyChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -75,14 +85,14 @@ export default function ResultsProgress({ challengeData }) {
       <h2 className="text-xl font-bold text-white mb-6">Results Progress</h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Win Rate Pie Chart */}
+        {/* Accuracy Pie Chart */}
         <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Win Rate Distribution</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Accuracy Distribution</h3>
 
           <div className="flex items-center justify-between mb-4">
             <div className="text-center">
-              <div className="text-3xl font-bold text-white">{winRate.toFixed(1)}%</div>
-              <div className="text-sm text-gray-400">Win Rate</div>
+              <div className="text-3xl font-bold text-white">{accuracy.toFixed(1)}%</div>
+              <div className="text-sm text-gray-400">Accuracy</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-semibold text-green-400">{winningTrades}</div>
@@ -95,7 +105,7 @@ export default function ResultsProgress({ challengeData }) {
           </div>
 
           <div className="h-48">
-            <Pie data={winRateData} options={winRateOptions} />
+            <Pie data={accuracyChartData} options={accuracyChartOptions} />
           </div>
         </div>
 

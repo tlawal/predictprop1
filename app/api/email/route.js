@@ -275,7 +275,7 @@ async function sendWelcomeEmail(userId, planType, amount) {
           <div style="margin: 30px 0;">
             <h3 style="color: #1f2937;">What's Next?</h3>
             <ul style="color: #4b5563; line-height: 1.6;">
-              <li>📊 Complete 10 resolved markets with 70%+ win rate</li>
+              <li>📊 Complete 10 resolved markets with 70%+ accuracy</li>
               <li>📈 Keep drawdown under 5% of your capital</li>
               <li>🎯 Stay within 15% exposure per trade</li>
               <li>🏆 Achieve your profit target to graduate</li>

@@ -15,8 +15,8 @@ export default function TradingObjectives({ challengeData, challengeSize }) {
   const exposureLimit = challengeData.maxExposurePercent || 15; // 15% max exposure
   const currentExposure = challengeData.maxExposurePercent || 0;
 
-  const winRateTarget = 70; // 70% win rate
-  const currentWinRate = challengeData.winRate || 0;
+  const accuracyTarget = 70; // 70% accuracy requirement
+  const currentAccuracy = challengeData.accuracy || challengeData.winRate || 0;
 
   const cards = [
     {
@@ -44,11 +44,11 @@ export default function TradingObjectives({ challengeData, challengeSize }) {
       color: currentExposure > exposureLimit ? 'yellow' : 'green'
     },
     {
-      title: 'Win Rate',
-      current: `${currentWinRate.toFixed(1)}%`,
-      target: `${winRateTarget}%`,
-      progress: Math.min(currentWinRate / winRateTarget * 100, 100),
-      status: currentWinRate >= winRateTarget ? 'completed' : 'active',
+      title: 'Accuracy',
+      current: `${currentAccuracy.toFixed(1)}%`,
+      target: `${accuracyTarget}%`,
+      progress: Math.min((currentAccuracy / accuracyTarget) * 100, 100),
+      status: currentAccuracy >= accuracyTarget ? 'completed' : 'active',
       color: 'blue'
     }
   ];

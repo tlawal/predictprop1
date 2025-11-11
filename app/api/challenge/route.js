@@ -18,7 +18,7 @@ export async function GET(request) {
           maxDrawdown: 0,
           maxExposure: 0,
           resolvedMarkets: 0,
-          winRate: 0
+          accuracy: 0
         }
       });
     }
@@ -55,7 +55,7 @@ export async function GET(request) {
         error: 'No active challenge found',
         message: challengeError?.message || 'User has no active challenge',
         projectedROI: 0,
-        winRate: 0,
+        accuracy: 0,
         maxDrawdown: 0,
         maxDrawdownPercent: 0,
         maxExposure: 0,
@@ -82,7 +82,7 @@ export async function GET(request) {
         error: 'Failed to fetch trades',
         message: tradesError.message,
         projectedROI: 0,
-        winRate: 0,
+        accuracy: 0,
         maxDrawdown: 0,
         maxDrawdownPercent: 0,
         maxExposure: 0,
@@ -122,14 +122,14 @@ export async function GET(request) {
     // Projected ROI (unrealized + realized P&L as % of initial capital)
     const projectedROI = (totalPnL / challengeSize) * 100;
 
-    // Win rate calculation
+    // Accuracy calculation
     const totalResolved = resolvedPositions.length;
     const winningTrades = resolvedPositions.filter(pos => {
       const side = pos.side === 'Yes' ? 1 : 0;
       const outcome = pos.resolvedOutcome === 'Yes' ? 1 : 0;
       return side === outcome;
     }).length;
-    const winRate = totalResolved > 0 ? (winningTrades / totalResolved) * 100 : 0;
+    const accuracy = totalResolved > 0 ? (winningTrades / totalResolved) * 100 : 0;
 
     // Drawdown calculation - cluster by end date and find max loss
     const positionsByEndDate = {};
@@ -157,7 +157,7 @@ export async function GET(request) {
     const maxExposurePercent = (maxPositionValue / challengeSize) * 100;
 
     // Challenge status
-    const phase1Complete = projectedROI >= 6 && winRate >= 70 && maxDrawdownPercent <= 5;
+    const phase1Complete = projectedROI >= 6 && accuracy >= 70 && maxDrawdownPercent <= 5;
     const challengeComplete = phase1Complete; // For demo, just Phase 1
 
     const result = {
@@ -166,8 +166,8 @@ export async function GET(request) {
       phase1Target: phase1Target,
       projectedROI: Math.round(projectedROI * 100) / 100,
 
-      // Win rate metrics
-      winRate: Math.round(winRate * 100) / 100,
+      // Accuracy metrics
+      accuracy: Math.round(accuracy * 100) / 100,
       totalResolved: totalResolved,
       winningTrades: winningTrades,
 
@@ -211,7 +211,7 @@ export async function GET(request) {
         error: 'Failed to fetch challenge data',
         message: error.message,
         projectedROI: 0,
-        winRate: 0,
+        accuracy: 0,
         maxDrawdown: 0,
         maxDrawdownPercent: 0,
         maxExposure: 0,

@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS plans (
   description TEXT NOT NULL,
   params JSONB NOT NULL DEFAULT '{
     "roi": 10,
+    "accuracy_target": 70,
     "win_rate": 70,
     "drawdown": 5,
     "exposure": 15,
@@ -377,8 +378,8 @@ CREATE TRIGGER update_addons_updated_at BEFORE UPDATE ON addons
 
 -- Insert default plans
 INSERT INTO plans (type, size, description, params, fee) VALUES
-  ('1-step', 5000, 'Single phase challenge with profit target', '{"roi": 6, "win_rate": 70, "drawdown": 5, "exposure": 15, "min_days": 10}', 99.00),
-  ('2-step', 10000, 'Two phase challenge with evaluation and profit phases', '{"roi": 10, "win_rate": 70, "drawdown": 5, "exposure": 15, "min_days": 20}', 149.00)
+  ('1-step', 5000, 'Single phase challenge with profit target', '{"roi": 6, "accuracy_target": 70, "win_rate": 70, "drawdown": 5, "exposure": 15, "min_days": 10}', 99.00),
+  ('2-step', 10000, 'Two phase challenge with evaluation and profit phases', '{"roi": 10, "accuracy_target": 70, "win_rate": 70, "drawdown": 5, "exposure": 15, "min_days": 20}', 149.00)
 ON CONFLICT DO NOTHING;
 
 -- Create affiliates table

@@ -86,7 +86,7 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }) {
             <div className="bg-slate-800/50 rounded-lg p-4 border-l-4 border-green-500">
               <h4 className="text-green-400 font-semibold mb-2">📈 Performance Goals</h4>
               <ul className="text-slate-300 text-sm text-left space-y-1">
-                <li>• 70%+ win rate required</li>
+                <li>• 70%+ accuracy required</li>
                 <li>• Max drawdown &lt; 5%</li>
                 <li>• Exposure cap &lt; 15%</li>
               </ul>
@@ -131,7 +131,7 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }) {
               </div>
               <div>
                 <p className="text-yellow-400 font-medium mb-1">📈 Track Performance</p>
-                <p className="text-slate-400 text-sm">Monitor your win rate and drawdown</p>
+                <p className="text-slate-400 text-sm">Monitor your accuracy and drawdown</p>
               </div>
               <div>
                 <p className="text-purple-400 font-medium mb-1">🧠 Stay Disciplined</p>

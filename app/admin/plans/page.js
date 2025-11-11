@@ -41,7 +41,7 @@ const createDefaultPhaseParams = () => ({
 
 const createDefaultOneStepParams = () => ({
   starting_balance: '',
-  win_rate: '',
+  accuracy_target: '',
   min_days: '',
   profit_target: { percent: '', amount: '' },
   drawdown_max: { percent: '', amount: '' },
@@ -50,7 +50,7 @@ const createDefaultOneStepParams = () => ({
 
 const createDefaultTwoStepParams = () => ({
   starting_balance: '',
-  win_rate: '',
+  accuracy_target: '',
   phases: {
     phase1: createDefaultPhaseParams(),
     phase2: createDefaultPhaseParams()
@@ -84,7 +84,7 @@ const normalizeParams = (params, type) => {
     if (params?.phases) {
       return {
         starting_balance: toInputString(params.starting_balance),
-        win_rate: toInputString(params.win_rate),
+        accuracy_target: toInputString(params.accuracy_target ?? params.win_rate),
         phases: {
           phase1: normalizePhaseParams(params.phases.phase1),
           phase2: normalizePhaseParams(params.phases.phase2)
@@ -97,7 +97,7 @@ const normalizeParams = (params, type) => {
 
     return {
       starting_balance: toInputString(source.starting_balance),
-      win_rate: toInputString(source.win_rate),
+      accuracy_target: toInputString(source.accuracy_target ?? source.win_rate),
       phases: {
         phase1: normalizePhaseParams(phases.phase1),
         phase2: normalizePhaseParams(phases.phase2)
@@ -108,7 +108,7 @@ const normalizeParams = (params, type) => {
   if (params && !params.phases) {
     return {
       starting_balance: toInputString(params.starting_balance),
-      win_rate: toInputString(params.win_rate),
+      accuracy_target: toInputString(params.accuracy_target ?? params.win_rate),
       min_days: toInputString(params.min_days),
       profit_target: {
         percent: toPercentInputString(params.profit_target?.percent),
@@ -129,7 +129,7 @@ const normalizeParams = (params, type) => {
 
   return {
     starting_balance: toInputString(source.starting_balance),
-    win_rate: toInputString(source.win_rate),
+    accuracy_target: toInputString(source.accuracy_target ?? source.win_rate),
     min_days: toInputString(source.min_days),
     profit_target: {
       percent: toPercentInputString(source.profit_target?.percent),
@@ -183,7 +183,7 @@ const buildParamsPayload = (type, params) => {
 
     return {
       starting_balance: parseRequiredNumber(params?.starting_balance, 'Starting balance'),
-      win_rate: parseRequiredNumber(params?.win_rate, 'Win rate'),
+      accuracy_target: parseRequiredNumber(params?.accuracy_target, 'Accuracy target'),
       phases: phaseEntries.reduce((acc, phaseKey) => {
         const label = PHASE_NAMES[phaseKey] || phaseKey;
         acc[phaseKey] = buildPhasePayload(label, params?.phases?.[phaseKey]);
@@ -194,7 +194,7 @@ const buildParamsPayload = (type, params) => {
 
   return {
     starting_balance: parseRequiredNumber(params?.starting_balance, 'Starting balance'),
-    win_rate: parseRequiredNumber(params?.win_rate, 'Win rate'),
+    accuracy_target: parseRequiredNumber(params?.accuracy_target, 'Accuracy target'),
     min_days: parseRequiredNumber(params?.min_days, 'Minimum trading days'),
     profit_target: {
       percent: parseRequiredPercent(params?.profit_target?.percent, 'Profit target (%)'),
@@ -540,14 +540,14 @@ function PlanForm({ initialData, onSubmit, onCancel }) {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-300">Required Win Rate (%)</label>
+            <label className="mb-1 block text-sm font-medium text-gray-300">Required Accuracy (%)</label>
             <input
               type="number"
-              value={params.win_rate}
+              value={params.accuracy_target}
               onChange={(e) =>
                 handleParamChange((current) => ({
                   ...current,
-                  win_rate: e.target.value
+                  accuracy_target: e.target.value
                 }))
               }
               className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white"
@@ -734,14 +734,14 @@ function PlanForm({ initialData, onSubmit, onCancel }) {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-300">Required Win Rate (%)</label>
+            <label className="mb-1 block text-sm font-medium text-gray-300">Required Accuracy (%)</label>
             <input
               type="number"
-              value={params.win_rate}
+              value={params.accuracy_target}
               onChange={(e) =>
                 handleParamChange((current) => ({
                   ...current,
-                  win_rate: e.target.value
+                  accuracy_target: e.target.value
                 }))
               }
               className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white"
@@ -1048,7 +1048,7 @@ function PlanParametersSummary({ plan }) {
           Min Days: <span className="text-sky-300">{params.min_days || 0}</span>
         </div>
         <div>
-          Win Rate: <span className="text-purple-300">{params.win_rate || 0}%</span>
+          Accuracy Target: <span className="text-purple-300">{params.accuracy_target || 0}%</span>
         </div>
       </div>
     );
@@ -1068,7 +1068,7 @@ function PlanParametersSummary({ plan }) {
         </div>
       ))}
       <div>
-        Win Rate: <span className="text-purple-300">{params.win_rate || 0}%</span>
+        Accuracy Target: <span className="text-purple-300">{params.accuracy_target || 0}%</span>
       </div>
     </div>
   );

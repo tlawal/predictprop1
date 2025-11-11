@@ -398,7 +398,7 @@ export default function SidePanel({ isOpen, onClose, isMobile = false, collapsed
                   <p>Follow these trading rules to succeed in your challenge...</p>
                   <p>• Maximum drawdown: 5% of challenge balance</p>
                   <p>• Maximum position exposure: 15% of challenge balance</p>
-                  <p>• Minimum win rate: 70% for phase progression</p>
+                  <p>• Minimum accuracy: 70% for phase progression</p>
                   <p>• No martingale or high-risk strategies</p>
                 </div>
                 <button
@@ -520,7 +520,7 @@ export default function SidePanel({ isOpen, onClose, isMobile = false, collapsed
                 <p>Follow these trading rules to succeed in your challenge...</p>
                 <p>• Maximum drawdown: 5% of challenge balance</p>
                 <p>• Maximum position exposure: 15% of challenge balance</p>
-                <p>• Minimum win rate: 70% for phase progression</p>
+                <p>• Minimum accuracy: 70% for phase progression</p>
                 <p>• No martingale or high-risk strategies</p>
               </div>
               <button

@@ -654,9 +654,13 @@ function TradersPageContent() {
                   <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-400">Win Rate</p>
+                        <p className="text-sm font-medium text-gray-400">Accuracy</p>
                         <p className="text-2xl font-bold text-green-400">
-                          {historyData?.summary?.winRate ? `${Math.round(historyData.summary.winRate)}%` : '0%'}
+                          {(() => {
+                            const rawAccuracy = historyData?.summary?.accuracy ?? historyData?.summary?.winRate ?? 0;
+                            const percent = rawAccuracy > 1 ? rawAccuracy : rawAccuracy * 100;
+                            return `${Math.round(percent)}%`;
+                          })()}
                         </p>
                       </div>
                       <div className="p-2 rounded-lg bg-green-500/20 text-green-400">

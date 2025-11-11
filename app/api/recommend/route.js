@@ -61,8 +61,8 @@ async function getUserTradingHistory(userId) {
     favoriteCategories: [categories[userCategoryIndex], categories[(userCategoryIndex + 1) % categories.length]],
     riskTolerance: userId.includes('conservative') ? 'low' : userId.includes('aggressive') ? 'high' : 'medium',
     pastTrades: [
-      { category: categories[userCategoryIndex], pnl: 1250, winRate: 0.75 },
-      { category: categories[(userCategoryIndex + 1) % categories.length], pnl: 890, winRate: 0.68 }
+      { category: categories[userCategoryIndex], pnl: 1250, accuracy: 75, winRate: 0.75 },
+      { category: categories[(userCategoryIndex + 1) % categories.length], pnl: 890, accuracy: 68, winRate: 0.68 }
     ]
   };
 }

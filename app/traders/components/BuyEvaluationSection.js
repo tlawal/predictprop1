@@ -16,6 +16,15 @@ const formatCurrency = (value) => {
 
 const formatPercent = (value) => `${Math.round(Number(value || 0) * 100)}%`;
 
+const resolveAccuracy = (source) => {
+  if (!source) return 0;
+  if (typeof source.accuracy_target === 'number') return source.accuracy_target;
+  if (typeof source.accuracy === 'number') return source.accuracy;
+  if (typeof source.win_rate === 'number') return source.win_rate <= 1 ? source.win_rate * 100 : source.win_rate;
+  if (typeof source.winRate === 'number') return source.winRate <= 1 ? source.winRate * 100 : source.winRate;
+  return 0;
+};
+
 export default function BuyEvaluationSection({ onClose }) {
   const router = useRouter();
   const [selectedStep, setSelectedStep] = useState('1-step');
@@ -47,7 +56,7 @@ export default function BuyEvaluationSection({ onClose }) {
     const params = plan.params || {};
     const baseBalance = params.starting_balance || plan.size;
     const planFee = Number(plan.fee || 0);
-    const winRate = params.win_rate || params.winRate;
+    const accuracyRequirement = resolveAccuracy(params);
 
     return (
       <div
@@ -127,8 +136,8 @@ export default function BuyEvaluationSection({ onClose }) {
             </div>
           )}
           <div className="flex justify-between">
-            <span className="text-slate-300">Win Rate Requirement</span>
-            <span className="text-teal-300 font-medium">{winRate || 0}%</span>
+            <span className="text-slate-300">Accuracy Requirement</span>
+            <span className="text-teal-300 font-medium">{Math.round(accuracyRequirement)}%</span>
           </div>
         </div>
 

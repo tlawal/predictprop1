@@ -15,6 +15,7 @@ INSERT INTO plans (id, type, size, description, params, fee) VALUES
     'Entry account to learn discipline with strict risk controls.',
     '{
       "starting_balance": 100,
+      "accuracy_target": 70,
       "win_rate": 70,
       "min_days": 5,
       "profit_target": { "percent": 0.1, "amount": 10 },
@@ -30,6 +31,7 @@ INSERT INTO plans (id, type, size, description, params, fee) VALUES
     'Scale up from micro stakes while keeping risk managed.',
     '{
       "starting_balance": 500,
+      "accuracy_target": 70,
       "win_rate": 70,
       "min_days": 5,
       "profit_target": { "percent": 0.1, "amount": 50 },
@@ -45,6 +47,7 @@ INSERT INTO plans (id, type, size, description, params, fee) VALUES
     'Popular account size for serious traders targeting funding.',
     '{
       "starting_balance": 5000,
+      "accuracy_target": 70,
       "win_rate": 70,
       "min_days": 5,
       "profit_target": { "percent": 0.1, "amount": 500 },
@@ -60,6 +63,7 @@ INSERT INTO plans (id, type, size, description, params, fee) VALUES
     'Advanced capital for confident traders ready to scale.',
     '{
       "starting_balance": 10000,
+      "accuracy_target": 70,
       "win_rate": 70,
       "min_days": 5,
       "profit_target": { "percent": 0.1, "amount": 1000 },
@@ -75,6 +79,7 @@ INSERT INTO plans (id, type, size, description, params, fee) VALUES
     'Gradual two-phase build-up for new traders proving consistency.',
     '{
       "starting_balance": 100,
+      "accuracy_target": 70,
       "win_rate": 70,
       "phases": {
         "phase1": {
@@ -100,6 +105,7 @@ INSERT INTO plans (id, type, size, description, params, fee) VALUES
     'Balanced progression path to reinforce winning habits.',
     '{
       "starting_balance": 500,
+      "accuracy_target": 70,
       "win_rate": 70,
       "phases": {
         "phase1": {
@@ -125,6 +131,7 @@ INSERT INTO plans (id, type, size, description, params, fee) VALUES
     'Structured route for experienced traders who like checkpoints.',
     '{
       "starting_balance": 5000,
+      "accuracy_target": 70,
       "win_rate": 70,
       "phases": {
         "phase1": {
@@ -150,6 +157,7 @@ INSERT INTO plans (id, type, size, description, params, fee) VALUES
     'Two-phase evaluation supporting larger strategic positions.',
     '{
       "starting_balance": 10000,
+      "accuracy_target": 70,
       "win_rate": 70,
       "phases": {
         "phase1": {

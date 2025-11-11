@@ -381,7 +381,7 @@ The platform features real-time market data integration, interactive charting, c
 ### 📋 **Plan Features**
 - **1-Step Challenges**: Single evaluation phase with profit targets
 - **2-Step Challenges**: Two-phase evaluation with progression requirements
-- **Dynamic Parameters**: ROI targets, win rates, drawdown limits, exposure caps
+- **Dynamic Parameters**: ROI targets, accuracy targets (legacy win rates), drawdown limits, exposure caps
 - **Account Sizes**: Multiple balance options per plan type
 
 ## Core Features
@@ -438,7 +438,7 @@ The platform features real-time market data integration, interactive charting, c
 
 ##### **Challenges Tab**
 - Phase 1 progress tracking (6% ROI target)
-- Win rate monitoring (70% target)
+- Accuracy monitoring (70% target)
 - Drawdown and exposure risk metrics
 - Challenge rules and requirements display
 
@@ -457,10 +457,10 @@ The platform features real-time market data integration, interactive charting, c
 #### **Enhanced Dashboard Features**
 - **Side Panel**: Profile management, language selector, notifications, account links
 - **Trading Objectives**: Visual progress cards for profit targets, drawdown limits, exposure caps
-- **Results Progress**: Win rate pie charts and P&L breakdown analytics
+- **Results Progress**: Accuracy pie charts and P&L breakdown analytics
 - **Equity Alerts**: Automatic warnings when approaching account limits
 - **Responsive Design**: Mobile drawer panel, desktop fixed sidebar
-- **Performance Metrics**: Win rate, total P&L, trade counts
+- **Performance Metrics**: Accuracy (legacy win rate), total P&L, trade counts
 - Filter chips for Open/Resolved/All trades
 
 #### **🏆 Additional Pages**
@@ -1018,7 +1018,7 @@ npm run simulate
 ✅ Trades Resolved: 18 (90% resolution rate)
 💰 Total Volume: $12,450.00
 📈 Total PnL: $1,234.56
-🎯 Win Rate: 65%
+🎯 Accuracy: 65%
 📊 Cluster Drawdown Analysis:
    • Clusters Analyzed: 8
    • Loss Clusters: 3

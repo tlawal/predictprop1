@@ -98,14 +98,20 @@ export async function GET(request) {
       traderStats[traderId].positions.push(position);
     });
 
-    // Convert to array and calculate win rates
-    const traders = Object.values(traderStats).map(trader => ({
-      trader: trader.trader,
-      pnl: trader.totalPnL,
-      wins: trader.wins,
-      totalTrades: trader.totalTrades,
-      winRate: trader.totalTrades > 0 ? trader.wins / trader.totalTrades : 0,
-    }));
+    // Convert to array and calculate accuracy
+    const traders = Object.values(traderStats).map(trader => {
+      const accuracyPercent = trader.totalTrades > 0 ? (trader.wins / trader.totalTrades) * 100 : 0;
+
+      return {
+        trader: trader.trader,
+        pnl: trader.totalPnL,
+        wins: trader.wins,
+        totalTrades: trader.totalTrades,
+        accuracy: accuracyPercent,
+        // Legacy field for compatibility (0-1 scale)
+        winRate: trader.totalTrades > 0 ? trader.wins / trader.totalTrades : 0,
+      };
+    });
 
     // Sort by PnL descending and take top 20
     const topTraders = traders
@@ -146,35 +152,40 @@ export async function GET(request) {
           pnl: 125000,
           wins: 45,
           totalTrades: 67,
-          winRate: 0.67,
+          accuracy: 67.2,
+          winRate: 0.672,
         },
         {
           trader: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
           pnl: 98000,
           wins: 38,
           totalTrades: 52,
-          winRate: 0.73,
+          accuracy: 73.1,
+          winRate: 0.731,
         },
         {
           trader: '0x1111111111111111111111111111111111111111',
           pnl: 87500,
           wins: 42,
           totalTrades: 58,
-          winRate: 0.72,
+          accuracy: 72.4,
+          winRate: 0.724,
         },
         {
           trader: '0x2222222222222222222222222222222222222222',
           pnl: 76300,
           wins: 35,
           totalTrades: 49,
-          winRate: 0.71,
+          accuracy: 71.4,
+          winRate: 0.714,
         },
         {
           trader: '0x3333333333333333333333333333333333333333',
           pnl: 65400,
           wins: 31,
           totalTrades: 44,
-          winRate: 0.70,
+          accuracy: 70.5,
+          winRate: 0.705,
         },
       ],
       totalCount: 5,

@@ -12,8 +12,16 @@ export async function GET(request) {
       return NextResponse.json({
         trades: [],
         equityHistory: [],
-        totalPnL: 0,
-        winRate: 0
+        summary: {
+          totalTrades: 0,
+          openTrades: 0,
+          resolvedTrades: 0,
+          winningTrades: 0,
+          losingTrades: 0,
+          totalPnL: 0,
+          accuracy: 0
+        },
+        lastUpdated: new Date().toISOString()
       });
     }
 
@@ -68,7 +76,7 @@ export async function GET(request) {
           winningTrades: 0,
           losingTrades: 0,
           totalPnL: 0,
-          winRate: 0
+          accuracy: 0
         }
       }, { status: 500 });
     }
@@ -159,18 +167,21 @@ export async function GET(request) {
       });
     });
 
+    const resolvedTradeCount = sortedTrades.filter(t => t.resolved).length;
+    const winningTradeCount = sortedTrades.filter(t => t.resolved && t.pnl > 0).length;
+    const accuracy = resolvedTradeCount > 0 ? (winningTradeCount / resolvedTradeCount) * 100 : 0;
+
     const result = {
       trades: sortedTrades,
       equityHistory: equityHistory,
       summary: {
         totalTrades: sortedTrades.length,
         openTrades: sortedTrades.filter(t => t.status === 'open').length,
-        resolvedTrades: sortedTrades.filter(t => t.status === 'resolved').length,
-        winningTrades: sortedTrades.filter(t => t.resolved && t.pnl > 0).length,
+        resolvedTrades: resolvedTradeCount,
+        winningTrades: winningTradeCount,
         losingTrades: sortedTrades.filter(t => t.resolved && t.pnl < 0).length,
         totalPnL: sortedTrades.reduce((sum, t) => sum + t.pnl, 0),
-        winRate: sortedTrades.filter(t => t.resolved).length > 0 ?
-          (sortedTrades.filter(t => t.resolved && t.pnl > 0).length / sortedTrades.filter(t => t.resolved).length) * 100 : 0
+        accuracy
       },
       lastUpdated: new Date().toISOString()
     };
@@ -198,7 +209,7 @@ export async function GET(request) {
           winningTrades: 0,
           losingTrades: 0,
           totalPnL: 0,
-          winRate: 0
+          accuracy: 0
         }
       },
       { status: 500 }

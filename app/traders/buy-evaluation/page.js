@@ -5,12 +5,35 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 
+const normalizePercentValue = (value) => {
+  if (value == null) return 0;
+  if (typeof value === 'number') {
+    return value <= 1 ? value * 100 : value;
+  }
+  const parsed = parseFloat(value);
+  if (Number.isFinite(parsed)) {
+    return parsed;
+  }
+  return 0;
+};
+
 // Helper function to format percentage values (converting from decimal to percentage)
 const formatPercentage = (value) => {
-  if (value == null) return 'N/A';
-  return typeof value === 'number' 
-    ? `${(value * 100).toFixed(0)}%` 
-    : value.endsWith('%') ? value : `${value}%`;
+  const percent = normalizePercentValue(value);
+  return `${percent.toFixed(0)}%`;
+};
+
+const resolveAccuracy = (source) => {
+  if (!source) return 0;
+  if (typeof source.accuracy_target === 'number') return normalizePercentValue(source.accuracy_target);
+  if (typeof source.accuracy === 'number') return normalizePercentValue(source.accuracy);
+  if (typeof source.win_rate === 'number') return normalizePercentValue(source.win_rate);
+  if (typeof source.winRate === 'number') return normalizePercentValue(source.winRate);
+  if (typeof source.metrics?.accuracy_target === 'number') return normalizePercentValue(source.metrics.accuracy_target);
+  if (typeof source.metrics?.accuracy === 'number') return normalizePercentValue(source.metrics.accuracy);
+  if (typeof source.metrics?.win_rate === 'number') return normalizePercentValue(source.metrics.win_rate);
+  if (typeof source.metrics?.winRate === 'number') return normalizePercentValue(source.metrics.winRate);
+  return 0;
 };
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
@@ -37,7 +60,7 @@ function PlanCard({ plan }) {
         </div>
 
         <div className="space-y-2 mb-6 text-sm text-gray-300">
-          <div>Win Rate: {plan.params?.win_rate || '70'}%</div>
+          <div>Accuracy Requirement: {resolveAccuracy(plan.params)}%</div>
           {plan.params?.metrics?.min_days && (
             <div>Min Trading Days: {plan.params.metrics.min_days}</div>
           )}

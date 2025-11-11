@@ -306,7 +306,7 @@ function analyzeClusterDrawdown(resolvedTrades) {
 function generateSimulationStats(originalTrades, resolvedTrades, drawdownAnalysis) {
   const totalVolume = originalTrades.reduce((sum, trade) => sum + trade.amount, 0);
   const totalPnL = resolvedTrades.reduce((sum, trade) => sum + trade.pnl, 0);
-  const winRate = resolvedTrades.length > 0 ?
+  const accuracyRatio = resolvedTrades.length > 0 ?
     resolvedTrades.filter(t => t.pnl > 0).length / resolvedTrades.length : 0;
 
   const stats = {
@@ -316,7 +316,9 @@ function generateSimulationStats(originalTrades, resolvedTrades, drawdownAnalysi
     resolution_rate: (resolvedTrades.length / originalTrades.length * 100).toFixed(2) + '%',
     total_volume_usd: totalVolume.toFixed(2),
     total_pnl_usd: totalPnL.toFixed(2),
-    win_rate: (winRate * 100).toFixed(2) + '%',
+    accuracy_percent: (accuracyRatio * 100).toFixed(2) + '%',
+    accuracy_ratio: accuracyRatio,
+    win_rate: (accuracyRatio * 100).toFixed(2) + '%',
     avg_trade_size: (totalVolume / originalTrades.length).toFixed(2),
     profitable_trades: resolvedTrades.filter(t => t.pnl > 0).length,
     losing_trades: resolvedTrades.filter(t => t.pnl < 0).length,
@@ -344,7 +346,7 @@ function logSimulationStats(stats) {
   console.log(`✅ Trades Resolved: ${stats.trades_resolved} (${stats.resolution_rate})`);
   console.log(`💰 Total Volume: $${stats.total_volume_usd}`);
   console.log(`📈 Total PnL: $${stats.total_pnl_usd}`);
-  console.log(`🎯 Win Rate: ${stats.win_rate}`);
+  console.log(`🎯 Accuracy: ${stats.accuracy_percent}`);
   console.log(`📏 Avg Trade Size: $${stats.avg_trade_size}`);
   console.log(`📈 Profitable Trades: ${stats.profitable_trades}`);
   console.log(`📉 Losing Trades: ${stats.losing_trades}`);

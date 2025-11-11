@@ -42,6 +42,14 @@ const PlanRulesSummary = ({ plan }) => {
   }
 
   const metrics = params.metrics || params;
+  const resolveAccuracy = (source) => {
+    if (!source) return 0;
+    if (typeof source.accuracy_target === 'number') return source.accuracy_target;
+    if (typeof source.accuracy === 'number') return source.accuracy;
+    if (typeof source.win_rate === 'number') return source.win_rate;
+    if (typeof source.winRate === 'number') return source.winRate;
+    return 0;
+  };
 
   if (plan.type === '1-step') {
     return (
@@ -56,7 +64,7 @@ const PlanRulesSummary = ({ plan }) => {
           Max Exposure: {formatPercent(metrics.exposure_cap?.percent)} ({formatCurrency(metrics.exposure_cap?.amount)})
         </div>
         <div>Minimum Days: {metrics.min_days ?? 0}</div>
-        <div>Win Rate Requirement: {metrics.win_rate ?? 0}%</div>
+        <div>Accuracy Requirement: {resolveAccuracy(metrics)}%</div>
       </div>
     );
   }
@@ -81,7 +89,7 @@ const PlanRulesSummary = ({ plan }) => {
           </div>
         );
       })}
-      <div>Win Rate Requirement: {metrics.win_rate ?? params.win_rate ?? 0}%</div>
+      <div>Accuracy Requirement: {resolveAccuracy(metrics) || resolveAccuracy(params)}%</div>
     </div>
   );
 };

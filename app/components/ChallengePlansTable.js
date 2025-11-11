@@ -76,12 +76,8 @@ const ChallengePlansTable = () => {
           value: `${formatPercentage(ONE_STEP_ROI)} (${formatCurrency(plan.size * ONE_STEP_ROI)} realized ROI)`
         },
         {
-          label: 'Win Rate',
+          label: 'Accuracy',
           value: '70% minimum across the evaluation'
-        },
-        {
-          label: 'Max Drawdown',
-          value: `<${formatPercentage(ONE_STEP_DRAWDOWN)} (${formatCurrency(plan.size * ONE_STEP_DRAWDOWN)} max loss)`
         },
         {
           label: 'Exposure Cap',
@@ -97,16 +93,12 @@ const ChallengePlansTable = () => {
       description: plan.descriptions.two,
       metrics: [
         {
-          label: 'Win Rate',
+          label: 'Accuracy',
           value: '70% minimum each phase'
         },
         {
           label: 'Phase 1 Profit Target',
           value: `${formatPercentage(TWO_STEP_PHASE1_ROI)} (${formatCurrency(plan.size * TWO_STEP_PHASE1_ROI)} projected ROI)`
-        },
-        {
-          label: 'Phase 1 Max Drawdown',
-          value: `<${formatPercentage(TWO_STEP_PHASE1_DRAWDOWN)} (${formatCurrency(plan.size * TWO_STEP_PHASE1_DRAWDOWN)} max loss)`
         },
         {
           label: 'Phase 1 Exposure Cap',
@@ -115,10 +107,6 @@ const ChallengePlansTable = () => {
         {
           label: 'Phase 2 Profit Target',
           value: `${formatPercentage(TWO_STEP_PHASE2_ROI)} (${formatCurrency(plan.size * TWO_STEP_PHASE2_ROI)} realized ROI)`
-        },
-        {
-          label: 'Phase 2 Max Drawdown',
-          value: `<${formatPercentage(TWO_STEP_PHASE2_DRAWDOWN)} (${formatCurrency(plan.size * TWO_STEP_PHASE2_DRAWDOWN)} max loss)`
         },
         {
           label: 'Phase 2 Exposure Cap',

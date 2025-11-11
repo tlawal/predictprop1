@@ -18,13 +18,15 @@ def load_mock_supabase_data():
     # Generate mock trader data
     traders = []
     for i in range(100):
+        accuracy_ratio = np.random.beta(3, 1)  # Accuracy expressed as 0-1 ratio
         trader = {
             'id': f'0x{i:040x}',
             'roi': np.random.normal(0.12, 0.05),  # Mean 12% ROI with variance
             'fees_earned': np.random.exponential(1000),  # Fee earnings
             'splits_earned': np.random.exponential(800),  # Split earnings
             'total_trades': np.random.randint(10, 200),
-            'win_rate': np.random.beta(3, 1),  # Beta distribution for win rates
+            'accuracy': accuracy_ratio * 100,  # Accuracy as percentage
+            'win_rate': accuracy_ratio,  # Legacy field for compatibility
             'avg_position_size': np.random.lognormal(8, 1),  # Position sizes
             'trading_days': np.random.randint(30, 365)
         }
@@ -37,9 +39,9 @@ def calculate_optimal_allocation(traders):
 
     print("Analyzing trader performance for optimal allocation...")
 
-    # Sort traders by ROI and win rate
+    # Sort traders by ROI and accuracy
     sorted_traders = sorted(traders,
-                          key=lambda x: x['roi'] * x['win_rate'],
+                          key=lambda x: x['roi'] * (x.get('accuracy', 0) / 100 or x.get('win_rate', 0)),
                           reverse=True)
 
     # Top performers get higher allocation
@@ -57,11 +59,14 @@ def calculate_optimal_allocation(traders):
             fees_allocation = 0.08
             splits_allocation = 0.12
 
+        accuracy_ratio = (trader.get('accuracy', 0) / 100) or trader.get('win_rate', 0)
+
         allocation_model[trader['id']] = {
             'fees_allocation': fees_allocation,
             'splits_allocation': splits_allocation,
             'rank': rank,
-            'confidence': trader['roi'] * trader['win_rate']
+            'confidence': trader['roi'] * accuracy_ratio,
+            'accuracy': trader.get('accuracy')
         }
 
     return allocation_model
@@ -116,7 +121,7 @@ def save_model(model_data):
         'metadata': {
             'total_traders_analyzed': model_data['total_traders'],
             'top_performers_selected': 20,
-            'training_method': 'roi_winrate_weighted'
+            'training_method': 'roi_accuracy_weighted'
         }
     }
 

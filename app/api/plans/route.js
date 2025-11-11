@@ -42,6 +42,7 @@ export async function GET(request) {
       const params = plan.params || {};
       const startingBalance = params.starting_balance ?? plan.size;
       const basePlan = PLAN_DEFINITIONS.find((base) => base.id === plan.id);
+      const accuracyTarget = params.accuracy_target ?? params.win_rate ?? 0;
 
       const buildMetrics = () => {
         if (plan.type === '1-step') {
@@ -50,12 +51,12 @@ export async function GET(request) {
             drawdown_max: params.drawdown_max,
             exposure_cap: params.exposure_cap,
             min_days: params.min_days,
-            win_rate: params.win_rate
+            accuracy_target: accuracyTarget
           };
         }
 
         return {
-          win_rate: params.win_rate,
+          accuracy_target: accuracyTarget,
           phases: params.phases
         };
       };
@@ -66,6 +67,7 @@ export async function GET(request) {
         description: plan.description || basePlan?.description,
         params: {
           ...params,
+          accuracy_target: accuracyTarget,
           metrics: buildMetrics()
         }
       };

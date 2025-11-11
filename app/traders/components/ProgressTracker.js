@@ -12,8 +12,17 @@ export default function ProgressTracker({ challengeData, challengeSize, onChalle
   const phase1Progress = challengeData?.phase1Progress || 0;
   const phase1Percentage = Math.min((phase1Progress / phase1Target) * 100, 100);
 
-  const winRate = challengeData?.winRate || 0;
-  const winRatePercentage = Math.min(winRate * 100, 100);
+  const legacyWinRate = challengeData?.winRate;
+  const accuracyValue = (() => {
+    if (typeof challengeData?.accuracy === 'number') {
+      return challengeData.accuracy;
+    }
+    if (typeof legacyWinRate === 'number') {
+      return legacyWinRate > 1 ? legacyWinRate : legacyWinRate * 100;
+    }
+    return 0;
+  })();
+  const accuracyPercentage = Math.min(Math.max(accuracyValue, 0), 100);
 
   const resolvedMarkets = challengeData?.resolvedMarkets || 0;
   const totalMarkets = 10; // Minimum required for phase 1
@@ -25,7 +34,7 @@ export default function ProgressTracker({ challengeData, challengeSize, onChalle
   const isChallengeCompleted = () => {
     return (
       phase1Percentage >= 100 &&
-      winRatePercentage >= 70 &&
+      accuracyPercentage >= 70 &&
       resolvedMarkets >= totalMarkets &&
       drawdown <= 5 &&
       exposure <= 15
@@ -99,26 +108,26 @@ export default function ProgressTracker({ challengeData, challengeSize, onChalle
             </div>
           </div>
 
-          {/* Win Rate Progress */}
+          {/* Accuracy Progress */}
           <div>
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-300">Win Rate</span>
+                <span className="text-sm font-medium text-gray-300">Accuracy</span>
                 <span className="text-xs text-gray-500">Min 70%</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-400">Target: 70%</span>
-                <span className={`text-sm font-medium ${winRatePercentage >= 70 ? 'text-green-400' : 'text-gray-300'}`}>
-                  {formatPercentage(winRatePercentage)}
+                <span className={`text-sm font-medium ${accuracyPercentage >= 70 ? 'text-green-400' : 'text-gray-300'}`}>
+                  {formatPercentage(accuracyPercentage)}
                 </span>
               </div>
             </div>
             <div className="w-full bg-slate-700 rounded-full h-3">
               <div
                 className={`h-3 rounded-full transition-all duration-500 ${
-                  winRatePercentage >= 70 ? 'bg-green-500' : winRatePercentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                  accuracyPercentage >= 70 ? 'bg-green-500' : accuracyPercentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
                 }`}
-                style={{ width: `${winRatePercentage}%` }}
+                style={{ width: `${accuracyPercentage}%` }}
               ></div>
             </div>
           </div>
@@ -144,7 +153,7 @@ export default function ProgressTracker({ challengeData, challengeSize, onChalle
           </div>
         </div>
 
-        {/* Win Rate */}
+        {/* Accuracy */}
         <div className={`backdrop-blur-sm rounded-2xl p-6 ${
           isDemoMode
             ? 'bg-slate-800/50 border border-yellow-500/30'
@@ -152,12 +161,12 @@ export default function ProgressTracker({ challengeData, challengeSize, onChalle
         }`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-400">Win Rate</p>
-              <p className={`text-2xl font-bold ${winRatePercentage >= 70 ? 'text-green-400' : 'text-white'}`}>
-                {formatPercentage(winRatePercentage)}
+              <p className="text-sm font-medium text-gray-400">Accuracy</p>
+              <p className={`text-2xl font-bold ${accuracyPercentage >= 70 ? 'text-green-400' : 'text-white'}`}>
+                {formatPercentage(accuracyPercentage)}
               </p>
             </div>
-            <div className={`p-2 rounded-lg ${winRatePercentage >= 70 ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+            <div className={`p-2 rounded-lg ${accuracyPercentage >= 70 ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
               🎯
             </div>
           </div>
@@ -245,7 +254,7 @@ export default function ProgressTracker({ challengeData, challengeSize, onChalle
             <h5 className="font-medium text-gray-300 mb-2">Phase 1 Requirements:</h5>
             <ul className="space-y-1 text-gray-400">
               <li>• 10 minimum resolved markets</li>
-              <li>• 70% minimum win rate</li>
+              <li>• 70% minimum accuracy</li>
               <li>• Max drawdown &lt; 5%</li>
               <li>• Max exposure &lt; 15% per market</li>
             </ul>
@@ -255,7 +264,7 @@ export default function ProgressTracker({ challengeData, challengeSize, onChalle
             <ul className="space-y-1 text-gray-400">
               <li>• Phase 1 completion</li>
               <li>• Additional 10 resolved markets</li>
-              <li>• Maintain win rate ≥ 70%</li>
+              <li>• Maintain accuracy ≥ 70%</li>
               <li>• Consistent risk management</li>
             </ul>
           </div>

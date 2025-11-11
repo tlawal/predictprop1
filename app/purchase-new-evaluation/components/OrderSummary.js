@@ -10,6 +10,15 @@ const formatCurrency = (value) => {
 
 const formatPercent = (value) => `${Math.round(Number(value || 0) * 100)}%`;
 
+const resolveAccuracy = (source) => {
+  if (!source) return 0;
+  if (typeof source.accuracy_target === 'number') return source.accuracy_target;
+  if (typeof source.accuracy === 'number') return source.accuracy;
+  if (typeof source.win_rate === 'number') return source.win_rate <= 1 ? source.win_rate * 100 : source.win_rate;
+  if (typeof source.winRate === 'number') return source.winRate <= 1 ? source.winRate * 100 : source.winRate;
+  return 0;
+};
+
 const OrderSummary = ({ selectedPlan, affiliateDiscount, selectedAddons, total }) => {
   if (!selectedPlan) {
     return (
@@ -168,8 +177,8 @@ const OrderSummary = ({ selectedPlan, affiliateDiscount, selectedAddons, total }
             </>
           )}
           <div className="flex justify-between">
-            <span>Win Rate Requirement:</span>
-            <span className="text-teal-300">{selectedPlan.params?.win_rate || 0}%</span>
+            <span>Accuracy Requirement:</span>
+            <span className="text-teal-300">{Math.round(resolveAccuracy(selectedPlan.params))}%</span>
           </div>
         </div>
       </div>
